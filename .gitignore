@@ -2,6 +2,7 @@
 
 /workloads/queue/bin
 /workloads/retwis/bin
+/workloads/micro/bin
 
 /experiments/**/docker-compose-generated.yml
 /experiments/**/results

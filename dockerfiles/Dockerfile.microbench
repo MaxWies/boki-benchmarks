@@ -1,0 +1,19 @@
+# run build in micro directory
+
+FROM zjia/boki:sosp-ae as boki
+FROM golang:1.14-buster as builder
+
+COPY . /micro
+RUN rm /micro/go.mod && mv /micro/go-container.mod /micro/go.mod
+COPY --from=boki /src/boki /src/boki
+
+# compiles workload and stores it in /micro/bin
+# micro needs reference to boki source code
+RUN cd /micro && ./build.sh
+
+FROM ubuntu:focal
+
+COPY --from=builder  /micro/bin     /microbench-bin
+COPY --from=boki     /boki/launcher  /boki/launcher
+
+WORKDIR /microbench-bin
