@@ -4,6 +4,7 @@ import os
 import sys
 import time
 import json
+from simplejson import load
 import yaml
 import random
 import string
@@ -74,12 +75,6 @@ def request_ec2_spot_instance(group_id, instance_type, security_group_id, instan
         '--launch-specification', json.dumps(launch_spec)])
     return cli_output['SpotInstanceRequests'][0]['SpotInstanceRequestId']
 
-def stop_instances(machine_infos):
-    instance_ids = list(map(lambda x: x['instance_id'], machine_infos.values()))
-    if len(instance_ids) == 0:
-        return
-    run_aws_ec2_command(['terminate-instances', '--instance-ids'] + instance_ids)
-
 def cancel_spot_instance_requests(spot_requests):
     request_ids = list(spot_requests.values())
     for request_id in request_ids:
@@ -142,88 +137,69 @@ def start_spot_instances(machine_configs, waiting_time, instance_role):
         raise e
     return results
 
-def setup_hostname_for_machines(machine_infos):
-    for name, machine_info in machine_infos.items():
-        run_remote_command(machine_info['dns'], ['sudo', 'hostnamectl', 'set-hostname', name])
+def setup_hostname_for_machines(machine_configs):
+    for name, machine_config in machine_configs.items():
+        run_remote_command(machine_config['ip'], ['sudo', 'hostnamectl', 'set-hostname', name])
 
-def setup_instance_storage(machine_configs, machine_infos):
+def setup_instance_storage(machine_configs):
     for name, machine_config in machine_configs.items():
         if 'mount_instance_storage' in machine_config:
-            dns = machine_infos[name]['dns']
+            ip = machine_configs[name]['ip']
             device = '/dev/' + machine_config['mount_instance_storage']
-            run_remote_command(dns, ['sudo', 'mkfs', '-t', 'ext4', device])
-            run_remote_command(dns, ['sudo', 'mkdir', '/mnt/storage'])
-            run_remote_command(dns, ['sudo', 'mount', '-o', 'defaults,noatime', device, '/mnt/storage'])
+            run_remote_command(ip, ['sudo', 'mkfs', '-t', 'ext4', device])
+            run_remote_command(ip, ['sudo', 'mkdir', '/mnt/storage'])
+            run_remote_command(ip, ['sudo', 'mount', '-o', 'defaults,noatime', device, '/mnt/storage'])
 
-def setup_docker_swarm_for_machines(machine_infos):
+def setup_docker_swarm_for_machines(machine_configs):
     manager_machine = None
-    for name, machine_info in machine_infos.items():
-        if machine_info['role'] == 'manager':
+    for name, machine_config in machine_configs.items():
+        if machine_config['role'] == 'manager':
             if manager_machine is not None:
                 raise Exception('More than one manager machine')
             run_remote_command(
-                machine_info['dns'],
-                ['docker', 'swarm', 'init', '--advertise-addr', machine_info['ip']])
+                machine_config['ip'],
+                ['docker', 'swarm', 'init', '--advertise-addr', machine_config['ip']])
             time.sleep(10)
             manager_machine = name
             join_token, _ = run_remote_command(
-                machine_info['dns'],
+                machine_config['ip'],
                 ['docker', 'swarm', 'join-token', '-q', 'worker'])
             join_token = join_token.strip()
     if manager_machine is None:
         raise Exception('No manager machine')
-    for name, machine_info in machine_infos.items():
-        if machine_info['role'] == 'worker':
+    for name, machine_config in machine_configs.items():
+        if machine_config['role'] == 'worker':
             run_remote_command(
-                machine_info['dns'],
+                machine_config['ip'],
                 ['docker', 'swarm', 'join', '--token', join_token,
-                 machine_infos[manager_machine]['ip']+':2377'])
+                 machine_config[manager_machine]['ip']+':2377'])
     time.sleep(10)
-    for name, machine_info in machine_infos.items():
-        if 'labels' in machine_info:
+    for name, machine_config in machine_configs.items():
+        if 'labels' in machine_config:
             cmd = ['docker', 'node', 'update']
-            for label_str in machine_info['labels']:
+            for label_str in machine_config['labels']:
                 cmd.extend(['--label-add', label_str])
             cmd.append(name)
-            run_remote_command(machine_infos[manager_machine]['dns'], cmd)
+            run_remote_command(machine_config[manager_machine]['ip'], cmd)
 
-def start_machines_main(base_dir,
-                        spot_instances_waiting_time,
-                        instance_iam_role):
-    if os.path.exists(os.path.join(base_dir, 'machines.json')):
-        raise Exception('Machines already started')
-    with open(os.path.join(base_dir, 'config.json')) as fin:
+def start_machines_main(base_dir):
+    machine_config_file = 'config.json'
+    if not os.path.exists(os.path.join(base_dir, machine_config_file)):
+        raise Exception('Could not find file {}!'.format(machine_config_file))
+    with open(os.path.join(base_dir, machine_config_file)) as fin:
         config = json.load(fin)
-    instance_role = None
-    if instance_iam_role is not None and len(instance_iam_role) > 0:
-        instance_role = find_instance_role(instance_iam_role)
-    machine_infos = start_spot_instances(
-        config['machines'], spot_instances_waiting_time, instance_role)
     try:
-        time.sleep(60)
         start_time = time.time()
-        setup_hostname_for_machines(machine_infos)
-        setup_instance_storage(config['machines'], machine_infos)
-        setup_docker_swarm_for_machines(machine_infos)
+        setup_hostname_for_machines(config['machines'])
+        setup_instance_storage(config['machines'])
+        setup_docker_swarm_for_machines(config['machines'])
         elapsed = time.time() - start_time
         print('Finish setup in %.3f seconds' % (elapsed,))
-        with open(os.path.join(base_dir, 'machines.json'), 'w') as fout:
-            json.dump(machine_infos, fout, indent=4, sort_keys=True)
     except Exception as e:
-        stop_instances(machine_infos)
         raise e
 
-def stop_machines_main(base_dir):
-    if not os.path.exists(os.path.join(base_dir, 'machines.json')):
-        raise Exception('Machines not started')
-    with open(os.path.join(base_dir, 'machines.json')) as fin:
-        machine_infos = json.load(fin)
-    stop_instances(machine_infos)
-    os.remove(os.path.join(base_dir, 'machines.json'))
-
 def generate_docker_compose_main(base_dir):
-    with open(os.path.join(base_dir, 'config.json')) as fin:
-        config = json.load(fin)
+    config = load_config_file(base_dir)
     docker_compose = { 'version': '3.8', 'services': {} }
     for name, service_config in config['services'].items():
         docker_compose['services'][name] = { 'deploy': {} }
@@ -256,75 +232,51 @@ def generate_docker_compose_main(base_dir):
     with open(os.path.join(base_dir, 'docker-compose-generated.yml'), 'w') as fout:
         yaml.dump(docker_compose, fout, default_flow_style=False)
 
+def load_config_file(base_dir):
+    config_file = 'config.json'
+    if not os.path.exists(os.path.join(base_dir, config_file)):
+        raise Exception('Could not find file {}!'.format(config_file))
+    with open(os.path.join(base_dir, config_file)) as fin:
+        config = json.load(fin)
+    return config
+
 def get_host_main(base_dir, machine_name):
-    if not os.path.exists(os.path.join(base_dir, 'machines.json')):
-        raise Exception('Machines not started')
-    with open(os.path.join(base_dir, 'machines.json')) as fin:
-        machine_infos = json.load(fin)
-    print(machine_infos[machine_name]['dns'])
+    print(load_config_file(base_dir)['machines'][machine_name]['ip'])
 
 def get_service_host_main(base_dir, service_name):
-    if not os.path.exists(os.path.join(base_dir, 'machines.json')):
-        raise Exception('Machines not started')
-    with open(os.path.join(base_dir, 'config.json')) as fin:
-        config = json.load(fin)
-    with open(os.path.join(base_dir, 'machines.json')) as fin:
-        machine_infos = json.load(fin)
+    config = load_config_file(base_dir)
     machine = config['services'][service_name]['placement']
-    print(machine_infos[machine]['dns'])
+    print(config[machine]['ip'])
 
 def get_docker_manager_host_main(base_dir):
-    if not os.path.exists(os.path.join(base_dir, 'machines.json')):
-        raise Exception('Machines not started')
-    with open(os.path.join(base_dir, 'machines.json')) as fin:
-        machine_infos = json.load(fin)
-    for machine_info in machine_infos.values():
+    for machine_info in load_config_file(base_dir)['machines'].values():
         if machine_info['role'] == 'manager':
-            print(machine_info['dns'])
+            print(machine_info['ip'])
             break
-
+    
 def get_client_host_main(base_dir):
-    if not os.path.exists(os.path.join(base_dir, 'machines.json')):
-        raise Exception('Machines not started')
-    with open(os.path.join(base_dir, 'machines.json')) as fin:
-        machine_infos = json.load(fin)
-    for machine_info in machine_infos.values():
+    for machine_info in load_config_file(base_dir)['machines'].values():
         if machine_info['role'] == 'client':
-            print(machine_info['dns'])
+            print(machine_info['ip'])
             break
 
 def get_all_server_hosts_main(base_dir):
-    if not os.path.exists(os.path.join(base_dir, 'machines.json')):
-        raise Exception('Machines not started')
-    with open(os.path.join(base_dir, 'machines.json')) as fin:
-        machine_infos = json.load(fin)
-    for machine_info in machine_infos.values():
+    for machine_info in load_config_file(base_dir)['machines'].values():
         if machine_info['role'] != 'client':
-            print(machine_info['dns'])
+            print(machine_info['ip'])
 
 def get_machine_with_label_main(base_dir, label):
-    if not os.path.exists(os.path.join(base_dir, 'machines.json')):
-        raise Exception('Machines not started')
-    with open(os.path.join(base_dir, 'config.json')) as fin:
-        config = json.load(fin)
-    with open(os.path.join(base_dir, 'machines.json')) as fin:
-        machine_infos = json.load(fin)
-    for name, machine_info in machine_infos.items():
-        if 'labels' in config['machines'][name]:
-            labels = config['machines'][name]['labels']
+    for machine_info in load_config_file(base_dir)['machines'].values():
+        if 'labels' in machine_info:
+            labels = machine_info['labels']
             if label in labels or label+'=true' in labels:
-                print(machine_info['dns'])
+                print(machine_info['ip'])
 
 def get_container_id_main(base_dir, service_name, machine_name, machine_host):
-    if not os.path.exists(os.path.join(base_dir, 'machines.json')):
-        raise Exception('Machines not started')
-    with open(os.path.join(base_dir, 'machines.json')) as fin:
-        machine_infos = json.load(fin)
+    machine_infos = load_config_file(base_dir)['machines'].values()    
     if machine_host is None:
         if machine_name is None:
-            with open(os.path.join(base_dir, 'config.json')) as fin:
-                config = json.load(fin)
-            machine_name = config['services'][service_name]['placement']
+            machine_name = load_config_file(base_dir)['services'][service_name]['placement']
         machine_host = machine_infos[machine_name]['dns']
     short_id, _ = run_remote_command(machine_host,
                                      ['docker', 'ps', '-q', '-f', 'name='+service_name])
@@ -335,23 +287,18 @@ def get_container_id_main(base_dir, service_name, machine_name, machine_host):
         print(container_info['Id'])
 
 def collect_container_logs_main(base_dir, log_path):
-    if not os.path.exists(os.path.join(base_dir, 'machines.json')):
-        raise Exception('Machines not started')
-    os.makedirs(log_path, exist_ok=True)
-    with open(os.path.join(base_dir, 'machines.json')) as fin:
-        machine_infos = json.load(fin)
-    for machine_info in machine_infos.values():
+    for machine_info in load_config_file(base_dir)['machines'].values():
         if machine_info['role'] == 'client':
             continue
-        container_ids, _ = run_remote_command(machine_info['dns'], ['docker', 'ps', '-q'])
+        container_ids, _ = run_remote_command(machine_info['ip'], ['docker', 'ps', '-q'])
         container_ids = container_ids.strip().split()
         for container_id in container_ids:
             container_info, _ = run_remote_command(
-                machine_info['dns'], ['docker', 'inspect', container_id])
+                machine_info['ip'], ['docker', 'inspect', container_id])
             container_info = json.loads(container_info)[0]
             container_name = container_info['Name'][1:]  # remove prefix '/'
             log_stdout, log_stderr = run_remote_command(
-                machine_info['dns'], ['docker', 'container', 'logs', container_id])
+                machine_info['ip'], ['docker', 'container', 'logs', container_id])
             with open(os.path.join(log_path, '%s.stdout' % container_name), 'w') as fout:
                 fout.write(log_stdout)
             with open(os.path.join(log_path, '%s.stderr' % container_name), 'w') as fout:
@@ -365,17 +312,13 @@ if __name__ == '__main__':
     parser.add_argument('--machine-label', type=str, default=None)
     parser.add_argument('--machine-host', type=str, default=None)
     parser.add_argument('--service', type=str, default=None)
-    parser.add_argument('--spot-instances-waiting-time', type=int, default=10)
-    parser.add_argument('--instance-iam-role', type=str, default=None)
     parser.add_argument('--log-path', type=str, default=None)
     args = parser.parse_args()
     try:
         if args.cmd == 'start-machines':
-            start_machines_main(args.base_dir,
-                                args.spot_instances_waiting_time,
-                                args.instance_iam_role)
-        elif args.cmd == 'stop-machines':
-            stop_machines_main(args.base_dir)
+            start_machines_main(args.base_dir)
+        # elif args.cmd == 'stop-machines':
+        #     stop_machines_main(args.base_dir)
         elif args.cmd == 'generate-docker-compose':
             generate_docker_compose_main(args.base_dir)
         elif args.cmd == 'get-host':

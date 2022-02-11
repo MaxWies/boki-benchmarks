@@ -1,0 +1,5 @@
+[
+    { "funcName": "AppendToLog", "funcId": 1, "minWorkers": 24, "maxWorkers": 24 },
+    { "funcName": "ReadFromLog", "funcId": 2, "minWorkers": 24, "maxWorkers": 24 },
+    { "funcName": "AppendToAndReadFromLog", "funcId": 3, "minWorkers": 24, "maxWorkers": 24 }
+]
