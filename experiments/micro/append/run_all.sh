@@ -3,7 +3,7 @@ BASE_DIR=`realpath $(dirname $0)`
 ROOT_DIR=`realpath $BASE_DIR/../../../..`
 CONFIG_DIR=$ROOT_DIR/..
 
-cp $CONFIG_DIR/config.json BASE_DIR
+cp $CONFIG_DIR/config.json $BASE_DIR
 
 HELPER_SCRIPT=$ROOT_DIR/scripts/exp_helper
 

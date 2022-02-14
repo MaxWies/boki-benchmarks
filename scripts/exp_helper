@@ -17,6 +17,9 @@ SECURITY_GROUP_NAME = 'boki'
 PLACEMENT_GROUP = 'boki-experiments'
 AVAILABILITY_ZONE = 'us-east-2a'
 
+# TODO: improve
+USER_NAME = 'mrc'
+
 def random_string(length):
     letters = string.ascii_lowercase
     return ''.join(random.choice(letters) for _ in range(length))
@@ -32,8 +35,8 @@ def run_aws_command(scope, cmd):
 def run_aws_ec2_command(cmd):
     return run_aws_command('ec2', cmd)
 
-def run_remote_command(ssh_str, cmd):
-    ret = sp.run(['ssh', '-q', ssh_str, '--'] + cmd,
+def run_remote_command(ssh_ip, cmd):
+    ret = sp.run(['ssh', '-q', ssh_ip + '-' + USER_NAME, '--'] + cmd,
                  stdout=sp.PIPE, stderr=sp.PIPE, encoding='utf8')
     if ret.returncode != 0:
         raise Exception('Failed to run remote command: ' + ' '.join(cmd) + '\n' + ret.stderr)
@@ -139,7 +142,8 @@ def start_spot_instances(machine_configs, waiting_time, instance_role):
 
 def setup_hostname_for_machines(machine_configs):
     for name, machine_config in machine_configs.items():
-        run_remote_command(machine_config['ip'], ['sudo', 'hostnamectl', 'set-hostname', name])
+        if machine_config['role'] != 'dirigent':
+            run_remote_command(machine_config['ip'], ['sudo', 'hostnamectl', 'set-hostname', name])
 
 def setup_instance_storage(machine_configs):
     for name, machine_config in machine_configs.items():
@@ -172,7 +176,7 @@ def setup_docker_swarm_for_machines(machine_configs):
             run_remote_command(
                 machine_config['ip'],
                 ['docker', 'swarm', 'join', '--token', join_token,
-                 machine_config[manager_machine]['ip']+':2377'])
+                 machine_configs[manager_machine]['ip']+':2377'])
     time.sleep(10)
     for name, machine_config in machine_configs.items():
         if 'labels' in machine_config:
@@ -180,7 +184,7 @@ def setup_docker_swarm_for_machines(machine_configs):
             for label_str in machine_config['labels']:
                 cmd.extend(['--label-add', label_str])
             cmd.append(name)
-            run_remote_command(machine_config[manager_machine]['ip'], cmd)
+            run_remote_command(machine_configs[manager_machine]['ip'], cmd)
 
 def start_machines_main(base_dir):
     machine_config_file = 'config.json'
@@ -190,7 +194,7 @@ def start_machines_main(base_dir):
         config = json.load(fin)
     try:
         start_time = time.time()
-        setup_hostname_for_machines(config['machines'])
+        #setup_hostname_for_machines(config['machines'])
         setup_instance_storage(config['machines'])
         setup_docker_swarm_for_machines(config['machines'])
         elapsed = time.time() - start_time
