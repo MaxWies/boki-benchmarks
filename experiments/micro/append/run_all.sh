@@ -1,7 +1,7 @@
 #!/bin/bash
 BASE_DIR=`realpath $(dirname $0)`
-ROOT_DIR=`realpath $BASE_DIR/../../../..`
-CONFIG_DIR=$ROOT_DIR/..
+ROOT_DIR=`realpath $BASE_DIR/../../..`
+CONFIG_DIR=`realpath $ROOT_DIR/..`
 
 cp $CONFIG_DIR/config.json $BASE_DIR
 
