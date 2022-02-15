@@ -19,6 +19,7 @@ AVAILABILITY_ZONE = 'us-east-2a'
 
 # TODO: improve
 USER_NAME = 'mrc'
+IP_HOSTNAME_MAP = {}
 
 def random_string(length):
     letters = string.ascii_lowercase
@@ -36,6 +37,7 @@ def run_aws_ec2_command(cmd):
     return run_aws_command('ec2', cmd)
 
 def run_remote_command(ssh_ip, cmd):
+    print(cmd)
     ret = sp.run(['ssh', '-q', ssh_ip + '-' + USER_NAME, '--'] + cmd,
                  stdout=sp.PIPE, stderr=sp.PIPE, encoding='utf8')
     if ret.returncode != 0:
@@ -145,14 +147,29 @@ def setup_hostname_for_machines(machine_configs):
         if machine_config['role'] != 'dirigent':
             run_remote_command(machine_config['ip'], ['sudo', 'hostnamectl', 'set-hostname', name])
 
+def is_mounted(ip, directory):
+    try:
+        run_remote_command(ip, ['mountpoint', '-q', directory])
+        return True
+    except Exception:
+        return False
+
 def setup_instance_storage(machine_configs):
     for name, machine_config in machine_configs.items():
         if 'mount_instance_storage' in machine_config:
             ip = machine_configs[name]['ip']
             device = '/dev/' + machine_config['mount_instance_storage']
-            run_remote_command(ip, ['sudo', 'mkfs', '-t', 'ext4', device])
-            run_remote_command(ip, ['sudo', 'mkdir', '/mnt/storage'])
-            run_remote_command(ip, ['sudo', 'mount', '-o', 'defaults,noatime', device, '/mnt/storage'])
+            directory = '/mnt/storage'
+            if not is_mounted(ip, directory):
+                run_remote_command(ip, ['sudo', 'mkfs', '-t', 'ext4', device])
+                run_remote_command(ip, ['sudo', 'mkdir', directory])
+                run_remote_command(ip, ['sudo', 'mount', '-o', 'defaults,noatime', device, directory])
+
+def docker_swarm_leave(ip):
+    try:
+        run_remote_command(ip, ['docker', 'swarm', 'leave', '--force'])
+    except Exception:
+        pass
 
 def setup_docker_swarm_for_machines(machine_configs):
     manager_machine = None
@@ -160,6 +177,7 @@ def setup_docker_swarm_for_machines(machine_configs):
         if machine_config['role'] == 'manager':
             if manager_machine is not None:
                 raise Exception('More than one manager machine')
+            docker_swarm_leave(machine_config['ip'])
             run_remote_command(
                 machine_config['ip'],
                 ['docker', 'swarm', 'init', '--advertise-addr', machine_config['ip']])
@@ -169,21 +187,26 @@ def setup_docker_swarm_for_machines(machine_configs):
                 machine_config['ip'],
                 ['docker', 'swarm', 'join-token', '-q', 'worker'])
             join_token = join_token.strip()
+            hostname, _ = run_remote_command(machine_config['ip'], ['hostname'])
+            IP_HOSTNAME_MAP[machine_config['ip']] = hostname.strip()
     if manager_machine is None:
         raise Exception('No manager machine')
     for name, machine_config in machine_configs.items():
         if machine_config['role'] == 'worker':
+            docker_swarm_leave(machine_config['ip'])
             run_remote_command(
                 machine_config['ip'],
                 ['docker', 'swarm', 'join', '--token', join_token,
                  machine_configs[manager_machine]['ip']+':2377'])
+            hostname, _ = run_remote_command(machine_config['ip'], ['hostname'])
+            IP_HOSTNAME_MAP[machine_config['ip']] = hostname.strip()
     time.sleep(10)
     for name, machine_config in machine_configs.items():
         if 'labels' in machine_config:
             cmd = ['docker', 'node', 'update']
             for label_str in machine_config['labels']:
                 cmd.extend(['--label-add', label_str])
-            cmd.append(name)
+            cmd.append(IP_HOSTNAME_MAP[machine_config['ip']])
             run_remote_command(machine_configs[manager_machine]['ip'], cmd)
 
 def start_machines_main(base_dir):
@@ -250,31 +273,31 @@ def get_host_main(base_dir, machine_name):
 def get_service_host_main(base_dir, service_name):
     config = load_config_file(base_dir)
     machine = config['services'][service_name]['placement']
-    print(config[machine]['ip'])
+    print(config[machine]['ip'] + '-' + USER_NAME)
 
 def get_docker_manager_host_main(base_dir):
     for machine_info in load_config_file(base_dir)['machines'].values():
         if machine_info['role'] == 'manager':
-            print(machine_info['ip'])
+            print(machine_info['ip'] + '-' + USER_NAME)
             break
     
 def get_client_host_main(base_dir):
     for machine_info in load_config_file(base_dir)['machines'].values():
         if machine_info['role'] == 'client':
-            print(machine_info['ip'])
+            print(machine_info['ip'] + '-' + USER_NAME)
             break
 
 def get_all_server_hosts_main(base_dir):
     for machine_info in load_config_file(base_dir)['machines'].values():
         if machine_info['role'] != 'client':
-            print(machine_info['ip'])
+            print(machine_info['ip'] + '-' + USER_NAME)
 
 def get_machine_with_label_main(base_dir, label):
     for machine_info in load_config_file(base_dir)['machines'].values():
         if 'labels' in machine_info:
             labels = machine_info['labels']
             if label in labels or label+'=true' in labels:
-                print(machine_info['ip'])
+                print(machine_info['ip'] + '-' + USER_NAME)
 
 def get_container_id_main(base_dir, service_name, machine_name, machine_host):
     machine_infos = load_config_file(base_dir)['machines'].values()    
