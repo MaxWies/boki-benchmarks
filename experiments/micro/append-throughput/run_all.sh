@@ -9,4 +9,5 @@ HELPER_SCRIPT=$ROOT_DIR/scripts/exp_helper
 
 $HELPER_SCRIPT start-machines --base-dir=$BASE_DIR
 
-$BASE_DIR/run_once.sh con1 1 append 1024
+# <script> <target-directory> <concurrent-connections> <duration> <benchmark-op> <record-length-per-op>
+$BASE_DIR/run_once.sh con1 1 20 append 1024

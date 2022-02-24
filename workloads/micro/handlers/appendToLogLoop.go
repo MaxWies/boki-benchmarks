@@ -38,7 +38,7 @@ type appendLoopHandler struct {
 }
 
 func NewAppendLoopHandler(env types.Environment) types.FuncHandler {
-	return &appendHandler{
+	return &appendLoopHandler{
 		kind: "append",
 		env:  env,
 	}

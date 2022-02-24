@@ -13,7 +13,7 @@ services:
     depends_on:
        - zookeeper
     volumes:
-      - ./tmp/zk_setup.sh:/tmp/boki/zk_setup.sh
+      - /tmp/zk_setup.sh:/tmp/boki/zk_setup.sh
     restart: always
 
   boki-engine:

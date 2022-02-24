@@ -19,6 +19,8 @@ func (f *funcHandlerFactory) New(env types.Environment, funcName string) (types.
 		return handlers.NewReadHandler(env), nil
 	case "AppendToAndReadFromLog":
 		return handlers.NewAppendAndReadHandler(env), nil
+	case "AppendToLogLoop":
+		return handlers.NewAppendLoopHandler(env), nil
 	default:
 		return nil, fmt.Errorf("Unknown function name: %s", funcName)
 	}
