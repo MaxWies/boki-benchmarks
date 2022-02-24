@@ -12,7 +12,7 @@ type AppendInput struct {
 }
 
 type AppendOutput struct {
-	Success bool   `json:"successAppend"`
+	Success bool   `json:"success"`
 	Seqnum  uint64 `json:"seqnum"`
 	Message string `json:"message,omitempty"`
 }

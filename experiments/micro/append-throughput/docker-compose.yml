@@ -49,7 +49,7 @@ services:
     entrypoint:
       - /boki/controller
       - --zookeeper_host=zookeeper:2181
-      - --metalog_replicas=3
+      - --metalog_replicas=1
       - --userlog_replicas=1
       - --index_replicas=1
       - --v=1
@@ -124,33 +124,9 @@ services:
       - FAAS_NODE_ID={{.Task.Slot}}
     restart: always
 
-  micro-append:
+  micro-append-loop:
     image: maxwie/boki-microbench:latest
     entrypoint: ["/tmp/boki/run_launcher", "/microbench-bin/main", "1"]
-    volumes:
-      - /mnt/inmem/boki:/tmp/boki
-    environment:
-      - FAAS_GO_MAX_PROC_FACTOR=8
-      - GOGC=1000
-    depends_on:
-      - boki-engine
-    restart: always
-
-  micro-read:
-    image: maxwie/boki-microbench:latest
-    entrypoint: ["/tmp/boki/run_launcher", "/microbench-bin/main", "2"]
-    volumes:
-      - /mnt/inmem/boki:/tmp/boki
-    environment:
-      - FAAS_GO_MAX_PROC_FACTOR=8
-      - GOGC=1000
-    depends_on:
-      - boki-engine
-    restart: always
-
-  micro-appendAndRead:
-    image: maxwie/boki-microbench:latest
-    entrypoint: ["/tmp/boki/run_launcher", "/microbench-bin/main", "3"]
     volumes:
       - /mnt/inmem/boki:/tmp/boki
     environment:

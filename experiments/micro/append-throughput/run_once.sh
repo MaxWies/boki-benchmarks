@@ -7,6 +7,7 @@ EXP_DIR=$BASE_DIR/results/$1
 CONCURRENCY=$2
 DURATION=$3
 MICROBENCHMARK_TYPE=$4
+RECORD_LENGTH=$5
 
 HELPER_SCRIPT=$ROOT_DIR/scripts/exp_helper
 
@@ -72,9 +73,11 @@ ssh -q $CLIENT_HOST -- docker run \
 
 ssh -q $CLIENT_HOST -- /tmp/benchmark \
     --faas_gateway=$ENTRY_HOST:8080 \
+    --loop_internal=true \
+    --microbenchmark_type=$MICROBENCHMARK_TYPE \
     --duration=$DURATION \
     --concurrency=$CONCURRENCY \
-    --microbenchmark_type=$MICROBENCHMARK_TYPE \
+    --record_length=$RECORD_LENGTH \
     >$EXP_DIR/results.log
 
 sleep 10

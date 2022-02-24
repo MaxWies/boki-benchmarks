@@ -9,3 +9,7 @@
 /experiments/**/machines.json
 
 *.code-workspace
+/.vscode/*
+
+#certificates
+/workloads/micro/certificates*

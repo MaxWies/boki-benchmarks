@@ -1,0 +1,3 @@
+[
+    { "funcName": "AppendToLogLoop", "funcId": 1, "minWorkers": 24, "maxWorkers": 24 }
+]
