@@ -188,7 +188,7 @@ def get_client_host_main(base_dir):
 def get_all_server_hosts_main(base_dir):
     for machine_info in load_config_file(base_dir)['machines'].values():
         if machine_info['role'] != 'client':
-            print(machine_info['ip'])
+            print(machine_info['ip'] + '-' + USER_NAME)
 
 def get_machine_with_label_main(base_dir, label):
     for machine_info in load_config_file(base_dir)['machines'].values():
