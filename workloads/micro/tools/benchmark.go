@@ -162,15 +162,15 @@ func clientLoopAsyncBenchmark(functionName string, requestInputBuilder func() ut
 
 	time.Sleep(time.Duration(FLAGS_duration*2) * time.Second)
 
-	clientDirectory := path.Join("/tmp/benchmark", functionName)
-	engineDirectory := path.Join("/tmp/boki/output/benchmark", functionName)
+	clientDirectory := path.Join(constants.BASE_PATH_CLIENT_BOKI_BENCHMARK, constants.AppendLoopAsync)
+	engineDirectory := path.Join(constants.BASE_PATH_ENGINE_BOKI_BENCHMARK, constants.AppendLoopAsync)
 
 	utils.CreateOutputDirectory(clientDirectory)
 
-	mergeClient := client.NewSimpleClient(FLAGS_faas_gateway, &client.CallAsyncLoopAppend{})
+	mergeClient := client.NewSimpleClient(FLAGS_faas_gateway, &client.CallSyncLoopAppend{})
 
 	// get response
-	mergeClient.SendRequest(FLAGS_fn_merge_prefix, utils.JSONValue{
+	mergeClient.SendRequest(FLAGS_fn_merge_prefix+constants.MergeResults, utils.JSONValue{
 		"Directory":    engineDirectory,
 		"MergableType": handlers.MergeType_AppendLoopResponse,
 	})

@@ -8,6 +8,7 @@ import (
 	"path"
 	"time"
 
+	"faas-micro/constants"
 	"faas-micro/merge"
 	"faas-micro/operations"
 
@@ -33,6 +34,7 @@ type AppendLoopResponse struct {
 	Throughput     float64      `json:"throughput"`
 	AverageLatency float64      `json:"average_latency"`
 	BucketLatency  utils.Bucket `json:"bucket"`
+	Message        string       `json:"message,omitempty"`
 }
 
 func (this AppendLoopResponse) Merge(object merge.Mergable) {
@@ -116,7 +118,7 @@ func (h *appendLoopHandler) Call(ctx context.Context, input []byte) ([]byte, err
 
 	if h.isAsync {
 		uuid := uuid.New().String()
-		filePath := path.Join("/tmp/boki/output/benchmarks/AppendToLogLoopAsync", uuid)
+		filePath := path.Join(constants.BASE_PATH_ENGINE_BOKI_BENCHMARK, constants.AppendLoopAsync, uuid)
 		err = ioutil.WriteFile(filePath, marshalledResponse, 0644)
 		if err != nil {
 			return nil, err

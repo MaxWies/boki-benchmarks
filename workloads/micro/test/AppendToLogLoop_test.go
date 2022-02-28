@@ -6,12 +6,13 @@ import (
 	"sync"
 	"testing"
 
+	"faas-micro/constants"
 	"faas-micro/handlers"
 	"faas-micro/utils"
 )
 
 const (
-	outputDirectoryPath string = "/tmp/boki/output/benchmarks/AppendToLogLoopAsync"
+	outputDirectoryPath string = constants.BASE_PATH_ENGINE_BOKI_BENCHMARK + "/" + constants.AppendLoopAsync
 )
 
 func SampleRequest() utils.JSONValue {

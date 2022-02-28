@@ -62,6 +62,13 @@ func (h *MergeHandler) Call(ctx context.Context, input []byte) ([]byte, error) {
 		}
 		mergable.Merge(appendLoopResponse)
 	}
+
+	if len(files) == 0 {
+		mergable = &AppendLoopResponse{
+			Message: "Empty. No results found!",
+		}
+	}
+
 	log.Printf("[INFO] Merged %d files", len(files))
 	return json.Marshal(mergable)
 }
