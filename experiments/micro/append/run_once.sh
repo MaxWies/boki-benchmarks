@@ -7,6 +7,7 @@ EXP_DIR=$BASE_DIR/results/$1
 CONCURRENCY=$2
 DURATION=$3
 MICROBENCHMARK_TYPE=$4
+RECORD_LENGTH=$5
 
 HELPER_SCRIPT=$ROOT_DIR/scripts/exp_helper
 
@@ -47,8 +48,7 @@ for HOST in $ALL_STORAGE_HOSTS; do
     ssh -q $HOST -- sudo mkdir -p /mnt/storage/logdata
 done
 
-ssh -q $MANAGER_HOST -- docker stack deploy \
-    -c ~/docker-compose-generated.yml -c ~/docker-compose.yml boki-experiment
+ssh -q $MANAGER_HOST -- docker stack deploy -c ~/docker-compose-generated.yml -c ~/docker-compose.yml --resolve-image always boki-experiment
 sleep 60
 
 for HOST in $ALL_ENGINE_HOSTS; do
