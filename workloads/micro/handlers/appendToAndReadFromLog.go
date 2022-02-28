@@ -4,7 +4,8 @@ import (
 	"context"
 	"encoding/json"
 
-	"cs.utexas.edu/zjia/faas-micro/utils"
+	"faas-micro/utils"
+
 	"cs.utexas.edu/zjia/faas/types"
 )
 

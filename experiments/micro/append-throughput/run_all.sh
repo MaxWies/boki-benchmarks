@@ -10,4 +10,4 @@ HELPER_SCRIPT=$ROOT_DIR/scripts/exp_helper
 $HELPER_SCRIPT start-machines --base-dir=$BASE_DIR
 
 # <script> <target-directory> <concurrent-connections> <duration> <benchmark-op> <record-length-per-op>
-$BASE_DIR/run_once.sh con1 1 20 append 1024
+$BASE_DIR/run_once.sh con2 2 20 AppendToLogLoopAsync 1024

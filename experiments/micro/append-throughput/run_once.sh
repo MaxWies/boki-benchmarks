@@ -73,7 +73,6 @@ ssh -q $CLIENT_HOST -- docker run \
 
 ssh -q $CLIENT_HOST -- /tmp/benchmark \
     --faas_gateway=$ENTRY_HOST:8080 \
-    --loop_internal=true \
     --microbenchmark_type=$MICROBENCHMARK_TYPE \
     --duration=$DURATION \
     --concurrency=$CONCURRENCY \

@@ -3,10 +3,18 @@ package handlers
 import (
 	"context"
 	"encoding/json"
+	"io/ioutil"
+	"log"
+	"path"
 	"time"
 
-	"cs.utexas.edu/zjia/faas-micro/utils"
+	"faas-micro/merge"
+	"faas-micro/operations"
+
+	"faas-micro/utils"
+
 	"cs.utexas.edu/zjia/faas/types"
+	"github.com/google/uuid"
 )
 
 // Input from client
@@ -18,12 +26,7 @@ type AppendLoopInput struct {
 	LatencyBucketGranularity int64  `json:"latency_bucket_granularity"`
 }
 
-type AppendLoopOutput struct {
-	Success bool   `json:"success"`
-	Seqnum  uint64 `json:"seqnum"`
-	Message string `json:"message,omitempty"`
-}
-
+// Response sync
 type AppendLoopResponse struct {
 	Success        uint         `json:"success"`
 	Calls          uint         `json:"calls"`
@@ -32,56 +35,62 @@ type AppendLoopResponse struct {
 	BucketLatency  utils.Bucket `json:"bucket"`
 }
 
+func (this AppendLoopResponse) Merge(object merge.Mergable) {
+	other := object.(AppendLoopResponse)
+	this.AverageLatency =
+		this.AverageLatency*(float64(this.Success)/(float64(this.Success)+float64(other.Success))) +
+			other.AverageLatency*(float64(other.Success)/(float64(this.Success)+float64(other.Success)))
+	this.Calls += other.Calls
+	this.Success += other.Success
+	for i := range other.BucketLatency.Slots {
+		this.BucketLatency.Slots[i] += other.BucketLatency.Slots[i]
+	}
+}
+
+// Response async
+type AppendLoopAsyncResponse struct {
+}
+
 type appendLoopHandler struct {
-	kind string
-	env  types.Environment
+	kind    string
+	env     types.Environment
+	isAsync bool
 }
 
-func NewAppendLoopHandler(env types.Environment) types.FuncHandler {
+func NewAppendLoopHandler(env types.Environment, isAsync bool) types.FuncHandler {
 	return &appendLoopHandler{
-		kind: "append",
-		env:  env,
+		kind:    "append",
+		env:     env,
+		isAsync: isAsync,
 	}
-}
-
-func (h *appendLoopHandler) append(ctx context.Context, env types.Environment, input *AppendLoopInput) (*AppendLoopOutput, error) {
-	uniqueId := env.GenerateUniqueID()
-	tags := []uint64{uniqueId}
-	seqNum, err := env.SharedLogAppend(ctx, tags, input.Record)
-	if err != nil {
-		return &AppendLoopOutput{
-			Success: false,
-			Seqnum:  0,
-		}, err
-	}
-	return &AppendLoopOutput{
-		Success: true,
-		Seqnum:  seqNum,
-	}, nil
 }
 
 func (h *appendLoopHandler) Call(ctx context.Context, input []byte) ([]byte, error) {
-
+	log.Printf("[INFO] Call AppendLoopHandler. Async: %v", h.isAsync)
 	parsedInput := &AppendLoopInput{}
 	err := json.Unmarshal(input, parsedInput)
 	if err != nil {
 		return nil, err
 	}
-
+	log.Printf("[INFO] Run loop for %d seconds. Latency bucket granularity is %d. Size of a record is %d", parsedInput.LoopDuration, parsedInput.LatencyBucketGranularity, len(parsedInput.Record))
 	startTime := time.Now()
 	success := float64(0)
 	calls := uint(0)
 	avg_latency := float64(0)
+	//log.Printf("[INFO] Create bucket")
 	bucketLatency := utils.CreateBucket(parsedInput.LatencyBucketLower, parsedInput.LatencyBucketUpper, parsedInput.LatencyBucketGranularity)
+	//log.Printf("[INFO] Run loop")
 	for {
 		if time.Since(startTime) > time.Duration(parsedInput.LoopDuration)*time.Second {
 			break
 		}
 
 		// call append
+		log.Print("[INFO] Append start")
 		appendBegin := time.Now()
-		output, err := h.append(ctx, h.env, parsedInput)
+		output, err := operations.Append(ctx, h.env, &operations.AppendInput{Record: parsedInput.Record})
 		appendDuration := time.Since(appendBegin).Microseconds()
+		log.Printf("[INFO] Append needed %d microseconds\n", appendDuration)
 
 		calls++
 		if err == nil {
@@ -100,5 +109,20 @@ func (h *appendLoopHandler) Call(ctx context.Context, input []byte) ([]byte, err
 		AverageLatency: float64(avg_latency),
 		BucketLatency:  *bucketLatency,
 	}
-	return json.Marshal(response)
+
+	log.Printf("[INFO] Loop finished. %d calls successful from %d total calls", int(success), calls)
+
+	marshalledResponse, err := json.Marshal(response)
+
+	if h.isAsync {
+		uuid := uuid.New().String()
+		filePath := path.Join("/tmp/boki/output/benchmarks/AppendToLogLoopAsync", uuid)
+		err = ioutil.WriteFile(filePath, marshalledResponse, 0644)
+		if err != nil {
+			return nil, err
+		}
+		return json.Marshal(&AppendLoopAsyncResponse{})
+	} else {
+		return marshalledResponse, err
+	}
 }

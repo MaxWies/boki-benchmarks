@@ -1,19 +1,26 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"math/rand"
+	"path"
 	"time"
 
-	"cs.utexas.edu/zjia/faas-micro/client"
-	"cs.utexas.edu/zjia/faas-micro/utils"
+	"faas-micro/client"
+	"faas-micro/constants"
+	"faas-micro/handlers"
+	"faas-micro/utils"
+
 	"github.com/montanaflynn/stats"
 )
 
 var FLAGS_faas_gateway string
 var FLAGS_fn_prefix string
+var FLAGS_fn_merge_prefix string
 var FLAGS_num_users int
 var FLAGS_concurrency int
 var FLAGS_duration int
@@ -21,31 +28,24 @@ var FLAGS_percentages string
 var FLAGS_bodylen int
 var FLAGS_rand_seed int
 var FLAGS_microbenchmark_type string
-var FLAGS_loop_internal bool
 
 var FLAGS_record_length int
 var FLAGS_latency_bucket_lower int
 var FLAGS_latency_bucket_upper int
 var FLAGS_latency_bucket_granularity int
 
-const (
-	Append        string = "append"
-	AppendAndRead string = "appendAndRead"
-	Read          string = "read"
-)
-
 func init() {
 	flag.StringVar(&FLAGS_faas_gateway, "faas_gateway", "127.0.0.1:8081", "")
 	flag.StringVar(&FLAGS_fn_prefix, "fn_prefix", "", "")
+	flag.StringVar(&FLAGS_fn_merge_prefix, "fn_merge_prefix", "", "")
 	flag.IntVar(&FLAGS_num_users, "num_users", 1000, "")
 	flag.IntVar(&FLAGS_concurrency, "concurrency", 1, "")
 	flag.IntVar(&FLAGS_duration, "duration", 10, "")
 	flag.IntVar(&FLAGS_rand_seed, "rand_seed", 23333, "")
 	flag.StringVar(&FLAGS_microbenchmark_type, "microbenchmark_type", "append", "")
-	flag.BoolVar(&FLAGS_loop_internal, "loop_internal", false, "")
 
 	flag.IntVar(&FLAGS_record_length, "record_length", 1024, "")
-	flag.IntVar(&FLAGS_latency_bucket_lower, "latency_bucket_lower", 300, "")            // microsec
+	flag.IntVar(&FLAGS_latency_bucket_lower, "latency_bucket_lower", 300, "")            //microsec
 	flag.IntVar(&FLAGS_latency_bucket_upper, "latency_bucket_upper", 10000, "")          //microsec
 	flag.IntVar(&FLAGS_latency_bucket_granularity, "latency_bucket_granularity", 10, "") //microsec
 
@@ -109,25 +109,33 @@ func printFnResult(fnName string, duration time.Duration, results []*utils.FaasC
 	}
 }
 
-func internalBenchmark() {
-	log.Printf("[INFO] Deploy loop functions. Function mode: %s. Concurrency: %d. Duration: %d", FLAGS_microbenchmark_type, FLAGS_concurrency, FLAGS_duration)
-	c := 0
-	client := client.NewFaasClient(FLAGS_faas_gateway, FLAGS_concurrency)
-	for c < FLAGS_concurrency {
-		switch FLAGS_microbenchmark_type {
-		case Append:
-			client.AddJsonFnCall(FLAGS_fn_prefix+"AppendToLogLoop", buildAppendToLogLoopRequest())
-		default:
-			fmt.Printf("Unknown argument %s", FLAGS_microbenchmark_type)
+func clientBenchmark(functionName string, functionBuilder func() utils.JSONValue) {
+	client := utils.NewFaasClient(FLAGS_faas_gateway, FLAGS_concurrency)
+	startTime := time.Now()
+	for {
+		if time.Since(startTime) > time.Duration(FLAGS_duration)*time.Second {
 			break
 		}
+		client.AddJsonFnCall(FLAGS_fn_prefix+functionName, functionBuilder())
+	}
+	results := client.WaitForResults()
+	elapsed := time.Since(startTime)
+	fmt.Printf("Benchmark runs for %v, %.1f request per sec\n", elapsed, float64(len(results))/elapsed.Seconds())
+	printFnResult(functionName, elapsed, results)
+}
+
+func clientLoopBenchmark(functionName string, requestInputBuilder func() utils.JSONValue) {
+	log.Printf("[INFO] Run loop functions. Function mode: %s. Concurrency: %d. Duration: %d", FLAGS_microbenchmark_type, FLAGS_concurrency, FLAGS_duration)
+	c := 0
+	client := client.NewFaasClient(FLAGS_faas_gateway, FLAGS_concurrency, &client.CallSyncLoopAppend{})
+	for c < FLAGS_concurrency {
+		client.AddJsonFnCall(FLAGS_fn_prefix+functionName, requestInputBuilder())
 		c++
 	}
-	faasCalls := client.WaitForResults()
-
+	faasCalls := client.WaitForHttpResults()
 	for _, faasCall := range faasCalls {
-		if faasCall.Result.Success {
-			appendLoopOutput := faasCall.Result.AppendLoopOutput
+		if faasCall.HttpResult.Success {
+			appendLoopOutput := faasCall.HttpResult.Result.(handlers.AppendLoopResponse)
 			fmt.Printf("Calls Total: %d", appendLoopOutput.Calls)
 			fmt.Printf("Calls Success: %d", appendLoopOutput.Success)
 			fmt.Printf("Calls Failure: %d", appendLoopOutput.Calls-appendLoopOutput.Success)
@@ -136,40 +144,69 @@ func internalBenchmark() {
 	}
 }
 
-func clientBenchmark() {
-	log.Printf("[INFO] Start running client for %d seconds with concurrency of %d", FLAGS_duration, FLAGS_concurrency)
-	client := utils.NewFaasClient(FLAGS_faas_gateway, FLAGS_concurrency)
-	startTime := time.Now()
-	for {
-		if time.Since(startTime) > time.Duration(FLAGS_duration)*time.Second {
-			break
-		}
-		switch FLAGS_microbenchmark_type {
-		case Append:
-			client.AddJsonFnCall(FLAGS_fn_prefix+"AppendToLog", buildAppendToLogRequest())
-		case Read:
-			client.AddJsonFnCall(FLAGS_fn_prefix+"ReadFromLog", buildReadFromLogRequest())
-		case AppendAndRead:
-			client.AddJsonFnCall(FLAGS_fn_prefix+"AppendToAndReadFromLog", buildAppendToAndReadFromLogRequest())
-		default:
-			fmt.Printf("Unknown argument %s", FLAGS_microbenchmark_type)
-			break
+func clientLoopAsyncBenchmark(functionName string, requestInputBuilder func() utils.JSONValue) {
+	log.Printf("[INFO] Run loop function %s. Concurrency: %d. Duration: %d", functionName, FLAGS_concurrency, FLAGS_duration)
+	appendClient := client.NewSimpleClient(FLAGS_faas_gateway, &client.CallAsyncLoopAppend{})
+	c := 0
+	for c < FLAGS_concurrency {
+		appendClient.SendRequest(FLAGS_fn_prefix+functionName, requestInputBuilder())
+		c++
+	}
+	success := 0
+	for _, r := range appendClient.HttpResults {
+		if r.Success {
+			success++
 		}
 	}
-	results := client.WaitForResults()
-	elapsed := time.Since(startTime)
-	fmt.Printf("Benchmark runs for %v, %.1f request per sec\n", elapsed, float64(len(results))/elapsed.Seconds())
+	log.Printf("[INFO] %d successful results from %d total results.", success, len(appendClient.HttpResults))
 
-	printFnResult("AppendToLog", elapsed, results)
-	printFnResult("ReadFromLog", elapsed, results)
-	printFnResult("AppendToAndReadFromLog", elapsed, results)
+	time.Sleep(time.Duration(FLAGS_duration*2) * time.Second)
+
+	clientDirectory := path.Join("/tmp/benchmark", functionName)
+	engineDirectory := path.Join("/tmp/boki/output/benchmark", functionName)
+
+	utils.CreateOutputDirectory(clientDirectory)
+
+	mergeClient := client.NewSimpleClient(FLAGS_faas_gateway, &client.CallAsyncLoopAppend{})
+
+	// get response
+	mergeClient.SendRequest(FLAGS_fn_merge_prefix, utils.JSONValue{
+		"Directory":    engineDirectory,
+		"MergableType": handlers.MergeType_AppendLoopResponse,
+	})
+
+	response, err := json.Marshal(mergeClient.HttpResults[0].Result.(handlers.AppendLoopResponse))
+	if err != nil {
+		log.Printf("[ERROR] Merge response not successful")
+		return
+	}
+	filePath := path.Join(clientDirectory, "result")
+	err = ioutil.WriteFile(filePath, response, 0644)
+	if err != nil {
+		log.Printf("[ERROR] Failed to write to file %s", filePath)
+	}
 }
 
 func main() {
 	flag.Parse()
-	if FLAGS_loop_internal {
-		internalBenchmark()
-	} else {
-		clientBenchmark()
+	switch FLAGS_microbenchmark_type {
+	case constants.Append:
+		builder := buildAppendToLogRequest
+		clientBenchmark(constants.Append, builder)
+	case constants.Read:
+		builder := buildAppendToLogRequest
+		clientBenchmark(constants.Read, builder)
+	case constants.AppendAndRead:
+		builder := buildAppendToLogRequest
+		clientBenchmark(constants.AppendAndRead, builder)
+	case constants.AppendLoop:
+		builder := buildAppendToLogLoopRequest
+		clientLoopBenchmark(constants.AppendLoop, builder)
+	case constants.AppendLoopAsync:
+		builder := buildAppendToLogLoopRequest
+		clientLoopAsyncBenchmark(constants.AppendLoopAsync, builder)
+	default:
+		fmt.Printf("Unknown argument %s", FLAGS_microbenchmark_type)
+		break
 	}
 }

@@ -1,4 +1,4 @@
-module cs.utexas.edu/zjia/faas-micro
+module faas-micro
 
 go 1.14
 

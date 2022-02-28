@@ -43,13 +43,17 @@ services:
       - FAAS_NODE_ID={{.Task.Slot}}
       - FAAS_CGROUP_FS_ROOT=/tmp/root_cgroupfs
     restart: always
+    ulimits:
+        memlock:
+                soft: 67108864
+                hard: 67108864
 
   boki-controller:
     image: zjia/boki:sosp-ae
     entrypoint:
       - /boki/controller
       - --zookeeper_host=zookeeper:2181
-      - --metalog_replicas=1
+      - --metalog_replicas=3
       - --userlog_replicas=1
       - --index_replicas=1
       - --v=1
@@ -81,6 +85,10 @@ services:
       - /tmp/nightcore_config.json:/tmp/boki/func_config.json
       - /mnt/inmem/store:/tmp/store
     restart: always
+    ulimits:
+        memlock:
+                soft: 67108864
+                hard: 67108864
 
   boki-storage:
     image: zjia/boki:sosp-ae
@@ -105,6 +113,10 @@ services:
     environment:
       - FAAS_NODE_ID={{.Task.Slot}}
     restart: always
+    ulimits:
+        memlock:
+                soft: 67108864
+                hard: 67108864
 
   boki-sequencer:
     image: zjia/boki:sosp-ae
@@ -123,10 +135,26 @@ services:
     environment:
       - FAAS_NODE_ID={{.Task.Slot}}
     restart: always
+    ulimits:
+        memlock:
+                soft: 67108864
+                hard: 67108864
 
   micro-append-loop:
     image: maxwie/boki-microbench:latest
-    entrypoint: ["/tmp/boki/run_launcher", "/microbench-bin/main", "1"]
+    entrypoint: ["/tmp/boki/run_launcher_async", "/microbench-bin/main", "1", "AppendToLogLoopAsync"]
+    volumes:
+      - /mnt/inmem/boki:/tmp/boki
+    environment:
+      - FAAS_GO_MAX_PROC_FACTOR=8
+      - GOGC=1000
+    depends_on:
+      - boki-engine
+    restart: always
+
+  micro-merge:
+    image: maxwie/boki-microbench:latest
+    entrypoint: ["/tmp/boki/run_launcher", "/microbench-bin/main", "2", "MergeResults"]
     volumes:
       - /mnt/inmem/boki:/tmp/boki
     environment:

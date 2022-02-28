@@ -3,8 +3,10 @@ package main
 import (
 	"fmt"
 
+	"faas-micro/constants"
+	"faas-micro/handlers"
+
 	"cs.utexas.edu/zjia/faas"
-	"cs.utexas.edu/zjia/faas-micro/handlers"
 	"cs.utexas.edu/zjia/faas/types"
 )
 
@@ -13,14 +15,18 @@ type funcHandlerFactory struct {
 
 func (f *funcHandlerFactory) New(env types.Environment, funcName string) (types.FuncHandler, error) {
 	switch funcName {
-	case "AppendToLog":
+	case constants.Append:
 		return handlers.NewAppendHandler(env), nil
-	case "ReadFromLog":
+	case constants.Read:
 		return handlers.NewReadHandler(env), nil
-	case "AppendToAndReadFromLog":
+	case constants.AppendAndRead:
 		return handlers.NewAppendAndReadHandler(env), nil
-	case "AppendToLogLoop":
-		return handlers.NewAppendLoopHandler(env), nil
+	case constants.AppendLoop:
+		return handlers.NewAppendLoopHandler(env, false), nil
+	case constants.AppendLoopAsync:
+		return handlers.NewAppendLoopHandler(env, true), nil
+	case constants.MergeResults:
+		return handlers.NewMergeHandler(), nil
 	default:
 		return nil, fmt.Errorf("Unknown function name: %s", funcName)
 	}
