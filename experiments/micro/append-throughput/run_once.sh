@@ -35,6 +35,8 @@ ALL_ENGINE_HOSTS=`$HELPER_SCRIPT get-machine-with-label --base-dir=$BASE_DIR --m
 for HOST in $ALL_ENGINE_HOSTS; do
     scp -q $BASE_DIR/run_launcher $HOST:/tmp/run_launcher
     ssh -q $HOST -- chmod +x /tmp/run_launcher
+    scp -q $BASE_DIR/run_launcher_async $HOST:/tmp/run_launcher_async
+    ssh -q $HOST -- chmod +x /tmp/run_launcher_async
     ssh -q $HOST -- sudo rm -rf /mnt/inmem/boki
     ssh -q $HOST -- sudo mkdir -p /mnt/inmem/boki
     ssh -q $HOST -- sudo mkdir -p /mnt/inmem/boki/output /mnt/inmem/boki/ipc

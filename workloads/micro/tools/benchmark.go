@@ -175,7 +175,13 @@ func clientLoopAsyncBenchmark(functionName string, requestInputBuilder func() ut
 		"MergableType": handlers.MergeType_AppendLoopResponse,
 	})
 
-	response, err := json.Marshal(mergeClient.HttpResults[0].Result.(handlers.AppendLoopResponse))
+	httpResult := mergeClient.HttpResults[0]
+	if httpResult.Err != nil {
+		log.Printf("[ERROR] Merge request failed")
+		return
+	}
+
+	response, err := json.Marshal(httpResult.Result.(handlers.AppendLoopResponse))
 	if err != nil {
 		log.Printf("[ERROR] Merge response not successful")
 		return

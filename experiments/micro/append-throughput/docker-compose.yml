@@ -154,7 +154,7 @@ services:
 
   micro-merge:
     image: maxwie/boki-microbench:latest
-    entrypoint: ["/tmp/boki/run_launcher", "/microbench-bin/main", "2", "MergeResults"]
+    entrypoint: ["/tmp/boki/run_launcher", "/microbench-bin/main", "2"]
     volumes:
       - /mnt/inmem/boki:/tmp/boki
     environment:
