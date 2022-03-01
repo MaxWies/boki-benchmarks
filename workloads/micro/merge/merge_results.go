@@ -9,5 +9,5 @@ func merge_on_client() {
 }
 
 type Mergable interface {
-	Merge(other Mergable)
+	Merge(other interface{})
 }

@@ -197,6 +197,16 @@ def get_machine_with_label_main(base_dir, label):
             if label in labels or label+'=true' in labels:
                 print(machine_info['ip'] + '-' + USER_NAME)
 
+def get_client_with_merged_results(base_dir):
+    label = 'merged_results=true'
+    for machine_info in load_config_file(base_dir)['machines'].values():
+        if machine_info['role'] == 'client':
+            labels = machine_info['labels']
+            if label in labels:
+                print(machine_info['ip'] + '-' + USER_NAME)
+                return
+    print('Warning: No client with label {}'.format(label))
+
 def get_container_id_main(base_dir, service_name, machine_name, machine_host):
     machine_infos = load_config_file(base_dir)['machines'].values()    
     if machine_host is None:
@@ -262,6 +272,8 @@ if __name__ == '__main__':
             get_all_server_hosts_main(args.base_dir)
         elif args.cmd == 'get-machine-with-label':
             get_machine_with_label_main(args.base_dir, args.machine_label)
+        elif args.cmd == 'get-client-with-merged-results':
+            get_client_with_merged_results(args.base_dir, args.machine_label)
         elif args.cmd == 'get-container-id':
             get_container_id_main(args.base_dir, args.service, args.machine_name, args.machine_host)
         elif args.cmd == 'collect-container-logs':

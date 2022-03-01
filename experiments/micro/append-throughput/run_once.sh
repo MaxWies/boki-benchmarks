@@ -10,9 +10,11 @@ MICROBENCHMARK_TYPE=$4
 RECORD_LENGTH=$5
 
 HELPER_SCRIPT=$ROOT_DIR/scripts/exp_helper
+BENCHMARK_SCRIPT=$ROOT_DIR/scripts/benchmark/present_benchmarks
 
 MANAGER_HOST=`$HELPER_SCRIPT get-docker-manager-host --base-dir=$BASE_DIR`
 CLIENT_HOST=`$HELPER_SCRIPT get-client-host --base-dir=$BASE_DIR`
+CLIENT_WITH_MERGED_RESULTS=`$HELPER_SCRIPT get-client-with-merged-results --base-dir=$BASE_DIR`
 ENTRY_HOST=`$HELPER_SCRIPT get-service-host --base-dir=$BASE_DIR --service=boki-gateway`
 ALL_HOSTS=`$HELPER_SCRIPT get-all-server-hosts --base-dir=$BASE_DIR`
 
@@ -85,3 +87,5 @@ ssh -q $CLIENT_HOST -- /tmp/benchmark \
 sleep 10
 
 $HELPER_SCRIPT collect-container-logs --base-dir=$BASE_DIR --log-path=$EXP_DIR/logs
+
+$BENCHMARK_SCRIPT --ssh-ip=$CLIENT_WITH_MERGED_RESULTS --remote-file-path=/tmp/boki/output/benchmark/AppendToLogLoopAsync/result --local_target_file_path=$EXP_DIR/benchmark/AppendToLogLoopAsync/result

@@ -29,16 +29,16 @@ type AppendLoopInput struct {
 
 // Response sync
 type AppendLoopResponse struct {
-	Success        uint         `json:"success"`
+	Success        uint         `json:"calls_success"`
 	Calls          uint         `json:"calls"`
 	Throughput     float64      `json:"throughput"`
-	AverageLatency float64      `json:"average_latency"`
+	AverageLatency float64      `json:"latency_average"`
 	BucketLatency  utils.Bucket `json:"bucket"`
 	Message        string       `json:"message,omitempty"`
 }
 
-func (this AppendLoopResponse) Merge(object merge.Mergable) {
-	other := object.(AppendLoopResponse)
+func (this *AppendLoopResponse) Merge(object interface{}) {
+	other := (object).(merge.Mergable).(*AppendLoopResponse)
 	this.AverageLatency =
 		this.AverageLatency*(float64(this.Success)/(float64(this.Success)+float64(other.Success))) +
 			other.AverageLatency*(float64(other.Success)/(float64(this.Success)+float64(other.Success)))
