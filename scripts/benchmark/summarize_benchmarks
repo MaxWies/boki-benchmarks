@@ -54,7 +54,7 @@ if __name__ == '__main__':
     parser.add_argument('--local-target-file-path', type=str)
     args = parser.parse_args()
     try:
-        os.makedirs(os.path.dirname(args.remote_file_path), exist_ok=True)
+        os.makedirs(os.path.dirname(args.local_target_file_path), exist_ok=True)
         show_benchmark_results(args.ssh_ip, args.remote_file_path, args.local_target_file_path)
     except Exception as e:
         err_str = str(e)
