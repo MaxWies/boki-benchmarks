@@ -207,6 +207,12 @@ def get_client_with_merged_results(base_dir):
                 return
     print('Warning: No client with label {}'.format(label))
 
+def get_client_ip(base_dir):
+    for machine_info in load_config_file(base_dir)['machines'].values():
+        if machine_info['role'] == 'client':
+            print(machine_info['ip'])
+            break
+
 def get_container_id_main(base_dir, service_name, machine_name, machine_host):
     machine_infos = load_config_file(base_dir)['machines'].values()    
     if machine_host is None:
@@ -274,6 +280,8 @@ if __name__ == '__main__':
             get_machine_with_label_main(args.base_dir, args.machine_label)
         elif args.cmd == 'get-client-with-merged-results':
             get_client_with_merged_results(args.base_dir)
+        elif args.cmd == 'get-client-ip':
+            get_client_ip(args.base_dir)
         elif args.cmd == 'get-container-id':
             get_container_id_main(args.base_dir, args.service, args.machine_name, args.machine_host)
         elif args.cmd == 'collect-container-logs':
