@@ -10,7 +10,7 @@ MICROBENCHMARK_TYPE=$4
 RECORD_LENGTH=$5
 
 HELPER_SCRIPT=$ROOT_DIR/scripts/exp_helper
-BENCHMARK_SCRIPT=$ROOT_DIR/scripts/benchmark/present_benchmarks
+BENCHMARK_SCRIPT=$ROOT_DIR/scripts/benchmark/summarize_benchmarks
 
 MANAGER_HOST=`$HELPER_SCRIPT get-docker-manager-host --base-dir=$BASE_DIR`
 CLIENT_HOST=`$HELPER_SCRIPT get-client-host --base-dir=$BASE_DIR`
@@ -36,9 +36,7 @@ done
 ALL_ENGINE_HOSTS=`$HELPER_SCRIPT get-machine-with-label --base-dir=$BASE_DIR --machine-label=engine_node`
 for HOST in $ALL_ENGINE_HOSTS; do
     scp -q $BASE_DIR/run_launcher $HOST:/tmp/run_launcher
-    ssh -q $HOST -- chmod +x /tmp/run_launcher
     scp -q $BASE_DIR/run_launcher_async $HOST:/tmp/run_launcher_async
-    ssh -q $HOST -- chmod +x /tmp/run_launcher_async
     ssh -q $HOST -- sudo rm -rf /mnt/inmem/boki
     ssh -q $HOST -- sudo mkdir -p /mnt/inmem/boki
     ssh -q $HOST -- sudo mkdir -p /mnt/inmem/boki/output /mnt/inmem/boki/ipc
@@ -53,8 +51,7 @@ for HOST in $ALL_STORAGE_HOSTS; do
     ssh -q $HOST -- sudo mkdir -p /mnt/storage/logdata
 done
 
-ssh -q $MANAGER_HOST -- docker stack deploy \
-    -c ~/docker-compose-generated.yml -c ~/docker-compose.yml boki-experiment
+ssh -q $MANAGER_HOST -- docker stack deploy -c ~/docker-compose-generated.yml -c ~/docker-compose.yml --resolve-image always boki-experiment
 sleep 60
 
 for HOST in $ALL_ENGINE_HOSTS; do
