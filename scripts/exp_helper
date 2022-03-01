@@ -273,7 +273,7 @@ if __name__ == '__main__':
         elif args.cmd == 'get-machine-with-label':
             get_machine_with_label_main(args.base_dir, args.machine_label)
         elif args.cmd == 'get-client-with-merged-results':
-            get_client_with_merged_results(args.base_dir, args.machine_label)
+            get_client_with_merged_results(args.base_dir)
         elif args.cmd == 'get-container-id':
             get_container_id_main(args.base_dir, args.service, args.machine_name, args.machine_host)
         elif args.cmd == 'collect-container-logs':

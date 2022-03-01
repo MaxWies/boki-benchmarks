@@ -25,7 +25,7 @@ func (callSync *CallSyncLoopAppend) JsonPostRequest(client *http.Client, url str
 	if err != nil {
 		log.Fatalf("[FATAL] Failed to encode JSON request: %v", err)
 	}
-	log.Printf("[Info] HTTP Post to url: %s", url)
+	log.Printf("[INFO] HTTP Post to url: %s", url)
 	resp, err := client.Post(url, "application/json", bytes.NewReader(encoded))
 	if err != nil {
 		log.Printf("[ERROR] HTTP Post failed: %v", err)
@@ -42,7 +42,7 @@ func (callSync *CallSyncLoopAppend) JsonPostRequest(client *http.Client, url str
 	if err != nil {
 		log.Fatalf("[FATAL] Failed to decode JSON response: %v", err)
 	}
-	log.Printf("[Info] HTTP response received")
+	log.Printf("[INFO] HTTP response received")
 
 	return &HttpResult{
 		StatusCode: resp.StatusCode,
