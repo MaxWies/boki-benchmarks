@@ -1,4 +1,5 @@
 #!/usr/bin/python3
+from datetime import datetime, time
 import os
 import sys
 import json
@@ -33,6 +34,15 @@ def compute_bucket_percentile(bucket, number_of_entries, percentile):
         entries_visited += bucket["slots"][bucket_slot_index]
     return bucket["lower"] + bucket_slot_index * bucket["interval"]
 
+def unix_timestamp_to_datetime(unix_timestamp_nanosec):
+    dt = datetime.utcfromtimestamp(unix_timestamp_nanosec)
+    return dt.strftime('%Y-%m-%d %H:%M:%S.%f')
+
+def make_timestamps_human_readable(dic, key_matcher):
+    for key in dic.keys():
+        if key_matcher in key:
+            dic[key] = unix_timestamp_to_datetime(dic[key])
+
 def show_benchmark_results(remote_ip, remote_file_path, local_file_path_target):
     run_remote_copy(remote_ip, remote_file_path, local_file_path_target)
     pretty_benchmark = None
@@ -44,6 +54,8 @@ def show_benchmark_results(remote_ip, remote_file_path, local_file_path_target):
             benchmark["latency_median"] = compute_bucket_percentile(benchmark["bucket"], e, 0.5)
             benchmark["latency_p99"] = compute_bucket_percentile(benchmark["bucket"], e, 0.99)
             del benchmark["bucket"]
+        if "time_log" in benchmark:
+            make_timestamps_human_readable(benchmark["time_log"], 'time')
         pretty_benchmark = json.dumps(benchmark, sort_keys=True, indent=4)
     if pretty_benchmark is None:
         raise Exception
