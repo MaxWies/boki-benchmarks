@@ -2,6 +2,7 @@ package test
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"sync"
 	"testing"
@@ -22,6 +23,8 @@ func SampleRequest() utils.JSONValue {
 		"latency_bucket_lower":       0,
 		"latency_bucket_upper":       3000,
 		"latency_bucket_granularity": 10,
+		"latency_head_size":          10,
+		"latency_tail_size":          10,
 	}
 }
 
@@ -71,6 +74,10 @@ func MergeCall(t *testing.T) {
 	if err != nil {
 		log.Fatalf("[FATAL] Failed to decode JSON response: %v", err)
 	}
+	if !appendLoopResponse.TimeLog.Valid {
+		t.Error("Time Log is invalid")
+	}
+	fmt.Printf("%s", result)
 	_ = result
 }
 

@@ -33,6 +33,8 @@ var FLAGS_record_length int
 var FLAGS_latency_bucket_lower int
 var FLAGS_latency_bucket_upper int
 var FLAGS_latency_bucket_granularity int
+var FLAGS_latency_head_size int
+var FLAGS_latency_tail_size int
 
 func init() {
 	flag.StringVar(&FLAGS_faas_gateway, "faas_gateway", "127.0.0.1:8081", "")
@@ -48,6 +50,8 @@ func init() {
 	flag.IntVar(&FLAGS_latency_bucket_lower, "latency_bucket_lower", 300, "")            //microsec
 	flag.IntVar(&FLAGS_latency_bucket_upper, "latency_bucket_upper", 10000, "")          //microsec
 	flag.IntVar(&FLAGS_latency_bucket_granularity, "latency_bucket_granularity", 10, "") //microsec
+	flag.IntVar(&FLAGS_latency_head_size, "latency_head_size", 20, "")
+	flag.IntVar(&FLAGS_latency_tail_size, "latency_tail_size", 20, "")
 
 	rand.Seed(int64(FLAGS_rand_seed))
 }
@@ -65,6 +69,8 @@ func buildAppendToLogLoopRequest() utils.JSONValue {
 		"latency_bucket_lower":       FLAGS_latency_bucket_lower,
 		"latency_bucket_upper":       FLAGS_latency_bucket_upper,
 		"latency_bucket_granularity": FLAGS_latency_bucket_granularity,
+		"latency_head_size":          FLAGS_latency_head_size,
+		"latency_tail_size":          FLAGS_latency_tail_size,
 	}
 }
 
