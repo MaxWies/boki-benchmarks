@@ -35,8 +35,10 @@ def compute_bucket_percentile(bucket, number_of_entries, percentile):
     return bucket["lower"] + bucket_slot_index * bucket["interval"]
 
 def unix_timestamp_to_datetime(unix_timestamp_nanosec):
-    dt = datetime.utcfromtimestamp(unix_timestamp_nanosec)
-    return dt.strftime('%Y-%m-%d %H:%M:%S.%f')
+    dt = datetime.utcfromtimestamp(unix_timestamp_nanosec // 1000000000)
+    nanosec = (unix_timestamp_nanosec - (unix_timestamp_nanosec // 1000000000) * 1000000000)
+    microsec = nanosec // 1000
+    return dt.strftime('%Y-%m-%d %H:%M:%S') + ' {}'.format(microsec)
 
 def make_timestamps_human_readable(dic, key_matcher):
     for key in dic.keys():
@@ -77,3 +79,5 @@ if __name__ == '__main__':
             err_str += '\n'
         sys.stderr.write(err_str)
         sys.exit(1)
+
+#show_benchmark_results('','','test')
