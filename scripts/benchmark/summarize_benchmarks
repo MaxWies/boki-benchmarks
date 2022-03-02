@@ -53,9 +53,17 @@ def show_benchmark_results(remote_ip, remote_file_path, local_file_path_target):
         e = sum(benchmark["bucket"]["slots"])
         print("Successful calls {}. Bucket entries {}".format(benchmark["calls_success"], e))
         if "bucket" in benchmark:
-            benchmark["latency_median"] = compute_bucket_percentile(benchmark["bucket"], e, 0.5)
+            benchmark["latency_p10"] = compute_bucket_percentile(benchmark["bucket"], e, 0.10)
+            benchmark["latency_p50"] = compute_bucket_percentile(benchmark["bucket"], e, 0.5)
+            benchmark["latency_p75"] = compute_bucket_percentile(benchmark["bucket"], e, 0.75)
+            benchmark["latency_p90"] = compute_bucket_percentile(benchmark["bucket"], e, 0.90)
             benchmark["latency_p99"] = compute_bucket_percentile(benchmark["bucket"], e, 0.99)
+            benchmark["latency_p99.9"] = compute_bucket_percentile(benchmark["bucket"], e, 0.999)
             del benchmark["bucket"]
+        if "latency_head" in benchmark:
+            benchmark["latency_min"] = min(benchmark["latency_head"]["items"])
+        if "latency_tail" in benchmark:
+            benchmark["latency_max"] = max(benchmark["latency_tail"]["items"])
         if "time_log" in benchmark:
             make_timestamps_human_readable(benchmark["time_log"], 'time')
         pretty_benchmark = json.dumps(benchmark, sort_keys=True, indent=4)
