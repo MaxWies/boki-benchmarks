@@ -182,7 +182,7 @@ func clientLoopAsyncBenchmark(functionName string, requestInputBuilder func() ut
 		// we assume round robin
 		mergeClient.SendRequest(FLAGS_fn_merge_prefix+constants.FunctionMergeResults, utils.JSONValue{
 			"directory": engineDirectory,
-			"function":  constants.FunctionAppendLoopAsync,
+			"function":  functionName,
 		})
 		e++
 	}
@@ -194,7 +194,7 @@ func clientLoopAsyncBenchmark(functionName string, requestInputBuilder func() ut
 		}
 		mergeInput := httpResult.Result.(response.Benchmark)
 		// write per-engine result to file
-		if err := (&mergeInput).WriteToFile(clientDirectory, fmt.Sprintf("engine-%d", i)); err != nil {
+		if err := (&mergeInput).WriteToFile(clientDirectory, fmt.Sprintf("engine-%d-%s", i, functionName)); err != nil {
 			log.Printf("[ERROR] Merge responses of all engines not successful")
 			return
 		}
@@ -208,7 +208,7 @@ func clientLoopAsyncBenchmark(functionName string, requestInputBuilder func() ut
 	(&mergedResponse).Description.Engines = FLAGS_num_engines
 
 	// write all engines result to file
-	if err := (&mergedResponse).WriteToFile(clientDirectory, "engine-all"); err != nil {
+	if err := (&mergedResponse).WriteToFile(clientDirectory, fmt.Sprintf("engine-%s", functionName)); err != nil {
 		log.Printf("[ERROR] Merge responses of all engines not successful")
 		return
 	}

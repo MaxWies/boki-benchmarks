@@ -87,6 +87,7 @@ func (this *Benchmark) WriteToFile(directory string, fileName string) error {
 		return err
 	}
 	filePath := path.Join(directory, fileName)
+	log.Printf("[INFO] Write benchmark as %s", filePath)
 	err = ioutil.WriteFile(filePath, marshalled, 0644)
 	if err != nil {
 		log.Printf("[ERROR] Failed to write to file %s", filePath)

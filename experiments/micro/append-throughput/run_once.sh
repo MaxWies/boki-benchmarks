@@ -100,5 +100,5 @@ mkdir -p $EXP_DIR/benchmark
 #/tmp/boki/output/benchmark/AppendToLogLoopAsync
 scp -r -q $CLIENT_HOST:/tmp/boki/output/benchmark/$BENCHMARK_TYPE/* $EXP_DIR/benchmark
 for engine_result in $EXP_DIR/benchmark/$BENCHMARK_TYPE; do
-    $BENCHMARK_SCRIPT --result-file=$engine_result
+    $BENCHMARK_SCRIPT --result-file=$EXP_DIR/benchmark/$engine_result
 done
