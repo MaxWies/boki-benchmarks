@@ -20,8 +20,9 @@ ALL_HOSTS=`$HELPER_SCRIPT get-all-server-hosts --base-dir=$BASE_DIR`
 
 docker-compose \
     -f $BASE_DIR/docker-compose-without-controller.yml \
-    -f $BASE_DIR/docker-compose-controller.yml \
-    $BASE_DIR/docker-compose.yml
+    -f $BASE_DIR/$SETTING/docker-compose-controller.yml \
+    config \
+    >> $BASE_DIR/docker-compose.yml
 
 $HELPER_SCRIPT generate-docker-compose --base-dir=$BASE_DIR
 scp -q $BASE_DIR/docker-compose.yml $MANAGER_HOST:~
