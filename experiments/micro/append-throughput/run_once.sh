@@ -2,13 +2,13 @@
 BASE_DIR=`realpath $(dirname $0)`
 ROOT_DIR=`realpath $BASE_DIR/../../..`
 
-CONFIGURATION=$1
+SETTING=$1
 BENCHMARK_TYPE=$2
 CONCURRENCY=$3
 DURATION=$4
 RECORD_LENGTH=$5
 
-EXP_DIR=$BASE_DIR/results/con$CONCURRENCY-$CONFIGURATION/$BENCHMARK_TYPE
+EXP_DIR=$BASE_DIR/results/con$CONCURRENCY/$SETTING
 
 HELPER_SCRIPT=$ROOT_DIR/scripts/exp_helper
 BENCHMARK_SCRIPT=$ROOT_DIR/scripts/benchmark/summarize_benchmarks
@@ -98,7 +98,7 @@ $HELPER_SCRIPT collect-container-logs --base-dir=$BASE_DIR --log-path=$EXP_DIR/l
 mkdir -p $EXP_DIR/benchmark
 
 #/tmp/boki/output/benchmark/AppendToLogLoopAsync
-scp -r -q $CLIENT_HOST:/tmp/boki/output/benchmark/$BENCHMARK_TYPE $EXP_DIR/benchmark
+scp -r -q $CLIENT_HOST:/tmp/boki/output/benchmark/$BENCHMARK_TYPE/* $EXP_DIR/benchmark
 for engine_result in $EXP_DIR/benchmark/$BENCHMARK_TYPE; do
     $BENCHMARK_SCRIPT --result-file=$engine_result
 done
