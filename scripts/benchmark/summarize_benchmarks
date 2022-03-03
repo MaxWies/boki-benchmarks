@@ -17,14 +17,6 @@ def run_remote_command(ssh_ip, cmd):
         raise Exception('Failed to run remote command: ' + ' '.join(cmd) + '\n' + ret.stderr)
     return ret.stdout, ret.stderr
 
-def run_remote_copy(ssh_ip, remote_file_path, local_file_path_target):
-    cmd = ['scp', ssh_ip + '-' + USER_NAME + ':' + remote_file_path, local_file_path_target]
-    print('{}:{}'.format(ssh_ip, cmd), file=sys.stderr)
-    ret = sp.run(cmd, stdout=sp.PIPE, stderr=sp.PIPE, encoding='utf8')
-    if ret.returncode != 0:
-        print('Failed to run remote command: ' + ' '.join(cmd) + '\n' + ret.stderr)
-    return ret.stdout, ret.stderr
-
 def compute_bucket_percentile(bucket, number_of_entries, percentile):
     bucket_slot_index = 0
     threshold = percentile * number_of_entries
@@ -45,10 +37,9 @@ def make_timestamps_human_readable(dic, key_matcher):
         if key_matcher in key:
             dic[key] = unix_timestamp_to_datetime(dic[key])
 
-def show_benchmark_results(remote_ip, remote_file_path, local_file_path_target):
-    run_remote_copy(remote_ip, remote_file_path, local_file_path_target)
+def show_benchmark_results(result_file):
     pretty_benchmark = None
-    with open(local_file_path_target) as f:
+    with open(result_file) as f:
         benchmark = json.load(f)
         e = sum(benchmark["bucket"]["slots"])
         print("Successful calls {}. Bucket entries {}".format(benchmark["calls_success"], e))
@@ -69,18 +60,15 @@ def show_benchmark_results(remote_ip, remote_file_path, local_file_path_target):
         pretty_benchmark = json.dumps(benchmark, sort_keys=True, indent=4)
     if pretty_benchmark is None:
         raise Exception
-    with open(os.path.join(os.path.dirname(local_file_path_target), "result-pretty"), 'w') as f:
+    with open(os.path.join(os.path.dirname(result_file), os.path.basename(result_file)), 'w') as f:
         f.write(pretty_benchmark)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--ssh-ip', type=str)
-    parser.add_argument('--remote-file-path', type=str)
-    parser.add_argument('--local-target-file-path', type=str)
+    parser.add_argument('--result-file', type=str)
     args = parser.parse_args()
     try:
-        os.makedirs(os.path.dirname(args.local_target_file_path), exist_ok=True)
-        show_benchmark_results(args.ssh_ip, args.remote_file_path, args.local_target_file_path)
+        show_benchmark_results(args.result_file)
     except Exception as e:
         err_str = str(e)
         if not err_str.endswith('\n'):

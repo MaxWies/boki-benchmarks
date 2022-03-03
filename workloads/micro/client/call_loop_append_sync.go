@@ -7,14 +7,14 @@ import (
 	"log"
 	"net/http"
 
-	"faas-micro/handlers"
+	"faas-micro/response"
 )
 
 type HttpResultAppendLoop struct {
-	Err              error
-	Success          bool
-	StatusCode       int
-	AppendLoopOutput handlers.AppendLoopResponse
+	Err        error
+	Success    bool
+	StatusCode int
+	Benchmark  response.Benchmark
 }
 
 type CallSyncLoopAppend struct {
@@ -37,8 +37,8 @@ func (callSync *CallSyncLoopAppend) JsonPostRequest(client *http.Client, url str
 		return &HttpResult{Success: false, StatusCode: resp.StatusCode}
 	}
 
-	var appendLoopOutput handlers.AppendLoopResponse
-	err = json.NewDecoder(resp.Body).Decode(&appendLoopOutput)
+	var benchmark response.Benchmark
+	err = json.NewDecoder(resp.Body).Decode(&benchmark)
 	if err != nil {
 		log.Fatalf("[FATAL] Failed to decode JSON response: %v", err)
 	}
@@ -46,7 +46,7 @@ func (callSync *CallSyncLoopAppend) JsonPostRequest(client *http.Client, url str
 
 	return &HttpResult{
 		StatusCode: resp.StatusCode,
-		Result:     appendLoopOutput,
+		Result:     benchmark,
 	}
 }
 

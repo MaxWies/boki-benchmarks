@@ -48,19 +48,6 @@ services:
                 soft: 67108864
                 hard: 67108864
 
-  boki-controller:
-    image: zjia/boki:sosp-ae
-    entrypoint:
-      - /boki/controller
-      - --zookeeper_host=zookeeper:2181
-      - --metalog_replicas=3
-      - --userlog_replicas=1
-      - --index_replicas=1
-      - --v=1
-    depends_on:
-      - zookeeper-setup
-    restart: always
-
   boki-gateway:
     image: zjia/boki:sosp-ae
     hostname: faas-gateway
@@ -142,7 +129,7 @@ services:
 
   micro-append-loop:
     image: maxwie/boki-microbench:latest
-    entrypoint: ["/tmp/boki/run_launcher_async", "/microbench-bin/main", "1", "AppendToLogLoopAsync"]
+    entrypoint: ["/tmp/boki/run_launcher_async", "/microbench-bin/main", "1", "append-throughput"]
     volumes:
       - /mnt/inmem/boki:/tmp/boki
     environment:

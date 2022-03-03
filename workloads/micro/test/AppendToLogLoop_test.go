@@ -9,11 +9,12 @@ import (
 
 	"faas-micro/constants"
 	"faas-micro/handlers"
+	"faas-micro/response"
 	"faas-micro/utils"
 )
 
 const (
-	outputDirectoryPath string = constants.BASE_PATH_ENGINE_BOKI_BENCHMARK + "/" + constants.AppendLoopAsync
+	outputDirectoryPath string = constants.BASE_PATH_ENGINE_BOKI_BENCHMARK + "/" + "append-throughput"
 )
 
 func SampleRequest() utils.JSONValue {
@@ -25,13 +26,18 @@ func SampleRequest() utils.JSONValue {
 		"latency_bucket_granularity": 10,
 		"latency_head_size":          10,
 		"latency_tail_size":          10,
+		"benchmark_type":             constants.BenchmarkAppendThroughput,
 	}
 }
 
-func MergeRequest() utils.JSONValue {
+func MergeRequest(isAsync bool) utils.JSONValue {
+	function := constants.FunctionAppendLoop
+	if isAsync {
+		function = constants.FunctionAppendLoopAsync
+	}
 	return utils.JSONValue{
-		"Directory":    outputDirectoryPath,
-		"MergableType": "AppendLoopResponse",
+		"directory": outputDirectoryPath,
+		"function":  function,
 	}
 }
 
@@ -49,7 +55,7 @@ func AppendCall(isAsync bool, t *testing.T) {
 		t.Error("Error is not nil")
 	}
 
-	var appendLoopOutput handlers.AppendLoopResponse
+	var appendLoopOutput response.Benchmark
 	err = json.Unmarshal(result, &appendLoopOutput)
 	if err != nil {
 		log.Fatalf("[FATAL] Failed to decode JSON response: %v", err)
@@ -57,9 +63,9 @@ func AppendCall(isAsync bool, t *testing.T) {
 	_ = result
 }
 
-func MergeCall(t *testing.T) {
+func MergeCall(isAsync bool, t *testing.T) {
 	handler := handlers.NewMergeHandler()
-	request := MergeRequest()
+	request := MergeRequest(isAsync)
 	encoded, err := json.Marshal(request)
 	if err != nil {
 		log.Fatalf("[FATAL] Failed to encode JSON request: %v", err)
@@ -69,12 +75,12 @@ func MergeCall(t *testing.T) {
 	if err != nil {
 		t.Error("Error is not nil")
 	}
-	var appendLoopResponse handlers.AppendLoopResponse
-	err = json.Unmarshal(result, &appendLoopResponse)
+	var benchmark response.Benchmark
+	err = json.Unmarshal(result, &benchmark)
 	if err != nil {
 		log.Fatalf("[FATAL] Failed to decode JSON response: %v", err)
 	}
-	if !appendLoopResponse.TimeLog.Valid {
+	if !benchmark.TimeLog.Valid {
 		t.Error("Time Log is invalid")
 	}
 	fmt.Printf("%s", result)
@@ -109,5 +115,5 @@ func TestAppendToLogLoopAsync_MultipleFunctions(t *testing.T) {
 
 func TestAppendToLogLoopAsync_MultipleFunctions_MergeResults(t *testing.T) {
 	TestAppendToLogLoopAsync_MultipleFunctions(t)
-	MergeCall(t)
+	MergeCall(true, t)
 }

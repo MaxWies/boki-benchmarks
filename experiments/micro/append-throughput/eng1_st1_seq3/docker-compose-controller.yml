@@ -1,0 +1,14 @@
+version: "3.8"
+services:
+  boki-controller:
+    image: zjia/boki:sosp-ae
+    entrypoint:
+      - /boki/controller
+      - --zookeeper_host=zookeeper:2181
+      - --metalog_replicas=3
+      - --userlog_replicas=1
+      - --index_replicas=1
+      - --v=1
+    depends_on:
+      - zookeeper-setup
+    restart: always

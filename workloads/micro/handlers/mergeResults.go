@@ -4,21 +4,18 @@ import (
 	"context"
 	"encoding/json"
 	"faas-micro/merge"
-	"fmt"
+	"faas-micro/response"
 	"io/ioutil"
 	"log"
 	"path"
+	"strings"
 
 	"cs.utexas.edu/zjia/faas/types"
 )
 
-const (
-	MergeType_AppendLoopResponse string = "AppendLoopResponse"
-)
-
 type MergeRequest struct {
-	Directory    string `json:"Directory"`
-	MergableType string `json:"MergableType"`
+	Directory string `json:"directory"`
+	Function  string `json:"function"`
 }
 
 type MergeHandler struct {
@@ -29,25 +26,31 @@ func NewMergeHandler() types.FuncHandler {
 }
 
 func (h *MergeHandler) CreateMergable(mergerType string) (merge.Mergable, error) {
-	switch mergerType {
-	case MergeType_AppendLoopResponse:
-		return &AppendLoopResponse{
-			Message: "No Results",
-		}, nil
-	default:
-		return nil, fmt.Errorf("Unknown merger type %s", mergerType)
-	}
+	// switch mergerType {
+	// case MergeType_AppendLoopResponse:
+	// 	return &response.Benchmark{
+	// 		Message: "No Results",
+	// 	}, nil
+	// default:
+	// 	return nil, fmt.Errorf("Unknown merger type %s", mergerType)
+	// }
+	return &response.Benchmark{
+		Message: "No Results",
+	}, nil
 }
 
 func (h *MergeHandler) CreateMergableFromJson(mergerType string, marshalled []byte) (merge.Mergable, error) {
-	switch mergerType {
-	case MergeType_AppendLoopResponse:
-		var appendLoopResponse AppendLoopResponse
-		err := json.Unmarshal(marshalled, &appendLoopResponse)
-		return &appendLoopResponse, err
-	default:
-		return nil, fmt.Errorf("Unknown merger type %s", mergerType)
-	}
+	// switch mergerType {
+	// case MergeType_AppendLoopResponse:
+	// 	var appendLoopResponse response.Benchmark
+	// 	err := json.Unmarshal(marshalled, &appendLoopResponse)
+	// 	return &appendLoopResponse, err
+	// default:
+	// 	return nil, fmt.Errorf("Unknown merger type %s", mergerType)
+	// }
+	var benchmarkResponse response.Benchmark
+	err := json.Unmarshal(marshalled, &benchmarkResponse)
+	return &benchmarkResponse, err
 }
 
 func (h *MergeHandler) Call(ctx context.Context, input []byte) ([]byte, error) {
@@ -58,16 +61,19 @@ func (h *MergeHandler) Call(ctx context.Context, input []byte) ([]byte, error) {
 		return nil, err
 	}
 	files, err := ioutil.ReadDir(mergeRequest.Directory)
-	mergable, err := h.CreateMergable(mergeRequest.MergableType)
+	mergable, err := h.CreateMergable(mergeRequest.Function)
 	if err != nil {
 		return nil, err
 	}
 	for i, file := range files {
+		if !strings.Contains(file.Name(), mergeRequest.Function) {
+			continue
+		}
 		marshalled, err := ioutil.ReadFile(path.Join(mergeRequest.Directory, file.Name()))
 		if err != nil {
 			return nil, err
 		}
-		mergeInput, err := h.CreateMergableFromJson(mergeRequest.MergableType, marshalled)
+		mergeInput, err := h.CreateMergableFromJson(mergeRequest.Function, marshalled)
 		if err != nil {
 			return nil, err
 		}
@@ -79,7 +85,7 @@ func (h *MergeHandler) Call(ctx context.Context, input []byte) ([]byte, error) {
 	}
 
 	if len(files) == 0 {
-		emptyMergable, err := h.CreateMergable(mergeRequest.MergableType)
+		emptyMergable, err := h.CreateMergable(mergeRequest.Function)
 		mergable = emptyMergable
 		if err != nil {
 			return nil, err

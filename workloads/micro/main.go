@@ -15,17 +15,17 @@ type funcHandlerFactory struct {
 
 func (f *funcHandlerFactory) New(env types.Environment, funcName string) (types.FuncHandler, error) {
 	switch funcName {
-	case constants.Append:
+	case constants.FunctionAppend:
 		return handlers.NewAppendHandler(env), nil
-	case constants.Read:
+	case constants.FunctionRead:
 		return handlers.NewReadHandler(env), nil
-	case constants.AppendAndRead:
+	case constants.FunctionAppendAndRead:
 		return handlers.NewAppendAndReadHandler(env), nil
-	case constants.AppendLoop:
+	case constants.FunctionAppendLoop:
 		return handlers.NewAppendLoopHandler(env, false), nil
-	case constants.AppendLoopAsync:
+	case constants.FunctionAppendLoopAsync:
 		return handlers.NewAppendLoopHandler(env, true), nil
-	case constants.MergeResults:
+	case constants.FunctionMergeResults:
 		return handlers.NewMergeHandler(), nil
 	default:
 		return nil, fmt.Errorf("Unknown function name: %s", funcName)

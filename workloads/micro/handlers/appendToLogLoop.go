@@ -4,14 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"path"
 	"time"
 
 	"faas-micro/constants"
-	"faas-micro/merge"
 	"faas-micro/operations"
+	"faas-micro/response"
 
 	"faas-micro/utils"
 
@@ -28,77 +27,7 @@ type AppendLoopInput struct {
 	LatencyBucketGranularity int64  `json:"latency_bucket_granularity"`
 	LatencyHeadSize          int    `json:"latency_head_size"`
 	LatencyTailSize          int    `json:"latency_tail_size"`
-}
-
-type TimeLog struct {
-	LoopDuration int   `json:"loop_duration"`  // original duration
-	StartTime    int64 `json:"time_start"`     // start time of concurrent running
-	EndTime      int64 `json:"time_end"`       // end time of concurrent running
-	MinStartTime int64 `json:"time_start_min"` // the smallest start time seen
-	MaxStartTime int64 `json:"time_start_max"` // the latest start time seen
-	MinEndTime   int64 `json:"time_end_min"`   // the smallest end time seen
-	MaxEndTime   int64 `json:"time_end_max"`   // the latest end time seen
-	Valid        bool  `json:"valid"`          // if time log appears valid or not
-}
-
-type Description struct {
-	Latency    string `json:"latency"`
-	Throughput string `json:"throughput"`
-	RecordSize string `json:"record_size"`
-	Benchmark  string `json:"benchmark"`
-}
-
-func (this *TimeLog) Merge(object interface{}) {
-	other := (object).(merge.Mergable).(*TimeLog)
-	// if this.LoopDuration != other.LoopDuration {
-	// 	return error
-	// }
-	this.StartTime = utils.Max(this.StartTime, other.StartTime)
-	this.EndTime = utils.Min(this.EndTime, other.EndTime)
-	this.MinStartTime = utils.Min(this.MinStartTime, other.MinStartTime)
-	this.MaxStartTime = utils.Max(this.MaxStartTime, other.MaxStartTime)
-	this.MinEndTime = utils.Min(this.MinEndTime, other.MinEndTime)
-	this.MaxEndTime = utils.Max(this.MaxEndTime, other.MaxEndTime)
-	this.Valid = this.Valid && other.Valid
-	if this.StartTime >= this.EndTime || this.LoopDuration != other.LoopDuration {
-		this.Valid = false
-	}
-}
-
-// Response sync
-type AppendLoopResponse struct {
-	Success             uint                   `json:"calls_success"`
-	Calls               uint                   `json:"calls"`
-	Throughput          float64                `json:"throughput"`
-	AverageLatency      float64                `json:"latency_average"`
-	BucketLatency       utils.Bucket           `json:"bucket"`
-	HeadLatency         utils.PriorityQueueMin `json:"latency_head"`
-	TailLatency         utils.PriorityQueueMax `json:"latency_tail"`
-	Message             string                 `json:"message,omitempty"`
-	TimeLog             TimeLog                `json:"time_log,omitempty"`
-	Description         Description            `json:"description,omitempty"`
-	ConcurrentFunctions int                    `json:"concurrent_functions"`
-}
-
-func (this *AppendLoopResponse) Merge(object interface{}) {
-	other := (object).(merge.Mergable).(*AppendLoopResponse)
-	this.AverageLatency =
-		this.AverageLatency*(float64(this.Success)/(float64(this.Success)+float64(other.Success))) +
-			other.AverageLatency*(float64(other.Success)/(float64(this.Success)+float64(other.Success)))
-	this.Throughput += other.Throughput
-	this.Calls += other.Calls
-	this.Success += other.Success
-	this.ConcurrentFunctions += other.ConcurrentFunctions
-	for i := range other.BucketLatency.Slots {
-		this.BucketLatency.Slots[i] += other.BucketLatency.Slots[i]
-	}
-	this.HeadLatency.Merge(&other.HeadLatency)
-	this.TailLatency.Merge(&other.TailLatency)
-	this.TimeLog.Merge(&other.TimeLog)
-}
-
-// Response async
-type AppendLoopAsyncResponse struct {
+	BenchmarkType            string `json:"benchmark_type"`
 }
 
 type appendLoopHandler struct {
@@ -162,7 +91,8 @@ func (h *appendLoopHandler) Call(ctx context.Context, input []byte) ([]byte, err
 	}
 	throughput := float64(success) / float64(time.Since(startTime).Seconds())
 
-	response := &AppendLoopResponse{
+	benchmark := &response.Benchmark{
+		Id:                  uuid.New(),
 		Success:             uint(success),
 		Calls:               calls,
 		Throughput:          throughput,
@@ -171,7 +101,7 @@ func (h *appendLoopHandler) Call(ctx context.Context, input []byte) ([]byte, err
 		HeadLatency:         headLatency,
 		TailLatency:         tailLatency,
 		ConcurrentFunctions: 1,
-		TimeLog: TimeLog{
+		TimeLog: response.TimeLog{
 			LoopDuration: parsedInput.LoopDuration,
 			StartTime:    startTime.UnixNano(),
 			EndTime:      endTime.UnixNano(),
@@ -181,7 +111,7 @@ func (h *appendLoopHandler) Call(ctx context.Context, input []byte) ([]byte, err
 			MaxEndTime:   endTime.UnixNano(),
 			Valid:        true,
 		},
-		Description: Description{
+		Description: response.Description{
 			Benchmark:  "Append to Log",
 			Throughput: "[Op/s] Operations per second",
 			Latency:    "[microsec] Operation latency",
@@ -191,17 +121,15 @@ func (h *appendLoopHandler) Call(ctx context.Context, input []byte) ([]byte, err
 
 	log.Printf("[INFO] Loop finished. %d calls successful from %d total calls", int(success), calls)
 
-	marshalledResponse, err := json.Marshal(response)
-
 	if h.isAsync {
-		uuid := uuid.New().String()
-		filePath := path.Join(constants.BASE_PATH_ENGINE_BOKI_BENCHMARK, constants.AppendLoopAsync, uuid)
-		err = ioutil.WriteFile(filePath, marshalledResponse, 0644)
+		fileDirectory := path.Join(constants.BASE_PATH_ENGINE_BOKI_BENCHMARK, parsedInput.BenchmarkType)
+		fileName := constants.FunctionAppendLoopAsync + "_" + benchmark.Id.String()
+		err = benchmark.WriteToFile(fileDirectory, fileName)
 		if err != nil {
 			return nil, err
 		}
-		return json.Marshal(&AppendLoopAsyncResponse{})
+		return json.Marshal(&response.BenchmarkAsync{})
 	} else {
-		return marshalledResponse, err
+		return json.Marshal(benchmark)
 	}
 }
