@@ -6,15 +6,15 @@ CONFIG_DIR=`realpath $ROOT_DIR/..`
 BENCHMARK=$(basename "$PWD")
 HELPER_SCRIPT=$ROOT_DIR/scripts/exp_helper
 
-BOKI_SETTING="eng1-st1-seq3"
+BOKI_SETTING=eng1-st1-seq3
 CONFIGURATION=$BENCHMARK-$BOKI_SETTING
 echo "Run benchmarks for $CONFIGURATION"
 cp $CONFIG_DIR/config_$CONFIGURATION.json $BASE_DIR/config.json
-docker-compose \
-    -f $BASE_DIR/docker-compose-no-controller.yml \
-    -f $BASE_DIR/$BOKI_SETTING/docker-compose-controller.yml \
-    config \
-    >> $BASE_DIR/docker-compose.yml
+# docker-compose \
+#     -f $BASE_DIR/docker-compose-no-controller.yml \
+#     -f $BASE_DIR/$BOKI_SETTING/docker-compose-controller.yml \
+#     config \
+#     >> $BASE_DIR/docker-compose.yml
 $HELPER_SCRIPT start-machines --base-dir=$BASE_DIR
 $BASE_DIR/run_once.sh $BOKI_SETTING $BENCHMARK 320 20 1024
 # $BASE_DIR/run_once.sh $BOKI_SETTING $BENCHMARK 640 20 1024

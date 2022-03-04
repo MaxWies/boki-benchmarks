@@ -1,5 +1,17 @@
 version: "3.8"
 services:
+  boki-controller:
+    image: zjia/boki:sosp-ae
+    entrypoint:
+      - /boki/controller
+      - --zookeeper_host=zookeeper:2181
+      - --metalog_replicas=3
+      - --userlog_replicas=1
+      - --index_replicas=4
+      - --v=1
+    depends_on:
+      - zookeeper-setup
+    restart: always
   zookeeper:
     image: zookeeper:3.6.2
     hostname: zookeeper
@@ -11,7 +23,7 @@ services:
     image: zookeeper:3.6.2
     command: /tmp/boki/zk_setup.sh
     depends_on:
-       - zookeeper
+        - zookeeper
     volumes:
       - /tmp/zk_setup.sh:/tmp/boki/zk_setup.sh
     restart: always
