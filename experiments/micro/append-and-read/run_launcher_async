@@ -1,0 +1,12 @@
+#!/bin/bash
+
+BENCHMARK_DIR=/tmp/boki/output/benchmark/$3
+if [ -d "$BENCHMARK_DIR" ]; then rm -Rf $BENCHMARK_DIR; fi
+mkdir -p $BENCHMARK_DIR
+
+/boki/launcher \
+    --fprocess_mode=go \
+    --root_path_for_ipc=/tmp/boki/ipc \
+    --fprocess_output_dir=/tmp/boki/output \
+    --fprocess="$1" \
+    --func_id=$2

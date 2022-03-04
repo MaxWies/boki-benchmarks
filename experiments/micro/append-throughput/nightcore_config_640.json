@@ -1,4 +1,4 @@
 [
-    { "funcName": "AppendToLogLoopAsync", "funcId": 1, "minWorkers": 640, "maxWorkers": 640 },
+    { "funcName": "AppendLoopAsync", "funcId": 1, "minWorkers": 640, "maxWorkers": 640 },
     { "funcName": "MergeResults", "funcId": 2, "minWorkers": 1, "maxWorkers": 1 }
 ]
