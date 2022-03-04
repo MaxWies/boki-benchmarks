@@ -45,18 +45,87 @@ type Description struct {
 }
 
 type Benchmark struct {
-	Id                  uuid.UUID              `json:"uuid"`
-	Success             uint                   `json:"calls_success"`
-	Calls               uint                   `json:"calls"`
-	Throughput          float64                `json:"throughput"`
-	AverageLatency      float64                `json:"latency_average"`
-	BucketLatency       utils.Bucket           `json:"bucket"`
-	HeadLatency         utils.PriorityQueueMin `json:"latency_head"`
-	TailLatency         utils.PriorityQueueMax `json:"latency_tail"`
-	Message             string                 `json:"message,omitempty"`
-	TimeLog             TimeLog                `json:"time_log,omitempty"`
-	Description         Description            `json:"description,omitempty"`
-	ConcurrentFunctions int                    `json:"concurrent_functions"`
+	Id                  uuid.UUID   `json:"uuid"`
+	Success             uint        `json:"calls_success"`
+	Calls               uint        `json:"calls"`
+	ConcurrentFunctions int         `json:"concurrent_functions"`
+	Operations          []Operation `json:"operations"`
+	Message             string      `json:"message,omitempty"`
+	TimeLog             TimeLog     `json:"time_log,omitempty"`
+	Description         Description `json:"description,omitempty"`
+	Throughput          float64     `json:"throughput"`
+}
+
+type Operation struct {
+	Calls          uint                   `json:"calls"`
+	Success        uint                   `json:"calls_success"`
+	AverageLatency float64                `json:"latency_average"`
+	BucketLatency  utils.Bucket           `json:"bucket"`
+	HeadLatency    utils.PriorityQueueMin `json:"latency_head"`
+	TailLatency    utils.PriorityQueueMax `json:"latency_tail"`
+	Description    string                 `json:"description"`
+}
+
+func (this *Operation) AddSuccess(operationDuration int64) {
+	this.Calls++
+	this.Success++
+	s := float64(this.Success)
+	this.AverageLatency = ((s-1)/s)*this.AverageLatency + (1/s)*float64(operationDuration)
+	this.BucketLatency.Insert(operationDuration)
+	this.HeadLatency.Add(operationDuration)
+	this.TailLatency.Add(operationDuration)
+}
+
+func (this *Operation) AddFailure() {
+	this.Calls++
+}
+
+func CreateInitialOperationResult(Description string, latencyBucketLower int64, latencyBucketUpper int64, latencyBucketGranularity int64, latencyHeadSize int, latencyTailSize int) *Operation {
+	return &Operation{
+		Calls:         0,
+		Success:       0,
+		Description:   Description,
+		BucketLatency: *utils.CreateBucket(latencyBucketLower, latencyBucketUpper, latencyBucketGranularity),
+		HeadLatency: utils.PriorityQueueMin{
+			Items: []int64{},
+			Limit: latencyHeadSize,
+		},
+		TailLatency: utils.PriorityQueueMax{
+			Items: []int64{},
+			Limit: latencyTailSize,
+		},
+	}
+}
+
+func CreateEmptyOperationResult() *Operation {
+	return &Operation{}
+}
+
+func (this *Operation) Merge(object interface{}) {
+	other := (object).(merge.Mergable).(*Operation)
+	this.Calls += other.Calls
+	if this.Description != other.Description {
+		log.Print("[WARNING] Cannot merge different operations")
+		return
+	}
+	if other.Success == 0 {
+	} else if this.Success == 0 {
+		this.Success = other.Success
+		this.AverageLatency = other.AverageLatency
+		this.BucketLatency = other.BucketLatency
+		this.HeadLatency = other.HeadLatency
+	} else {
+		this.AverageLatency =
+			this.AverageLatency*(float64(this.Success)/(float64(this.Success)+float64(other.Success))) +
+				other.AverageLatency*(float64(other.Success)/(float64(this.Success)+float64(other.Success)))
+		this.Success += other.Success
+		for i := range other.BucketLatency.Slots {
+			this.BucketLatency.Slots[i] += other.BucketLatency.Slots[i]
+		}
+		this.HeadLatency.Merge(&other.HeadLatency)
+		this.TailLatency.Merge(&other.TailLatency)
+	}
+
 }
 
 func (this *Benchmark) Merge(object interface{}) {
@@ -65,18 +134,17 @@ func (this *Benchmark) Merge(object interface{}) {
 		log.Print("[WARNING] Cannot merge same responses")
 		return
 	}
-	this.AverageLatency =
-		this.AverageLatency*(float64(this.Success)/(float64(this.Success)+float64(other.Success))) +
-			other.AverageLatency*(float64(other.Success)/(float64(this.Success)+float64(other.Success)))
-	this.Throughput += other.Throughput
+	if len(this.Operations) != len(other.Operations) {
+		log.Print("[WARNING] Cannot merge different operation sizes")
+		return
+	}
+	for i := range this.Operations {
+		this.Operations[i].Merge(&other.Operations[i])
+	}
 	this.Calls += other.Calls
 	this.Success += other.Success
+	this.Throughput += other.Throughput
 	this.ConcurrentFunctions += other.ConcurrentFunctions
-	for i := range other.BucketLatency.Slots {
-		this.BucketLatency.Slots[i] += other.BucketLatency.Slots[i]
-	}
-	this.HeadLatency.Merge(&other.HeadLatency)
-	this.TailLatency.Merge(&other.TailLatency)
 	this.TimeLog.Merge(&other.TimeLog)
 }
 

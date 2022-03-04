@@ -17,20 +17,20 @@ type AppendOutput struct {
 	Message string `json:"message,omitempty"`
 }
 
-func Append(ctx context.Context, env types.Environment, input *AppendInput) (*AppendOutput, error) {
+func Append(ctx context.Context, env types.Environment, input *AppendInput) (uint64, error) {
 	//uniqueId := env.GenerateUniqueID()
 	if input.Tags == nil {
 		input.Tags = make([]uint64, 0)
 	}
-	seqNum, err := env.SharedLogAppend(ctx, input.Tags, input.Record)
-	if err != nil {
-		return &AppendOutput{
-			Success: false,
-			Seqnum:  0,
-		}, err
-	}
-	return &AppendOutput{
-		Success: true,
-		Seqnum:  seqNum,
-	}, nil
+	return env.SharedLogAppend(ctx, input.Tags, input.Record)
+	// if err != nil {
+	// 	return &AppendOutput{
+	// 		Success: false,
+	// 		Seqnum:  0,
+	// 	}, err
+	// }
+	// return &AppendOutput{
+	// 	Success: true,
+	// 	Seqnum:  seqNum,
+	// }, nil
 }

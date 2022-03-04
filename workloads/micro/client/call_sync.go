@@ -10,17 +10,17 @@ import (
 	"faas-micro/response"
 )
 
-type HttpResultAppendLoop struct {
+type HttpResultLoop struct {
 	Err        error
 	Success    bool
 	StatusCode int
 	Benchmark  response.Benchmark
 }
 
-type CallSyncLoopAppend struct {
+type CallSync struct {
 }
 
-func (callSync *CallSyncLoopAppend) JsonPostRequest(client *http.Client, url string, request JSONValue) *HttpResult {
+func (callSync *CallSync) JsonPostRequest(client *http.Client, url string, request JSONValue) *HttpResult {
 	encoded, err := json.Marshal(request)
 	if err != nil {
 		log.Fatalf("[FATAL] Failed to encode JSON request: %v", err)
@@ -41,15 +41,17 @@ func (callSync *CallSyncLoopAppend) JsonPostRequest(client *http.Client, url str
 	err = json.NewDecoder(resp.Body).Decode(&benchmark)
 	if err != nil {
 		log.Fatalf("[FATAL] Failed to decode JSON response: %v", err)
+		return &HttpResult{Err: err, Success: false, StatusCode: resp.StatusCode}
 	}
 	log.Printf("[INFO] HTTP response received")
 
 	return &HttpResult{
 		StatusCode: resp.StatusCode,
+		Success:    true,
 		Result:     benchmark,
 	}
 }
 
-func (callSync *CallSyncLoopAppend) BuildFunctionUrl(gatewayAddr string, fnName string) string {
+func (callSync *CallSync) BuildFunctionUrl(gatewayAddr string, fnName string) string {
 	return fmt.Sprintf("http://%s/function/%s", gatewayAddr, fnName)
 }

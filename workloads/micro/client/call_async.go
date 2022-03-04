@@ -8,10 +8,10 @@ import (
 	"net/http"
 )
 
-type CallAsyncLoopAppend struct {
+type CallAsync struct {
 }
 
-func (callAsync *CallAsyncLoopAppend) JsonPostRequest(client *http.Client, url string, request JSONValue) *HttpResult {
+func (callAsync *CallAsync) JsonPostRequest(client *http.Client, url string, request JSONValue) *HttpResult {
 	encoded, err := json.Marshal(request)
 	if err != nil {
 		log.Fatalf("[FATAL] Failed to encode JSON request: %v", err)
@@ -36,6 +36,6 @@ func (callAsync *CallAsyncLoopAppend) JsonPostRequest(client *http.Client, url s
 	}
 }
 
-func (callAsync *CallAsyncLoopAppend) BuildFunctionUrl(gatewayAddr string, fnName string) string {
+func (callAsync *CallAsync) BuildFunctionUrl(gatewayAddr string, fnName string) string {
 	return fmt.Sprintf("http://%s/asyncFunction/%s", gatewayAddr, fnName)
 }

@@ -2,7 +2,7 @@ package test
 
 import (
 	"context"
-	"fmt"
+	"log"
 	"math/rand"
 	"time"
 
@@ -31,12 +31,16 @@ func (m *EnvironmentMock) GenerateUniqueID() uint64 {
 func (m *EnvironmentMock) SharedLogAppend(ctx context.Context, tags []uint64, data []byte) (uint64, error) {
 	r := rand.Float64()
 	s := int64(2000 * r)
-	fmt.Printf("Append: Artificial wait of %d microseconds\n", s)
+	log.Printf("[INFO] Append: Artificial wait of %d microseconds\n", s)
 	time.Sleep(time.Duration(s) * time.Microsecond)
 	return 42, nil
 }
 
 func (m *EnvironmentMock) SharedLogReadNext(ctx context.Context, tag uint64, seqNum uint64) (*types.LogEntry, error) {
+	r := rand.Float64()
+	s := int64(1000 * r)
+	log.Printf("[INFO] Append: Artificial wait of %d microseconds\n", s)
+	time.Sleep(time.Duration(s) * time.Microsecond)
 	return &types.LogEntry{}, nil
 }
 

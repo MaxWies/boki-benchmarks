@@ -25,6 +25,8 @@ func (f *funcHandlerFactory) New(env types.Environment, funcName string) (types.
 		return handlers.NewAppendLoopHandler(env, false), nil
 	case constants.FunctionAppendLoopAsync:
 		return handlers.NewAppendLoopHandler(env, true), nil
+	case constants.FunctionAppendAndReadLoopAsync:
+		return handlers.NewAppendReadLoopHandler(env, true), nil
 	case constants.FunctionMergeResults:
 		return handlers.NewMergeHandler(), nil
 	default:

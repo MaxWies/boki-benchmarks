@@ -15,15 +15,16 @@ type ReadOutput struct {
 	Message string `json:"message,omitempty"`
 }
 
-func readNext(ctx context.Context, env types.Environment, tag uint64, seqNum uint64, input *ReadInput) (*ReadOutput, error) {
-	logEntry, err := env.SharedLogReadNext(ctx, tag, seqNum)
-	if err != nil {
-		return &ReadOutput{
-			Success: false,
-		}, err
-	}
-	return &ReadOutput{
-		Success: true,
-		Message: string(logEntry.Data),
-	}, nil
+func ReadNext(ctx context.Context, env types.Environment, tag uint64, seqNum uint64) (*types.LogEntry, error) {
+	// logEntry, err := env.SharedLogReadNext(ctx, tag, seqNum)
+	// if err != nil {
+	// 	return &ReadOutput{
+	// 		Success: false,
+	// 	}, err
+	// }
+	// return &ReadOutput{
+	// 	Success: true,
+	// 	Message: string(logEntry.Data),
+	// }, nil
+	return env.SharedLogReadNext(ctx, tag, seqNum)
 }

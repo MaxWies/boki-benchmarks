@@ -1,10 +1,11 @@
 package constants
 
 const (
-	FunctionAppend          string = "AppendToLog"
-	FunctionAppendAndRead   string = "AppendToLogAndReadFromLog"
-	FunctionRead            string = "ReadFromLog"
-	FunctionAppendLoop      string = "AppendToLogLoop"
-	FunctionAppendLoopAsync string = "AppendToLogLoopAsync"
-	FunctionMergeResults    string = "MergeResults"
+	FunctionAppend                 string = "Append"
+	FunctionAppendAndRead          string = "AppendAndRead"
+	FunctionRead                   string = "Read"
+	FunctionAppendLoop             string = "AppendLoop"
+	FunctionAppendLoopAsync        string = "AppendLoopAsync"
+	FunctionAppendAndReadLoopAsync string = "AppendAndReadLoopAsync"
+	FunctionMergeResults           string = "MergeResults"
 )

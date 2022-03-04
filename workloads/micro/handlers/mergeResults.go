@@ -65,6 +65,7 @@ func (h *MergeHandler) Call(ctx context.Context, input []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+	merged := 0
 	for i, file := range files {
 		if !strings.Contains(file.Name(), mergeRequest.Function) {
 			continue
@@ -79,9 +80,11 @@ func (h *MergeHandler) Call(ctx context.Context, input []byte) ([]byte, error) {
 		}
 		if i == 0 {
 			mergable = mergeInput
+			merged++
 			continue
 		}
 		mergable.Merge(mergeInput)
+		merged++
 	}
 
 	if len(files) == 0 {
@@ -92,6 +95,6 @@ func (h *MergeHandler) Call(ctx context.Context, input []byte) ([]byte, error) {
 		}
 	}
 
-	log.Printf("[INFO] Merged %d files", len(files))
+	log.Printf("[INFO] Merged %d files", merged)
 	return json.Marshal(mergable)
 }

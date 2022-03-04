@@ -92,14 +92,16 @@ func (h *appendLoopHandler) Call(ctx context.Context, input []byte) ([]byte, err
 	throughput := float64(success) / float64(time.Since(startTime).Seconds())
 
 	benchmark := &response.Benchmark{
-		Id:                  uuid.New(),
-		Success:             uint(success),
-		Calls:               calls,
-		Throughput:          throughput,
-		AverageLatency:      float64(avg_latency),
-		BucketLatency:       *bucketLatency,
-		HeadLatency:         headLatency,
-		TailLatency:         tailLatency,
+		Id:         uuid.New(),
+		Success:    uint(success),
+		Calls:      calls,
+		Throughput: throughput,
+		Operations: []response.Operation{{
+			AverageLatency: float64(avg_latency),
+			BucketLatency:  *bucketLatency,
+			HeadLatency:    headLatency,
+			TailLatency:    tailLatency,
+		}},
 		ConcurrentFunctions: 1,
 		TimeLog: response.TimeLog{
 			LoopDuration: parsedInput.LoopDuration,
