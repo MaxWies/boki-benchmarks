@@ -41,9 +41,9 @@ def show_benchmark_results(result_file):
     pretty_benchmark = None
     with open(result_file) as f:
         benchmark = json.load(f)
-        e = sum(benchmark["bucket"]["slots"])
-        print("Successful calls {}. Bucket entries {}".format(benchmark["calls_success"], e))
         for operation in benchmark["operations"]:
+            e = sum(operation["bucket"]["slots"])
+            print("Successful calls {}. Bucket entries {}".format(operation["calls_success"], e))
             if "bucket" in operation:
                 operation["latency_p10"] = compute_bucket_percentile(operation["bucket"], e, 0.10)
                 operation["latency_p50"] = compute_bucket_percentile(operation["bucket"], e, 0.5)
@@ -77,4 +77,4 @@ if __name__ == '__main__':
         sys.stderr.write(err_str)
         sys.exit(1)
 
-#show_benchmark_results('','','test')
+#show_benchmark_results('test.json')
