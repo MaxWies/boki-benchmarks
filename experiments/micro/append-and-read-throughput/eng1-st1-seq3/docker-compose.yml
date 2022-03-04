@@ -140,9 +140,9 @@ services:
                 soft: 67108864
                 hard: 67108864
 
-  micro-append-loop:
+  micro-append-and-read-loop:
     image: maxwie/boki-microbench:latest
-    entrypoint: ["/tmp/boki/run_launcher_async", "/microbench-bin/main", "1", "append-and-read"]
+    entrypoint: ["/tmp/boki/run_launcher_async", "/microbench-bin/main", "1", "append-and-read-throughput"]
     volumes:
       - /mnt/inmem/boki:/tmp/boki
     environment:
