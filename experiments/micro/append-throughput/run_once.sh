@@ -87,13 +87,9 @@ sleep 10
 
 $HELPER_SCRIPT collect-container-logs --base-dir=$BASE_DIR --log-path=$EXP_DIR/logs
 
-#CLIENT_HOST_IP=`$HELPER_SCRIPT get-client-ip --base-dir=$BASE_DIR`
-#$BENCHMARK_SCRIPT --ssh-ip=$CLIENT_HOST_IP --remote-file-path=/tmp/boki/output/benchmark/AppendToLogLoopAsync/result --local-target-file-path=$EXP_DIR/benchmark/AppendToLogLoopAsync/result
+mkdir -p $EXP_DIR/benchmark/$BENCHMARK_TYPE
 
-mkdir -p $EXP_DIR/benchmark
-
-#/tmp/boki/output/benchmark/AppendToLogLoopAsync
-scp -r -q $CLIENT_HOST:/tmp/boki/output/benchmark/$BENCHMARK_TYPE/* $EXP_DIR/benchmark
-for engine_result in $EXP_DIR/benchmark/$BENCHMARK_TYPE; do
-    $BENCHMARK_SCRIPT --result-file=$EXP_DIR/benchmark/$engine_result
+scp -r -q $CLIENT_HOST:/tmp/boki/output/benchmark/$BENCHMARK_TYPE/* $EXP_DIR/benchmark/$BENCHMARK_TYPE
+for engine_result in $EXP_DIR/benchmark/$BENCHMARK_TYPE/*; do
+    $BENCHMARK_SCRIPT --result-file=$engine_result
 done
