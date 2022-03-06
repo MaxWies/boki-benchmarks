@@ -16,7 +16,7 @@ def load_json_file(file):
     return s
 
 def create_service_from_function_spec(func_dic, func_id):
-    service_name = '{}-{}'.format(func_dic["service_name"], str(func_id))
+    service_name = '{}{}'.format(func_dic["service_name"], str(func_id))
     function_name = func_dic["function_name"]
     service_desc = copy.deepcopy(func_dic["docker"])
     service_desc["entrypoint"].append(str(func_id))
@@ -50,7 +50,7 @@ def generate_nightcore_config(base_dir, spec):
             for f in application["functions"]:
                 id_counter += 1
                 nc_config.append({
-                    "funcName": '{}-{}'.format(f["function_name"], str(id_counter)),
+                    "funcName": '{}{}'.format(f["function_name"], str(id_counter)),
                     "funcId": id_counter,
                     "defaultLogSpace": logspace_counter,
                     "minWorkers": f["min_workers"],
