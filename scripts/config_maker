@@ -1,0 +1,121 @@
+#!/usr/bin/python3
+
+import argparse
+import os
+import sys
+import yaml
+import json
+import copy
+import subprocess as sp
+        
+def load_json_file(file):
+    if not os.path.exists(file):
+        raise Exception('Could not find file {}!'.format(file))
+    with open(file) as f:
+        s = json.load(f)
+    return s
+
+def create_service_from_function_spec(benchmark, func_dic, func_id):
+    service_name = '{}-{}'.format(func_dic["service_name"], str(func_id))
+    function_name = func_dic["function_name"]
+    service_desc = copy.deepcopy(func_dic["docker"])
+    service_desc["entrypoint"].append(str(func_id))
+    #service_desc["entrypoint"].append("{}/{}".format(benchmark, function_name))
+    return service_name, service_desc
+
+def generate_docker_compose_file(base_dir, spec):
+    with open(os.path.join(base_dir, 'docker-compose-main.yml')) as f:
+        compose_file = yaml.safe_load(f)
+    for service in spec["docker"]["services"]:
+        service_name = service["service_name"]
+        service_desc = service["docker"]
+        compose_file['services'][service_name] = service_desc
+    id_counter = 0
+    for application in spec['applications']:
+        for _ in range(application['instances']):
+            for f in application["functions"]:
+                id_counter += 1
+                service_name, service_desc = create_service_from_function_spec(f ,id_counter)
+                compose_file['services'][service_name] = service_desc
+    with open(os.path.join(base_dir, "docker-compose.yaml"), 'w') as f:
+        yaml.dump(compose_file, f, default_flow_style=False, sort_keys=False)
+
+def generate_nightcore_config(base_dir, spec):
+    nc_config = []
+    id_counter = 0
+    logspace_counter = 0
+    for application in spec['applications']:
+        for i in range(application['instances']):
+            logspace_counter += 1
+            for f in application["functions"]:
+                id_counter += 1
+                nc_config.append({
+                    "funcName": '{}-{}'.format(f["function_name"], str(id_counter)),
+                    "funcId": id_counter,
+                    "defaultLogSpace": logspace_counter,
+                    "minWorkers": f["min_workers"],
+                    "maxWorkers": f["max_workers"]
+                })
+    nc_config = json.dumps(nc_config, indent=2)
+    with open(os.path.join(base_dir, "nightcore_config.json"), 'w') as f:
+        f.write(nc_config)
+
+
+def generate_main_config(base_dir, spec):
+    config = {}
+    config["services"] = spec["services"]
+    id_counter = 0
+    for application in spec['applications']:
+        for i in range(application['instances']):
+            for f in application["functions"]:
+                id_counter += 1
+                config["services"]["{}-{}".format(f["function_name"], str(id_counter))] = {
+                    "placement_label": f["placement_label"],
+                    "replicas": f["replicas"]
+                }
+    config = json.dumps(config, indent=2)
+    with open(os.path.join(base_dir, "config.json"), 'w') as f:
+        f.write(config)
+
+def generate_runtime_config(base_dir, spec_file):
+    spec = load_json_file(spec_file)
+    generate_main_config(base_dir, spec)
+    generate_nightcore_config(base_dir, spec)
+    generate_docker_compose_file(base_dir, spec)
+
+# def generate_main_config():
+#     base_dir = '.'
+#     spec_file_name = 'service_specification.json'
+#     #machine_file_name = 'machines.json'
+#     generate_main_config(base_dir, spec_file_name)
+
+def test():
+    # generate_main_config()
+    generate_runtime_config()
+    # base_dir = '.'
+    # spec_file_name = 'service_specification.json'
+    # #machine_file_name = 'machines.json'
+    # generate_main_config(base_dir, machine_file_name, spec_file_name)
+    # generate_nightcore_config(base_dir, spec_file_name)
+    # generate_docker_compose_file(base_dir, spec_file_name)
+
+
+#test()
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('cmd', type=str)
+    parser.add_argument('--base-dir', type=str, default='.')
+    parser.add_argument('--spec-file', type=str, default=None)
+    args = parser.parse_args()
+    try:
+        if args.cmd == 'generate-runtime-config':
+            generate_runtime_config(args.base_dir, args.spec_file)
+        else:
+            raise Exception('Unknown command: ' + args.cmd)
+    except Exception as e:
+        err_str = str(e)
+        if not err_str.endswith('\n'):
+            err_str += '\n'
+        sys.stderr.write(err_str)
+        sys.exit(1)

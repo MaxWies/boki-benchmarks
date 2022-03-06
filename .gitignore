@@ -7,9 +7,14 @@
 /experiments/**/docker-compose-generated.yml
 /experiments/**/results
 /experiments/**/machines.json
+/experiments/**/machines*.json
 
 *.code-workspace
 /.vscode/*
 
 #certificates
 /workloads/micro/certificates*
+
+/experiments/micro/logbook-virtualization/docker-compose.yaml
+/experiments/micro/logbook-virtualization/nightcore_config.json
+/experiments/micro/logbook-virtualization/config.json

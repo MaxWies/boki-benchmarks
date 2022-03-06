@@ -108,7 +108,7 @@ def setup_docker_swarm_for_machines(machine_configs):
             run_remote_command(machine_configs[manager_machine]['ip'], cmd)
 
 def start_machines_main(base_dir):
-    machine_config_file = 'config.json'
+    machine_config_file = 'machines.json'
     if not os.path.exists(os.path.join(base_dir, machine_config_file)):
         raise Exception('Could not find file {}!'.format(machine_config_file))
     with open(os.path.join(base_dir, machine_config_file)) as fin:
@@ -141,19 +141,19 @@ def generate_docker_compose_main(base_dir):
             }
         service_docker_compose['environment'] = []
         service_docker_compose['volumes'] = []
-        if 'need_aws_env' in service_config and service_config['need_aws_env']:
-            if 'aws_access_key_id' in config:
-                service_docker_compose['environment'].append(
-                    'AWS_ACCESS_KEY_ID=%s' % (config['aws_access_key_id'],))
-            if 'aws_secret_access_key' in config:
-                service_docker_compose['environment'].append(
-                    'AWS_SECRET_ACCESS_KEY=%s' % (config['aws_secret_access_key'],))
-            if 'aws_region' in config:
-                service_docker_compose['environment'].append(
-                    'AWS_REGION=%s' % (config['aws_region'],))
-        if 'mount_certs' in service_config and service_config['mount_certs']:
-            service_docker_compose['volumes'].append(
-                '/etc/ssl/certs/ca-certificates.crt:/etc/ssl/certs/ca-certificates.crt')
+        # if 'need_aws_env' in service_config and service_config['need_aws_env']:
+        #     if 'aws_access_key_id' in config:
+        #         service_docker_compose['environment'].append(
+        #             'AWS_ACCESS_KEY_ID=%s' % (config['aws_access_key_id'],))
+        #     if 'aws_secret_access_key' in config:
+        #         service_docker_compose['environment'].append(
+        #             'AWS_SECRET_ACCESS_KEY=%s' % (config['aws_secret_access_key'],))
+        #     if 'aws_region' in config:
+        #         service_docker_compose['environment'].append(
+        #             'AWS_REGION=%s' % (config['aws_region'],))
+        # if 'mount_certs' in service_config and service_config['mount_certs']:
+        #     service_docker_compose['volumes'].append(
+        #         '/etc/ssl/certs/ca-certificates.crt:/etc/ssl/certs/ca-certificates.crt')
     with open(os.path.join(base_dir, 'docker-compose-generated.yml'), 'w') as fout:
         yaml.dump(docker_compose, fout, default_flow_style=False)
 
@@ -165,33 +165,42 @@ def load_config_file(base_dir):
         config = json.load(fin)
     return config
 
+def load_machines_file(base_dir):
+    config_file = 'machines.json'
+    if not os.path.exists(os.path.join(base_dir, config_file)):
+        raise Exception('Could not find file {}!'.format(config_file))
+    with open(os.path.join(base_dir, config_file)) as fin:
+        config = json.load(fin)
+    return config
+
 def get_host_main(base_dir, machine_name):
-    print(load_config_file(base_dir)['machines'][machine_name]['ip'])
+    print(load_machines_file(base_dir)['machines'][machine_name]['ip'])
 
 def get_service_host_main(base_dir, service_name):
     config = load_config_file(base_dir)
     machine = config['services'][service_name]['placement']
+    machine_config = load_machines_file(base_dir)
     print(config['machines'][machine]['ip'])
 
 def get_docker_manager_host_main(base_dir):
-    for machine_info in load_config_file(base_dir)['machines'].values():
+    for machine_info in load_machines_file(base_dir)['machines'].values():
         if machine_info['role'] == 'manager':
             print(machine_info['ip'] + '-' + USER_NAME)
             break
     
 def get_client_host_main(base_dir):
-    for machine_info in load_config_file(base_dir)['machines'].values():
+    for machine_info in load_machines_file(base_dir)['machines'].values():
         if machine_info['role'] == 'client':
             print(machine_info['ip'] + '-' + USER_NAME)
             break
 
 def get_all_server_hosts_main(base_dir):
-    for machine_info in load_config_file(base_dir)['machines'].values():
+    for machine_info in load_machines_file(base_dir)['machines'].values():
         if machine_info['role'] != 'client':
             print(machine_info['ip'] + '-' + USER_NAME)
 
 def get_machine_with_label_main(base_dir, label):
-    for machine_info in load_config_file(base_dir)['machines'].values():
+    for machine_info in load_machines_file(base_dir)['machines'].values():
         if 'labels' in machine_info:
             labels = machine_info['labels']
             if label in labels or label+'=true' in labels:
@@ -199,7 +208,7 @@ def get_machine_with_label_main(base_dir, label):
 
 def get_client_with_merged_results(base_dir):
     label = 'merged_results=true'
-    for machine_info in load_config_file(base_dir)['machines'].values():
+    for machine_info in load_machines_file(base_dir)['machines'].values():
         if machine_info['role'] == 'client':
             labels = machine_info['labels']
             if label in labels:
@@ -208,13 +217,13 @@ def get_client_with_merged_results(base_dir):
     print('Warning: No client with label {}'.format(label))
 
 def get_client_ip(base_dir):
-    for machine_info in load_config_file(base_dir)['machines'].values():
+    for machine_info in load_machines_file(base_dir)['machines'].values():
         if machine_info['role'] == 'client':
             print(machine_info['ip'])
             break
 
 def get_container_id_main(base_dir, service_name, machine_name, machine_host):
-    machine_infos = load_config_file(base_dir)['machines'].values()    
+    machine_infos = load_machines_file(base_dir)['machines'].values()    
     if machine_host is None:
         if machine_name is None:
             machine_name = load_config_file(base_dir)['services'][service_name]['placement']
@@ -232,7 +241,7 @@ def get_container_id_main(base_dir, service_name, machine_name, machine_host):
 def collect_container_logs_main(base_dir, log_path):
     if not os.path.isdir(log_path):
         os.mkdir(log_path)
-    for machine_info in load_config_file(base_dir)['machines'].values():
+    for machine_info in load_machines_file(base_dir)['machines'].values():
         if machine_info['role'] == 'client':
             continue
         container_ids, _ = run_remote_command(machine_info['ip'], ['docker', 'ps', '-q'])
