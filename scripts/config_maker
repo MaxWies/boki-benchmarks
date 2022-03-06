@@ -15,7 +15,7 @@ def load_json_file(file):
         s = json.load(f)
     return s
 
-def create_service_from_function_spec(benchmark, func_dic, func_id):
+def create_service_from_function_spec(func_dic, func_id):
     service_name = '{}-{}'.format(func_dic["service_name"], str(func_id))
     function_name = func_dic["function_name"]
     service_desc = copy.deepcopy(func_dic["docker"])
@@ -37,7 +37,7 @@ def generate_docker_compose_file(base_dir, spec):
                 id_counter += 1
                 service_name, service_desc = create_service_from_function_spec(f ,id_counter)
                 compose_file['services'][service_name] = service_desc
-    with open(os.path.join(base_dir, "docker-compose.yaml"), 'w') as f:
+    with open(os.path.join(base_dir, "docker-compose.yml"), 'w') as f:
         yaml.dump(compose_file, f, default_flow_style=False, sort_keys=False)
 
 def generate_nightcore_config(base_dir, spec):
@@ -69,7 +69,7 @@ def generate_main_config(base_dir, spec):
         for i in range(application['instances']):
             for f in application["functions"]:
                 id_counter += 1
-                config["services"]["{}-{}".format(f["function_name"], str(id_counter))] = {
+                config["services"]["{}-{}".format(f["service_name"], str(id_counter))] = {
                     "placement_label": f["placement_label"],
                     "replicas": f["replicas"]
                 }

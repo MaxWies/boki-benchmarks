@@ -178,9 +178,9 @@ def get_host_main(base_dir, machine_name):
 
 def get_service_host_main(base_dir, service_name):
     config = load_config_file(base_dir)
-    machine = config['services'][service_name]['placement']
     machine_config = load_machines_file(base_dir)
-    print(config['machines'][machine]['ip'])
+    machine = config['services'][service_name]['placement']
+    print(machine_config['machines'][machine]['ip'])
 
 def get_docker_manager_host_main(base_dir):
     for machine_info in load_machines_file(base_dir)['machines'].values():
