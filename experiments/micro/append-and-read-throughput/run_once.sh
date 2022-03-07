@@ -2,19 +2,22 @@
 BASE_DIR=`realpath $(dirname $0)`
 ROOT_DIR=`realpath $BASE_DIR/../../..`
 
-SPEC_FILE=$1
-
-EXP_DIR=$BASE_DIR/results/con$CONCURRENCY/$SETTING
+BOKI_SPEC_FILE=$1
+EXP_SPEC_FILE=$2
 
 HELPER_SCRIPT=$ROOT_DIR/scripts/exp_helper
 CONFIG_MAKER_SCRIPT=$ROOT_DIR/scripts/config_maker
 BENCHMARK_SCRIPT=$ROOT_DIR/scripts/benchmark/summarize_benchmarks
 
-for s in $(echo $values | jq -r ".exp_variables | to_entries | map(\"\(.key)=\(.value|tostring)\") | .[]" $SPEC_FILE); do
+for s in $(echo $values | jq -r ".exp_variables | to_entries | map(\"\(.key)=\(.value|tostring)\") | .[]" $BOKI_SPEC_FILE); do
+    export $s
+done
+for s in $(echo $values | jq -r ".exp_variables | to_entries | map(\"\(.key)=\(.value|tostring)\") | .[]" $EXP_SPEC_FILE); do
     export $s
 done
 
-$CONFIG_MAKER_SCRIPT generate-runtime-config --base-dir=$BASE_DIR --spec-file=$SPEC_FILE
+EXP_DIR=$BASE_DIR/results/con$CONCURRENCY/$BOKI_SETTING
+$CONFIG_MAKER_SCRIPT generate-runtime-config --base-dir=$BASE_DIR --boki-spec-file=$BOKI_SPEC_FILE --exp-spec-file=$EXP_SPEC_FILE
 
 MANAGER_HOST=`$HELPER_SCRIPT get-docker-manager-host --base-dir=$BASE_DIR`
 CLIENT_HOST=`$HELPER_SCRIPT get-client-host --base-dir=$BASE_DIR`
