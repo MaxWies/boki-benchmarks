@@ -3,9 +3,10 @@
         "BENCHMARK_TYPE": "append-read-throughput",
         "DURATION": "20",
         "RECORD_LENGTH": "1024",
-        "NUM_ENGINES": "3",
-        "RELATIVE_EXP_DIR": "eng1-st1-seq3/cf2560",
-        "CONCURRENCY": "2560"
+        "NUM_ENGINES": "4",
+        "RELATIVE_EXP_DIR": "eng4-st1-seq3/cf320",
+        "CONCURRENCY": "320",
+        "READ_TIMES": "4"
     },
     "services": {
         "zookeeper": { "placement": "bokiexp-gateway" },
@@ -14,7 +15,7 @@
         "boki-gateway": { "placement": "bokiexp-gateway" },
         "boki-storage": { "placement_label": "storage_node", "replicas": 1 },
         "boki-sequencer": { "placement_label": "sequencer_node", "replicas": 3 },
-        "boki-engine": { "placement_label": "engine_node", "replicas": 3 }
+        "boki-engine": { "placement_label": "engine_node", "replicas": 4 }
     },
     "docker" : {
         "services" : [
@@ -22,7 +23,14 @@
                 "service_name": "boki-controller",
                 "docker": {
                     "image": "zjia/boki:sosp-ae",
-                    "entrypoint" : ["/boki/controller", "--zookeeper_host=zookeeper:2181", "--metalog_replicas=3", "--userlog_replicas=1", "--index_replicas=3", "--v=1"],
+                    "entrypoint" : [
+                        "/boki/controller", 
+                        "--zookeeper_host=zookeeper:2181", 
+                        "--metalog_replicas=3", 
+                        "--userlog_replicas=1", 
+                        "--index_replicas=4", 
+                        "--v=1"
+                    ],
                     "depends_on": ["zookeeper-setup"]
                 } 
             }
@@ -41,8 +49,8 @@
                         "environment": ["FAAS_GO_MAX_PROC_FACTOR=8", "GOGC=1000"],
                         "depends_on": ["boki-engine"]
                     },
-                    "min_workers": 2560,
-                    "max_workers": 2560,
+                    "min_workers": 320,
+                    "max_workers": 320,
                     "replicas": 1,
                     "placement_label": "engine_node"
                 }

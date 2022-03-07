@@ -5,7 +5,8 @@
         "RECORD_LENGTH": "1024",
         "NUM_ENGINES": "1",
         "RELATIVE_EXP_DIR": "eng1-st1-seq3/cf2560",
-        "CONCURRENCY": "2560"
+        "CONCURRENCY": "2560",
+        "READ_TIMES": "4"
     },
     "services": {
         "zookeeper": { "placement": "bokiexp-gateway" },

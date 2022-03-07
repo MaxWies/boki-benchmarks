@@ -33,7 +33,7 @@ scp -q $ROOT_DIR/scripts/zk_setup.sh $MANAGER_HOST:/tmp/zk_setup.sh
 ssh $MANAGER_HOST -- sudo mkdir -p /mnt/inmem/store
 
 for host in $ALL_HOSTS; do
-    scp -q $BASE_DIR/nightcore_config_$CONCURRENCY.json $host:/tmp/nightcore_config.json
+    scp -q $BASE_DIR/nightcore_config.json $host:/tmp/nightcore_config.json
 done
 
 ALL_ENGINE_HOSTS=`$HELPER_SCRIPT get-machine-with-label --base-dir=$BASE_DIR --machine-label=engine_node`
