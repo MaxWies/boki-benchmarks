@@ -4,8 +4,8 @@
         "DURATION": "20",
         "RECORD_LENGTH": "1024",
         "NUM_ENGINES": "4",
-        "RELATIVE_EXP_DIR": "eng4-st1-seq3/cf320",
-        "CONCURRENCY": "320",
+        "RELATIVE_EXP_DIR": "eng4-st1-seq3/cf640",
+        "CONCURRENCY": "640",
         "READ_TIMES": "4"
     },
     "services": {
@@ -49,8 +49,8 @@
                         "environment": ["FAAS_GO_MAX_PROC_FACTOR=8", "GOGC=1000"],
                         "depends_on": ["boki-engine"]
                     },
-                    "min_workers": 320,
-                    "max_workers": 320,
+                    "min_workers": 640,
+                    "max_workers": 640,
                     "replicas": 1,
                     "placement_label": "engine_node"
                 }
