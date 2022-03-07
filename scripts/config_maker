@@ -42,11 +42,11 @@ def generate_docker_compose_with_applications():
 def generate_docker_compose_application_less(base_dir, compose_file):
     function_definitions = load_json_file(os.path.join(base_dir, 'functions.json'))
     func_id = 0
-    for function in function_definitions['functions']:
+    for _, function_value in function_definitions['functions'].items():
         func_id += 1
-        service_desc = copy.deepcopy(function["docker"])
+        service_desc = copy.deepcopy(function_value["docker"])
         service_desc["entrypoint"].append(str(func_id))
-        compose_file['services'][function['service_name']] = service_desc
+        compose_file['services'][function_value['service_name']] = service_desc
 
 def generate_docker_compose_file(base_dir, boki_spec, exp_spec):
     with open(os.path.join(base_dir, 'docker-compose-main.yml')) as f:
@@ -121,9 +121,10 @@ def generate_nightcore_config(base_dir, exp_spec):
 def generate_swarm_with_applications():
     pass
 
-def generate_swarm_application_less(config, boki_spec, exp_spec):
+def generate_swarm_application_less(base_dir, config, boki_spec, exp_spec):
+    function_definitions = load_json_file(os.path.join(base_dir, 'functions.json'))
     for key, _ in exp_spec['functions'].items():
-        config["services"][key] = {
+        config["services"][function_definitions['functions'][key]['service_name']] = {
                 "placement_label": "engine_node",
                 "replicas": boki_spec['boki_engine_replicas']
         }
@@ -143,7 +144,7 @@ def generate_swarm_config(base_dir, boki_spec, exp_spec):
     if 'applications' in exp_spec.keys():
         generate_swarm_with_applications()
     else:
-        generate_swarm_application_less(config, boki_spec, exp_spec)
+        generate_swarm_application_less(base_dir, config, boki_spec, exp_spec)
 
     # for application in exp_file['applications']:
     #     id_counter = 0

@@ -1,7 +1,6 @@
 {
-    "functions": [
-        {
-            "function_name": "AppendAndReadLoopAsync", 
+    "functions": {
+        "AppendAndReadLoopAsync": {
             "service_name": "append-read-service",
             "docker": {
                 "image": "maxwie/boki-microbench:latest",
@@ -11,8 +10,7 @@
                 "depends_on": ["boki-engine"]
             }
         },
-        {
-            "function_name": "MergeResults", 
+        "MergeResults" : {
             "service_name": "merge-service",
             "docker": {
                 "image": "maxwie/boki-microbench:latest",
@@ -22,5 +20,5 @@
                 "depends_on": ["boki-engine"]
             }
         }
-    ]
+    }
 }
