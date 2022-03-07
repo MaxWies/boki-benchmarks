@@ -1,18 +1,5 @@
 version: "3.8"
-services:
-  boki-controller:
-    image: zjia/boki:sosp-ae
-    entrypoint:
-      - /boki/controller
-      - --zookeeper_host=zookeeper:2181
-      - --metalog_replicas=3
-      - --userlog_replicas=1
-      - --index_replicas=1
-      - --v=1
-    depends_on:
-      - zookeeper-setup
-    restart: always
-    
+services:   
   zookeeper:
     image: zookeeper:3.6.2
     hostname: zookeeper
@@ -139,27 +126,3 @@ services:
         memlock:
                 soft: 67108864
                 hard: 67108864
-
-  micro-append-and-read-loop:
-    image: maxwie/boki-microbench:latest
-    entrypoint: ["/tmp/boki/run_launcher_async", "/microbench-bin/main", "1", "append-and-read-throughput"]
-    volumes:
-      - /mnt/inmem/boki:/tmp/boki
-    environment:
-      - FAAS_GO_MAX_PROC_FACTOR=8
-      - GOGC=1000
-    depends_on:
-      - boki-engine
-    restart: always
-
-  micro-merge:
-    image: maxwie/boki-microbench:latest
-    entrypoint: ["/tmp/boki/run_launcher", "/microbench-bin/main", "2"]
-    volumes:
-      - /mnt/inmem/boki:/tmp/boki
-    environment:
-      - FAAS_GO_MAX_PROC_FACTOR=8
-      - GOGC=1000
-    depends_on:
-      - boki-engine
-    restart: always

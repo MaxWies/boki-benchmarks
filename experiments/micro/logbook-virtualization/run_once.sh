@@ -5,7 +5,7 @@ ROOT_DIR=`realpath $BASE_DIR/../../..`
 SPEC_FILE=$1
 
 HELPER_SCRIPT=$ROOT_DIR/scripts/exp_helper
-CONFIG_MAKER_SCRIPT=$ROOT_DIR/scripts/config_maker/maker
+CONFIG_MAKER_SCRIPT=$ROOT_DIR/scripts/config_maker
 BENCHMARK_SCRIPT=$ROOT_DIR/scripts/benchmark/summarize_benchmarks
 
 for s in $(echo $values | jq -r ".exp_variables | to_entries | map(\"\(.key)=\(.value|tostring)\") | .[]" $SPEC_FILE); do
@@ -36,7 +36,6 @@ for host in $ALL_HOSTS; do
 done
 
 ALL_ENGINE_HOSTS=`$HELPER_SCRIPT get-machine-with-label --base-dir=$BASE_DIR --machine-label=engine_node`
-NUM_ENGINES=$(wc -w <<< $ALL_ENGINE_HOSTS)
 for HOST in $ALL_ENGINE_HOSTS; do
     scp -q $BASE_DIR/run_launcher $HOST:/tmp/run_launcher
     ssh -q $HOST -- sudo rm -rf /mnt/inmem/boki

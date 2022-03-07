@@ -2,17 +2,19 @@
 BASE_DIR=`realpath $(dirname $0)`
 ROOT_DIR=`realpath $BASE_DIR/../../..`
 
-SETTING=$1
-BENCHMARK_TYPE=$2
-CONCURRENCY=$3
-DURATION=$4
-RECORD_LENGTH=$5
-READ_TIMES=$6
+SPEC_FILE=$1
 
 EXP_DIR=$BASE_DIR/results/con$CONCURRENCY/$SETTING
 
 HELPER_SCRIPT=$ROOT_DIR/scripts/exp_helper
+CONFIG_MAKER_SCRIPT=$ROOT_DIR/scripts/config_maker
 BENCHMARK_SCRIPT=$ROOT_DIR/scripts/benchmark/summarize_benchmarks
+
+for s in $(echo $values | jq -r ".exp_variables | to_entries | map(\"\(.key)=\(.value|tostring)\") | .[]" $SPEC_FILE); do
+    export $s
+done
+
+$CONFIG_MAKER_SCRIPT generate-runtime-config --base-dir=$BASE_DIR --spec-file=$SPEC_FILE
 
 MANAGER_HOST=`$HELPER_SCRIPT get-docker-manager-host --base-dir=$BASE_DIR`
 CLIENT_HOST=`$HELPER_SCRIPT get-client-host --base-dir=$BASE_DIR`
@@ -35,15 +37,13 @@ for host in $ALL_HOSTS; do
 done
 
 ALL_ENGINE_HOSTS=`$HELPER_SCRIPT get-machine-with-label --base-dir=$BASE_DIR --machine-label=engine_node`
-NUM_ENGINES=$(wc -w <<< $ALL_ENGINE_HOSTS)
 for HOST in $ALL_ENGINE_HOSTS; do
     scp -q $BASE_DIR/run_launcher $HOST:/tmp/run_launcher
-    scp -q $BASE_DIR/run_launcher_async $HOST:/tmp/run_launcher_async
     ssh -q $HOST -- sudo rm -rf /mnt/inmem/boki
     ssh -q $HOST -- sudo mkdir -p /mnt/inmem/boki
     ssh -q $HOST -- sudo mkdir -p /mnt/inmem/boki/output /mnt/inmem/boki/ipc
+    ssh -q $HOST -- sudo mkdir -p /mnt/inmem/boki/output/benchmark/$BENCHMARK_TYPE
     ssh -q $HOST -- sudo cp /tmp/run_launcher /mnt/inmem/boki/run_launcher
-    ssh -q $HOST -- sudo cp /tmp/run_launcher_async /mnt/inmem/boki/run_launcher_async
     ssh -q $HOST -- sudo cp /tmp/nightcore_config.json /mnt/inmem/boki/func_config.json
 done
 
@@ -89,9 +89,9 @@ sleep 10
 
 $HELPER_SCRIPT collect-container-logs --base-dir=$BASE_DIR --log-path=$EXP_DIR/logs
 
-mkdir -p $EXP_DIR/benchmark/$BENCHMARK_TYPE
+mkdir -p $EXP_DIR/benchmark
 
-scp -r -q $CLIENT_HOST:/tmp/boki/output/benchmark/$BENCHMARK_TYPE/* $EXP_DIR/benchmark/$BENCHMARK_TYPE
+scp -r -q $CLIENT_HOST:/tmp/boki/output/benchmark/$BENCHMARK_TYPE $EXP_DIR/benchmark
 for engine_result in $EXP_DIR/benchmark/$BENCHMARK_TYPE/*; do
     $BENCHMARK_SCRIPT --result-file=$engine_result
 done

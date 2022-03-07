@@ -1,11 +1,11 @@
 {
     "exp_variables" : {
-        "BENCHMARK_TYPE": "logbook-virtualization",
+        "BENCHMARK_TYPE": "append-read-throughput",
         "DURATION": "20",
         "RECORD_LENGTH": "1024",
-        "NUM_ENGINES": "1",
-        "RELATIVE_EXP_DIR": "eng1-st1-seq3/lb100",
-        "LOG_BOOKS": "100"
+        "NUM_ENGINES": "3",
+        "RELATIVE_EXP_DIR": "eng1-st1-seq3/cf2560",
+        "CONCURRENCY": "2560"
     },
     "services": {
         "zookeeper": { "placement": "bokiexp-gateway" },
@@ -14,7 +14,7 @@
         "boki-gateway": { "placement": "bokiexp-gateway" },
         "boki-storage": { "placement_label": "storage_node", "replicas": 1 },
         "boki-sequencer": { "placement_label": "sequencer_node", "replicas": 3 },
-        "boki-engine": { "placement_label": "engine_node", "replicas": 1 }
+        "boki-engine": { "placement_label": "engine_node", "replicas": 3 }
     },
     "docker" : {
         "services" : [
@@ -22,7 +22,7 @@
                 "service_name": "boki-controller",
                 "docker": {
                     "image": "zjia/boki:sosp-ae",
-                    "entrypoint" : ["/boki/controller", "--zookeeper_host=zookeeper:2181", "--metalog_replicas=3", "--userlog_replicas=1", "--index_replicas=1", "--v=1"],
+                    "entrypoint" : ["/boki/controller", "--zookeeper_host=zookeeper:2181", "--metalog_replicas=3", "--userlog_replicas=1", "--index_replicas=3", "--v=1"],
                     "depends_on": ["zookeeper-setup"]
                 } 
             }
@@ -32,8 +32,8 @@
         {
             "functions": [
                 {
-                    "function_name": "AppendLoopAsync",
-                    "service_name": "append-service",
+                    "function_name": "AppendAndReadLoopAsync",
+                    "service_name": "append-read-service",
                     "docker": {
                         "image": "maxwie/boki-microbench:latest",
                         "entrypoint" : ["/tmp/boki/run_launcher", "/microbench-bin/main"],
@@ -41,13 +41,13 @@
                         "environment": ["FAAS_GO_MAX_PROC_FACTOR=8", "GOGC=1000"],
                         "depends_on": ["boki-engine"]
                     },
-                    "min_workers": 1,
-                    "max_workers": 1,
+                    "min_workers": 2560,
+                    "max_workers": 2560,
                     "replicas": 1,
                     "placement_label": "engine_node"
                 }
             ],
-            "instances" : 100
+            "instances" : 1
         }, 
         {
             "functions": [
