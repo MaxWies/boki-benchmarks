@@ -32,20 +32,18 @@ scp -q $ROOT_DIR/scripts/zk_setup.sh $MANAGER_HOST:/tmp/zk_setup.sh
 ssh $MANAGER_HOST -- sudo mkdir -p /mnt/inmem/store
 
 for host in $ALL_HOSTS; do
-    scp -q $BASE_DIR/nightcore_config_$CONCURRENCY.json $host:/tmp/nightcore_config.json
+    scp -q $BASE_DIR/nightcore_config.json $host:/tmp/nightcore_config.json
 done
 
 ALL_ENGINE_HOSTS=`$HELPER_SCRIPT get-machine-with-label --base-dir=$BASE_DIR --machine-label=engine_node`
 NUM_ENGINES=$(wc -w <<< $ALL_ENGINE_HOSTS)
 for HOST in $ALL_ENGINE_HOSTS; do
     scp -q $BASE_DIR/run_launcher $HOST:/tmp/run_launcher
-    scp -q $BASE_DIR/run_launcher_async $HOST:/tmp/run_launcher_async
     ssh -q $HOST -- sudo rm -rf /mnt/inmem/boki
     ssh -q $HOST -- sudo mkdir -p /mnt/inmem/boki
     ssh -q $HOST -- sudo mkdir -p /mnt/inmem/boki/output /mnt/inmem/boki/ipc
     ssh -q $HOST -- sudo mkdir -p /mnt/inmem/boki/output/benchmark/$BENCHMARK_TYPE
     ssh -q $HOST -- sudo cp /tmp/run_launcher /mnt/inmem/boki/run_launcher
-    ssh -q $HOST -- sudo cp /tmp/run_launcher_async /mnt/inmem/boki/run_launcher_async
     ssh -q $HOST -- sudo cp /tmp/nightcore_config.json /mnt/inmem/boki/func_config.json
 done
 
@@ -90,9 +88,9 @@ sleep 10
 
 $HELPER_SCRIPT collect-container-logs --base-dir=$BASE_DIR --log-path=$EXP_DIR/logs
 
-mkdir -p $EXP_DIR/benchmark/$BENCHMARK_TYPE
+mkdir -p $EXP_DIR/benchmark
 
-scp -r -q $CLIENT_HOST:/tmp/boki/output/benchmark/$BENCHMARK_TYPE/* $EXP_DIR/benchmark/$BENCHMARK_TYPE
+scp -r -q $CLIENT_HOST:/tmp/boki/output/benchmark/$BENCHMARK_TYPE $EXP_DIR/benchmark
 for engine_result in $EXP_DIR/benchmark/$BENCHMARK_TYPE/*; do
     $BENCHMARK_SCRIPT --result-file=$engine_result
 done

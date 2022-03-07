@@ -16,11 +16,9 @@ def load_json_file(file):
     return s
 
 def create_service_from_function_spec(func_dic, func_id):
-    service_name = '{}{}'.format(func_dic["service_name"], str(func_id))
-    function_name = func_dic["function_name"]
+    service_name = '{}-{}'.format(func_dic["service_name"], str(func_id))
     service_desc = copy.deepcopy(func_dic["docker"])
     service_desc["entrypoint"].append(str(func_id))
-    #service_desc["entrypoint"].append("{}/{}".format(benchmark, function_name))
     return service_name, service_desc
 
 def generate_docker_compose_file(base_dir, spec):
@@ -60,7 +58,6 @@ def generate_nightcore_config(base_dir, spec):
     with open(os.path.join(base_dir, "nightcore_config.json"), 'w') as f:
         f.write(nc_config)
 
-
 def generate_main_config(base_dir, spec):
     config = {}
     config["services"] = spec["services"]
@@ -82,25 +79,6 @@ def generate_runtime_config(base_dir, spec_file):
     generate_main_config(base_dir, spec)
     generate_nightcore_config(base_dir, spec)
     generate_docker_compose_file(base_dir, spec)
-
-# def generate_main_config():
-#     base_dir = '.'
-#     spec_file_name = 'service_specification.json'
-#     #machine_file_name = 'machines.json'
-#     generate_main_config(base_dir, spec_file_name)
-
-def test():
-    # generate_main_config()
-    generate_runtime_config()
-    # base_dir = '.'
-    # spec_file_name = 'service_specification.json'
-    # #machine_file_name = 'machines.json'
-    # generate_main_config(base_dir, machine_file_name, spec_file_name)
-    # generate_nightcore_config(base_dir, spec_file_name)
-    # generate_docker_compose_file(base_dir, spec_file_name)
-
-
-#test()
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()

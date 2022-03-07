@@ -2,10 +2,10 @@
     "exp_variables" : {
         "BENCHMARK_TYPE": "logbook-virtualization",
         "DURATION": "20",
-        "CONCURRENCY": "100",
         "RECORD_LENGTH": "1024",
         "NUM_ENGINES": "1",
-        "RELATIVE_EXP_DIR": "eng1-st1-seq3/lb100"
+        "RELATIVE_EXP_DIR": "eng1-st1-seq3/lb100",
+        "LOG_BOOKS": "100"
     },
     "services": {
         "zookeeper": { "placement": "bokiexp-gateway" },
