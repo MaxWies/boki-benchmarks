@@ -79,7 +79,7 @@ ssh -q $CLIENT_HOST -- /tmp/benchmark \
     --faas_gateway=$ENTRY_HOST:8080 \
     --benchmark_type=$BENCHMARK_TYPE \
     --duration=$DURATION \
-    --concurrency=$CONCURRENCY \
+    --logbooks=$LOG_BOOKS \
     --record_length=$RECORD_LENGTH \
     --num_engines=$NUM_ENGINES \
     >$EXP_DIR/results.log

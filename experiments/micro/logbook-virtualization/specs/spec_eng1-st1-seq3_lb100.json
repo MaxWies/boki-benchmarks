@@ -52,7 +52,7 @@
         {
             "functions": [
                 {
-                    "function_name": "merge",
+                    "function_name": "MergeResults",
                     "service_name": "merge-service",
                     "docker": {
                         "image": "maxwie/boki-microbench:latest",
