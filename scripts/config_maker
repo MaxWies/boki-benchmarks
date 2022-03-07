@@ -51,7 +51,7 @@ def generate_docker_compose_application_less(base_dir, compose_file):
 def generate_docker_compose_file(base_dir, boki_spec, exp_spec):
     with open(os.path.join(base_dir, 'docker-compose-main.yml')) as f:
         compose_file = yaml.safe_load(f)
-    compose_file['services']['boki_controller'] = boki_spec['boki_controller']
+    compose_file['services']['boki-controller'] = boki_spec['boki_controller']
     if 'applications' in exp_spec.keys():
         generate_docker_compose_with_applications()
     else:
