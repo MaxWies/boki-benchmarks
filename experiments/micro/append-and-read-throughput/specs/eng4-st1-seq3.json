@@ -1,7 +1,7 @@
 {
-    "boki_engine_replicas": "4",
-    "boki_storage_replicas": "1",
-    "boki_sequencers_replicas": "3",
+    "boki_engine_replicas": 4,
+    "boki_storage_replicas": 1,
+    "boki_sequencers_replicas": 3,
     "boki_controller": {
         "image": "zjia/boki:sosp-ae",
         "entrypoint" : [

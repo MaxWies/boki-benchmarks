@@ -40,6 +40,7 @@ for host in $ALL_HOSTS; do
 done
 
 ALL_ENGINE_HOSTS=`$HELPER_SCRIPT get-machine-with-label --base-dir=$BASE_DIR --machine-label=engine_node`
+NUM_ENGINES=$(wc -w <<< $ALL_ENGINE_HOSTS)
 for HOST in $ALL_ENGINE_HOSTS; do
     scp -q $BASE_DIR/run_launcher $HOST:/tmp/run_launcher
     ssh -q $HOST -- sudo rm -rf /mnt/inmem/boki
