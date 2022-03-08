@@ -6,6 +6,7 @@ EXP_SPEC_FILE=$1
 EXP_DIR=$2
 
 HELPER_SCRIPT=$ROOT_DIR/scripts/exp_helper
+BENCHMARK_SCRIPT=$ROOT_DIR/scripts/benchmark/summarize_benchmarks
 
 for s in $(echo $values | jq -r ".exp_variables | to_entries | map(\"\(.key)=\(.value|tostring)\") | .[]" $EXP_SPEC_FILE); do
     export $s
@@ -46,10 +47,11 @@ ssh -q $CLIENT_HOST -- /tmp/benchmark \
 
 sleep 10
 
-$HELPER_SCRIPT collect-container-logs --base-dir=$BASE_DIR --log-path=$EXP_DIR/logs
+if [$COLLECT_CONTAINER_LOGS == 'true']; then
+    $HELPER_SCRIPT collect-container-logs --base-dir=$BASE_DIR --log-path=$EXP_DIR/logs
+fi
 
 mkdir -p $EXP_DIR/benchmark
-
 scp -r -q $CLIENT_HOST:/tmp/boki/output/benchmark/$BENCHMARK_TYPE $EXP_DIR/benchmark
 for engine_result in $EXP_DIR/benchmark/$BENCHMARK_TYPE/*; do
     $BENCHMARK_SCRIPT --result-file=$engine_result

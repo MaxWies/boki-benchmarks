@@ -12,6 +12,7 @@
         "DURATION": "20",
         "RECORD_LENGTH": "1024",
         "READ_TIMES": "4",
-        "CONCURRENCY": "640"
+        "CONCURRENCY": "640",
+        "COLLECT_CONTAINER_LOGS": "false"
     }
 }
