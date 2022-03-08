@@ -46,7 +46,7 @@ ssh -q $CLIENT_HOST -- /tmp/benchmark \
 
 sleep 10
 
-if  [$COLLECT_CONTAINER_LOGS == 'true' ]; then
+if [ $COLLECT_CONTAINER_LOGS == 'true' ]; then
     $HELPER_SCRIPT collect-container-logs --base-dir=$BASE_DIR --log-path=$EXP_DIR/logs
 fi
 
