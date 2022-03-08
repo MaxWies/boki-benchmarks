@@ -1,6 +1,6 @@
 {
     "functions": {
-        "AppendAndReadLoopAsync" : {
+        "AppendLoopAsync" : {
             "concurrency": 320
         },
         "MergeResults": {
