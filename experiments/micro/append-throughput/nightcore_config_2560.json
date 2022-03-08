@@ -1,4 +1,0 @@
-[
-    { "funcName": "AppendLoopAsync", "funcId": 1, "minWorkers": 2560, "maxWorkers": 2560 },
-    { "funcName": "MergeResults", "funcId": 2, "minWorkers": 1, "maxWorkers": 1 }
-]

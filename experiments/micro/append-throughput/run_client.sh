@@ -42,12 +42,11 @@ ssh -q $CLIENT_HOST -- /tmp/benchmark \
     --concurrency=$CONCURRENCY \
     --record_length=$RECORD_LENGTH \
     --num_engines=$NUM_ENGINES \
-    --read_times=$READ_TIMES \
     >$EXP_DIR/results.log
 
 sleep 10
 
-if  [ $COLLECT_CONTAINER_LOGS == 'true' ]; then
+if  [$COLLECT_CONTAINER_LOGS == 'true' ]; then
     $HELPER_SCRIPT collect-container-logs --base-dir=$BASE_DIR --log-path=$EXP_DIR/logs
 fi
 
