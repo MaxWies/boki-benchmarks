@@ -4,19 +4,20 @@ ROOT_DIR=`realpath $BASE_DIR/../../..`
 
 BOKI_SPEC_FILE=$1
 EXP_SPEC_FILE=$2
+EXP_DIR=$3
 
 HELPER_SCRIPT=$ROOT_DIR/scripts/exp_helper
 CONFIG_MAKER_SCRIPT=$ROOT_DIR/scripts/config_maker
 BENCHMARK_SCRIPT=$ROOT_DIR/scripts/benchmark/summarize_benchmarks
 
-for s in $(echo $values | jq -r ".exp_variables | to_entries | map(\"\(.key)=\(.value|tostring)\") | .[]" $BOKI_SPEC_FILE); do
-    export $s
-done
 for s in $(echo $values | jq -r ".exp_variables | to_entries | map(\"\(.key)=\(.value|tostring)\") | .[]" $EXP_SPEC_FILE); do
     export $s
 done
 
-EXP_DIR=$BASE_DIR/results/con$CONCURRENCY/$BOKI_SETTING
+BOKI_SPEC_FILE_NAME=$(basename BOKI_SPEC_FILE .json)
+EXP_SPEC_FILE_NAME=$(basename EXP_SPEC_FILE .json)
+EXP_DIR=$BASE_DIR/results/$BOKI_SPEC_FILE_NAME/$EXP_SPEC_FILE_NAME
+
 $CONFIG_MAKER_SCRIPT generate-runtime-config --base-dir=$BASE_DIR --boki-spec-file=$BOKI_SPEC_FILE --exp-spec-file=$EXP_SPEC_FILE
 
 MANAGER_HOST=`$HELPER_SCRIPT get-docker-manager-host --base-dir=$BASE_DIR`
