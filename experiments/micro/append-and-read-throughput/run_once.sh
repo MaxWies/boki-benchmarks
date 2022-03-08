@@ -10,19 +10,14 @@ HELPER_SCRIPT=$ROOT_DIR/scripts/exp_helper
 CONFIG_MAKER_SCRIPT=$ROOT_DIR/scripts/config_maker
 BENCHMARK_SCRIPT=$ROOT_DIR/scripts/benchmark/summarize_benchmarks
 
-for s in $(echo $values | jq -r ".exp_variables | to_entries | map(\"\(.key)=\(.value|tostring)\") | .[]" $EXP_SPEC_FILE); do
-    export $s
-done
-
-BOKI_SPEC_FILE_NAME=$(basename BOKI_SPEC_FILE .json)
-EXP_SPEC_FILE_NAME=$(basename EXP_SPEC_FILE .json)
+BOKI_SPEC_FILE_NAME=$(basename $BOKI_SPEC_FILE .json)
+EXP_SPEC_FILE_NAME=$(basename $EXP_SPEC_FILE .json)
 EXP_DIR=$BASE_DIR/results/$BOKI_SPEC_FILE_NAME/$EXP_SPEC_FILE_NAME
 
 $CONFIG_MAKER_SCRIPT generate-runtime-config --base-dir=$BASE_DIR --boki-spec-file=$BOKI_SPEC_FILE --exp-spec-file=$EXP_SPEC_FILE
 
 MANAGER_HOST=`$HELPER_SCRIPT get-docker-manager-host --base-dir=$BASE_DIR`
 CLIENT_HOST=`$HELPER_SCRIPT get-client-host --base-dir=$BASE_DIR`
-ENTRY_HOST=`$HELPER_SCRIPT get-service-host --base-dir=$BASE_DIR --service=boki-gateway`
 ALL_HOSTS=`$HELPER_SCRIPT get-all-server-hosts --base-dir=$BASE_DIR`
 
 $HELPER_SCRIPT generate-docker-compose --base-dir=$BASE_DIR
@@ -41,13 +36,11 @@ for host in $ALL_HOSTS; do
 done
 
 ALL_ENGINE_HOSTS=`$HELPER_SCRIPT get-machine-with-label --base-dir=$BASE_DIR --machine-label=engine_node`
-NUM_ENGINES=$(wc -w <<< $ALL_ENGINE_HOSTS)
 for HOST in $ALL_ENGINE_HOSTS; do
     scp -q $BASE_DIR/run_launcher $HOST:/tmp/run_launcher
     ssh -q $HOST -- sudo rm -rf /mnt/inmem/boki
     ssh -q $HOST -- sudo mkdir -p /mnt/inmem/boki
     ssh -q $HOST -- sudo mkdir -p /mnt/inmem/boki/output /mnt/inmem/boki/ipc
-    ssh -q $HOST -- sudo mkdir -p /mnt/inmem/boki/output/benchmark/$BENCHMARK_TYPE
     ssh -q $HOST -- sudo cp /tmp/run_launcher /mnt/inmem/boki/run_launcher
     ssh -q $HOST -- sudo cp /tmp/nightcore_config.json /mnt/inmem/boki/func_config.json
 done
@@ -68,35 +61,4 @@ done
 
 sleep 10
 
-rm -rf $EXP_DIR
-mkdir -p $EXP_DIR
-
-ssh -q $MANAGER_HOST -- cat /proc/cmdline >>$EXP_DIR/kernel_cmdline
-ssh -q $MANAGER_HOST -- uname -a >>$EXP_DIR/kernel_version
-
-ssh -q $CLIENT_HOST -- docker run \
-    --pull always \
-    -v /tmp:/tmp \
-    maxwie/boki-microbench:latest \
-    cp /microbench-bin/benchmark /tmp/benchmark
-
-ssh -q $CLIENT_HOST -- /tmp/benchmark \
-    --faas_gateway=$ENTRY_HOST:8080 \
-    --benchmark_type=$BENCHMARK_TYPE \
-    --duration=$DURATION \
-    --concurrency=$CONCURRENCY \
-    --record_length=$RECORD_LENGTH \
-    --num_engines=$NUM_ENGINES \
-    --read_times=$READ_TIMES \
-    >$EXP_DIR/results.log
-
-sleep 10
-
-$HELPER_SCRIPT collect-container-logs --base-dir=$BASE_DIR --log-path=$EXP_DIR/logs
-
-mkdir -p $EXP_DIR/benchmark
-
-scp -r -q $CLIENT_HOST:/tmp/boki/output/benchmark/$BENCHMARK_TYPE $EXP_DIR/benchmark
-for engine_result in $EXP_DIR/benchmark/$BENCHMARK_TYPE/*; do
-    $BENCHMARK_SCRIPT --result-file=$engine_result
-done
+$BASE_DIR/run_client.sh $EXP_SPEC_FILE $EXP_DIR
