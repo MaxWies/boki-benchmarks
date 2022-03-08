@@ -52,9 +52,9 @@ def show_benchmark_results(result_file):
                 operation["latency_p99"] = compute_bucket_percentile(operation["bucket"], e, 0.99)
                 operation["latency_p99.9"] = compute_bucket_percentile(operation["bucket"], e, 0.999)
                 del operation["bucket"]
-            if "latency_head" in operation:
+            if "latency_head" in operation and 0 < len(operation["latency_head"]["items"]):
                 operation["latency_min"] = min(operation["latency_head"]["items"])
-            if "latency_tail" in operation:
+            if "latency_tail" in operation and 0 < len(operation["latency_tail"]["items"]):
                 operation["latency_max"] = max(operation["latency_tail"]["items"])
         if "time_log" in benchmark:
             make_timestamps_human_readable(benchmark["time_log"], 'time')
