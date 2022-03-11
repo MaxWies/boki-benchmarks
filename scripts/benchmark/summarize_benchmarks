@@ -57,10 +57,10 @@ def show_benchmark_results(result_file):
                 operation["latency_p99.9"] = compute_bucket_percentile(operation["bucket"], e, 0.999)
                 del operation["bucket"]
             if "latency_head" in operation and 0 < len(operation["latency_head"]["items"]):
-                operation["latency_min"] = min(operation["latency_head"]["items"])
-                operation["latency_head"]["items"] = operation["latency_head"]["items"].sort()
+                operation["latency_min"] = min([i["latency"] for i in operation["latency_head"]["items"]])
+                operation["latency_head"]["items"] = sort_operation_item_calls(operation["latency_head"]["items"])
             if "latency_tail" in operation and 0 < len(operation["latency_tail"]["items"]):
-                operation["latency_max"] = max(operation["latency_tail"]["items"])
+                operation["latency_max"] = max([i["latency"] for i in operation["latency_tail"]["items"]])
                 operation["latency_tail"]["items"] = sort_operation_item_calls(operation["latency_tail"]["items"])
         if "time_log" in benchmark:
             make_timestamps_human_readable(benchmark["time_log"], 'time')
@@ -83,4 +83,4 @@ if __name__ == '__main__':
         sys.stderr.write(err_str)
         sys.exit(1)
 
-#show_benchmark_results('test.json')
+# show_benchmark_results('test.json')
