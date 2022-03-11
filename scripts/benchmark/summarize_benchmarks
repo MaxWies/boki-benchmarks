@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 from datetime import datetime, time
+from operator import itemgetter
 import os
 import sys
 import json
@@ -37,6 +38,9 @@ def make_timestamps_human_readable(dic, key_matcher):
         if key_matcher in key:
             dic[key] = unix_timestamp_to_datetime(dic[key])
 
+def sort_operation_item_calls(items):
+    return sorted(items, key=itemgetter('relative_timestamp'))
+
 def show_benchmark_results(result_file):
     pretty_benchmark = None
     with open(result_file) as f:
@@ -54,8 +58,10 @@ def show_benchmark_results(result_file):
                 del operation["bucket"]
             if "latency_head" in operation and 0 < len(operation["latency_head"]["items"]):
                 operation["latency_min"] = min(operation["latency_head"]["items"])
+                operation["latency_head"]["items"] = operation["latency_head"]["items"].sort()
             if "latency_tail" in operation and 0 < len(operation["latency_tail"]["items"]):
                 operation["latency_max"] = max(operation["latency_tail"]["items"])
+                operation["latency_tail"]["items"] = sort_operation_item_calls(operation["latency_tail"]["items"])
         if "time_log" in benchmark:
             make_timestamps_human_readable(benchmark["time_log"], 'time')
         pretty_benchmark = json.dumps(benchmark, sort_keys=True, indent=4)
