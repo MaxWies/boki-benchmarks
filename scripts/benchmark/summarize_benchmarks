@@ -6,6 +6,8 @@ import sys
 import json
 import argparse
 import subprocess as sp
+import matplotlib.pyplot as plt
+import numpy as np
 
 # TODO: improve
 USER_NAME = 'mrc'
@@ -17,6 +19,15 @@ def run_remote_command(ssh_ip, cmd):
     if ret.returncode != 0:
         raise Exception('Failed to run remote command: ' + ' '.join(cmd) + '\n' + ret.stderr)
     return ret.stdout, ret.stderr
+
+def present_latencies_on_timeline(directory, items, type, exp_duration_sec):
+    latencies = [i['latency'] for i in items]
+    events = [i['relative_timestamp'] for i in items]
+    plt.plot(events, latencies, 'ro')
+    plt.xlabel('Relative time in msec')
+    plt.xlim([0, 10**6 * exp_duration_sec])
+    plt.ylabel('Latency in msec')
+    plt.savefig(os.path.join(directory, 'latencies-'+type+'.png'))
 
 def compute_bucket_percentile(bucket, number_of_entries, percentile):
     bucket_slot_index = 0
@@ -42,6 +53,9 @@ def sort_operation_item_calls(items):
     return sorted(items, key=itemgetter('relative_timestamp'))
 
 def show_benchmark_results(result_file):
+    file_directory = os.path.dirname(result_file)
+    file_name = os.path.basename(result_file)
+    file_name_extensionless = file_name.split('.')[0]
     pretty_benchmark = None
     with open(result_file) as f:
         benchmark = json.load(f)
@@ -62,12 +76,13 @@ def show_benchmark_results(result_file):
             if "latency_tail" in operation and 0 < len(operation["latency_tail"]["items"]):
                 operation["latency_max"] = max([i["latency"] for i in operation["latency_tail"]["items"]])
                 operation["latency_tail"]["items"] = sort_operation_item_calls(operation["latency_tail"]["items"])
+                #present_latencies_on_timeline(os.path.dirname(result_file), operation["latency_tail"]["items"])
         if "time_log" in benchmark:
             make_timestamps_human_readable(benchmark["time_log"], 'time')
         pretty_benchmark = json.dumps(benchmark, sort_keys=True, indent=4)
     if pretty_benchmark is None:
         raise Exception
-    with open(os.path.join(os.path.dirname(result_file), os.path.basename(result_file)), 'w') as f:
+    with open(os.path.join(file_directory, 'pretty-'+file_name_extensionless+'.json'), 'w') as f:
         f.write(pretty_benchmark)
 
 if __name__ == '__main__':
