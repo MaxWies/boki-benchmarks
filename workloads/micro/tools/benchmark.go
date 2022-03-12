@@ -42,6 +42,8 @@ var FLAGS_read_times int
 
 var FLAGS_logbooks int
 
+var FLAGS_concurrency_operation int
+
 func init() {
 	flag.StringVar(&FLAGS_faas_gateway, "faas_gateway", "127.0.0.1:8081", "")
 	flag.StringVar(&FLAGS_fn_prefix, "fn_prefix", "", "")
@@ -65,6 +67,8 @@ func init() {
 
 	flag.IntVar(&FLAGS_logbooks, "logbooks", 1, "")
 
+	flag.IntVar(&FLAGS_concurrency_operation, "concurrency_operation", 1, "")
+
 	rand.Seed(int64(FLAGS_rand_seed))
 }
 
@@ -85,6 +89,7 @@ func buildAppendLoopRequest() utils.JSONValue {
 		"latency_head_size":          FLAGS_latency_head_size,
 		"latency_tail_size":          FLAGS_latency_tail_size,
 		"benchmark_type":             FLAGS_benchmark_type,
+		"concurrency_operation":      FLAGS_concurrency_operation,
 	}
 }
 

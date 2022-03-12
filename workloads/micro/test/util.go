@@ -72,6 +72,7 @@ func SampleRequest_AppendLoop() []byte {
 		"latency_head_size":          10,
 		"latency_tail_size":          10,
 		"benchmark_type":             testBenchmarkType,
+		"concurrency":                4,
 	})
 	return req
 }

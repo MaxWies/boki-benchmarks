@@ -6,11 +6,13 @@ import (
 	"fmt"
 	"log"
 	"path"
+	"sync"
 	"time"
 
 	"faas-micro/constants"
 	"faas-micro/operations"
 	"faas-micro/response"
+	"faas-micro/utils"
 
 	"cs.utexas.edu/zjia/faas/types"
 	"github.com/google/uuid"
@@ -27,6 +29,7 @@ type AppendLoopInput struct {
 	LatencyHeadSize          int    `json:"latency_head_size"`
 	LatencyTailSize          int    `json:"latency_tail_size"`
 	BenchmarkType            string `json:"benchmark_type"`
+	ConcurrencyOperation     int    `json:"concurrency_operation"`
 }
 
 type appendLoopHandler struct {
@@ -43,6 +46,68 @@ func NewAppendLoopHandler(env types.Environment, isAsync bool) types.FuncHandler
 	}
 }
 
+type operationHandler struct {
+	env                  types.Environment
+	operationCalls       chan *utils.OperationCallItem
+	operationBenchmark   *response.Operation
+	concurrentGoRoutines chan struct{}
+	wg                   *sync.WaitGroup
+}
+
+func NewOperationHandler(env types.Environment, input *AppendLoopInput) *operationHandler {
+	op := &operationHandler{
+		env:                  env,
+		operationCalls:       make(chan *utils.OperationCallItem),
+		operationBenchmark:   response.CreateInitialOperationResult("append", input.LatencyBucketLower, input.LatencyBucketUpper, input.LatencyBucketGranularity, input.LatencyHeadSize, input.LatencyTailSize),
+		concurrentGoRoutines: make(chan struct{}, input.ConcurrencyOperation),
+		wg:                   &sync.WaitGroup{},
+	}
+	for i := 0; i < input.ConcurrencyOperation; i++ {
+		op.concurrentGoRoutines <- struct{}{}
+	}
+	return op
+}
+
+func (o *operationHandler) operationCall(opCall func() (*types.LogEntry, error), startTime time.Time, call int64) (*types.LogEntry, error) {
+	appendBegin := time.Now()
+	output, err := opCall()
+	_ = output
+	success := false
+	if err == nil {
+		success = true
+	}
+	o.operationCalls <- &utils.OperationCallItem{
+		Latency:           time.Since(appendBegin).Microseconds(),
+		Call:              call,
+		Success:           success,
+		RelativeTimestamp: time.Since(startTime).Microseconds(),
+	}
+	return output, err
+}
+
+func (o *operationHandler) operationSequence(ctx context.Context, startTime time.Time, call int64, record []byte) {
+	o.operationCall(
+		func() (*types.LogEntry, error) {
+			return operations.Append(ctx, o.env, &operations.AppendInput{Record: record})
+		}, startTime, call)
+}
+
+func (o *operationHandler) operationResponse() {
+	for {
+		call, more := <-o.operationCalls
+		if !more {
+			break
+		}
+		if call.Success {
+			o.operationBenchmark.AddSuccess(call)
+		} else {
+			o.operationBenchmark.AddFailure()
+		}
+		o.wg.Done()
+		o.concurrentGoRoutines <- struct{}{}
+	}
+}
+
 func (h *appendLoopHandler) Call(ctx context.Context, input []byte) ([]byte, error) {
 	log.Printf("[INFO] Call AppendLoopHandler. Async: %v", h.isAsync)
 	parsedInput := &AppendLoopInput{}
@@ -55,46 +120,58 @@ func (h *appendLoopHandler) Call(ctx context.Context, input []byte) ([]byte, err
 		// no snapshots
 		parsedInput.SnapshotInterval = parsedInput.LoopDuration + 1000
 	}
-	success := 0
-	calls := uint(0)
-	appendOperations := make([]*response.Operation, 0)
-	appendOperation := response.CreateInitialOperationResult("append", parsedInput.LatencyBucketLower, parsedInput.LatencyBucketUpper, parsedInput.LatencyBucketGranularity, parsedInput.LatencyHeadSize, parsedInput.LatencyTailSize)
-	appendOperations = append(appendOperations, appendOperation)
-	startTime := time.Now()
-	endTime := time.Now()
+	if parsedInput.ConcurrencyOperation < 1 {
+		parsedInput.ConcurrencyOperation = 1
+	}
+	calls := int64(0)
+
 	snapshotCounter := 1
+
+	operationHandlers := make([]*operationHandler, 0)
+	operationHandler := NewOperationHandler(h.env, parsedInput)
+	operationHandlers = append(operationHandlers, operationHandler)
+
+	go operationHandler.operationResponse()
+
+	startTime := time.Now()
 	for {
 		if time.Since(startTime) > time.Duration(parsedInput.LoopDuration)*time.Second {
 			break
 		}
 		if time.Since(startTime) > time.Duration(parsedInput.SnapshotInterval*snapshotCounter)*time.Second {
-			appendOperation = response.CreateInitialOperationResult("append", parsedInput.LatencyBucketLower, parsedInput.LatencyBucketUpper, parsedInput.LatencyBucketGranularity, parsedInput.LatencyHeadSize, parsedInput.LatencyTailSize)
-			appendOperations = append(appendOperations, appendOperation)
+			operationHandler.wg.Wait()
+			close(operationHandler.operationCalls)
+			close(operationHandler.concurrentGoRoutines)
+			operationHandler = NewOperationHandler(h.env, parsedInput)
+			operationHandlers = append(operationHandlers, operationHandler)
 			snapshotCounter++
-
+			go operationHandler.operationResponse()
 		}
-		appendBegin := time.Now()
-		output, err := operations.Append(ctx, h.env, &operations.AppendInput{Record: parsedInput.Record})
-		appendDuration := time.Since(appendBegin).Microseconds()
-		endTime = time.Now()
-
-		if err == nil {
-			appendOperation.AddSuccess(appendDuration, time.Since(startTime).Microseconds())
-			success++
-		} else {
-			appendOperation.AddFailure()
-		}
+		<-operationHandler.concurrentGoRoutines
 		calls++
-		_ = output
+		operationHandler.wg.Add(1)
+		go operationHandler.operationSequence(ctx, startTime, calls, parsedInput.Record)
 	}
+	operationHandler.wg.Wait()
+	close(operationHandler.operationCalls)
+	close(operationHandler.concurrentGoRoutines)
+	endTime := time.Now()
+
+	success := uint(0)
+	operationBenchmarks := make([]*response.Operation, 0)
+	for i := range operationHandlers {
+		operationBenchmarks = append(operationBenchmarks, operationHandlers[i].operationBenchmark)
+		success += operationHandlers[i].operationBenchmark.Success
+	}
+
 	throughput := float64(success) / float64(time.Since(startTime).Seconds())
 
 	benchmark := &response.Benchmark{
 		Id:                  uuid.New(),
 		Success:             uint(success),
-		Calls:               calls,
+		Calls:               uint(calls),
 		Throughput:          throughput,
-		Operations:          appendOperations,
+		Operations:          operationBenchmarks,
 		ConcurrentFunctions: 1,
 		TimeLog: response.TimeLog{
 			LoopDuration: parsedInput.LoopDuration,

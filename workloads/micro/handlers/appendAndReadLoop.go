@@ -11,6 +11,7 @@ import (
 	"faas-micro/constants"
 	"faas-micro/operations"
 	"faas-micro/response"
+	"faas-micro/utils"
 
 	"cs.utexas.edu/zjia/faas/types"
 	"github.com/google/uuid"
@@ -72,11 +73,15 @@ func (h *appendReadLoopHandler) Call(ctx context.Context, input []byte) ([]byte,
 		appendBegin := time.Now()
 		uniqueId := h.env.GenerateUniqueID()
 		tags := []uint64{uniqueId}
-		seqNum, err := operations.Append(ctx, h.env, &operations.AppendInput{Record: parsedInput.Record, Tags: tags})
+		logEntry, err := operations.Append(ctx, h.env, &operations.AppendInput{Record: parsedInput.Record, Tags: tags})
 		appendDuration := time.Since(appendBegin).Microseconds()
 
 		if err == nil {
-			appendOperation.AddSuccess(appendDuration, time.Since(startBenchmarkTime).Microseconds())
+			appendOperation.AddSuccess(&utils.OperationCallItem{
+				Latency:           appendDuration,
+				Success:           true,
+				RelativeTimestamp: time.Since(startBenchmarkTime).Microseconds(),
+			})
 		} else {
 			successful = false
 			// skip reading calls
@@ -89,10 +94,14 @@ func (h *appendReadLoopHandler) Call(ctx context.Context, input []byte) ([]byte,
 		// call reads
 		for i := range readOperations {
 			readBegin := time.Now()
-			_, err := operations.ReadNext(ctx, h.env, uniqueId, seqNum)
+			_, err := operations.ReadNext(ctx, h.env, uniqueId, logEntry.SeqNum)
 			readDuration := time.Since(readBegin).Microseconds()
 			if err == nil {
-				readOperations[i].AddSuccess(readDuration, time.Since(startBenchmarkTime).Microseconds())
+				readOperations[i].AddSuccess(&utils.OperationCallItem{
+					Latency:           readDuration,
+					Success:           true,
+					RelativeTimestamp: time.Since(startBenchmarkTime).Microseconds(),
+				})
 			} else {
 				successful = false
 			}

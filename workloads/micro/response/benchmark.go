@@ -66,22 +66,14 @@ type Operation struct {
 	Description    string                 `json:"description"`
 }
 
-func (this *Operation) AddSuccess(operationDuration int64, timeSinceStart int64) {
+func (this *Operation) AddSuccess(item *utils.OperationCallItem) {
 	this.Calls++
 	this.Success++
 	s := float64(this.Success)
-	this.AverageLatency = ((s-1)/s)*this.AverageLatency + (1/s)*float64(operationDuration)
-	this.BucketLatency.Insert(operationDuration)
-	this.HeadLatency.Add(&utils.OperationCallItem{
-		Latency:           operationDuration,
-		Call:              int64(this.Calls),
-		RelativeTimestamp: timeSinceStart,
-	})
-	this.TailLatency.Add(&utils.OperationCallItem{
-		Latency:           operationDuration,
-		Call:              int64(this.Calls),
-		RelativeTimestamp: timeSinceStart,
-	})
+	this.AverageLatency = ((s-1)/s)*this.AverageLatency + (1/s)*float64(item.Latency)
+	this.BucketLatency.Insert(item.Latency)
+	this.HeadLatency.Add(item)
+	this.TailLatency.Add(item)
 }
 
 func (this *Operation) AddFailure() {
