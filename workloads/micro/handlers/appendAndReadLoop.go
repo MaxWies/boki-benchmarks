@@ -44,7 +44,7 @@ func NewAppendReadLoopHandler(env types.Environment, isAsync bool) types.FuncHan
 }
 
 func (h *appendReadLoopHandler) Call(ctx context.Context, input []byte) ([]byte, error) {
-	log.Printf("[INFO] Call AppendLoopHandler. Async: %v", h.isAsync)
+	log.Printf("[INFO] Call AppendReadLoopHandler. Async: %v", h.isAsync)
 	parsedInput := &AppendReadLoopInput{}
 	err := json.Unmarshal(input, parsedInput)
 	if err != nil {
@@ -54,9 +54,9 @@ func (h *appendReadLoopHandler) Call(ctx context.Context, input []byte) ([]byte,
 	calls := uint(0)
 
 	appendOperation := response.CreateInitialOperationResult("append", parsedInput.LatencyBucketLower, parsedInput.LatencyBucketUpper, parsedInput.LatencyBucketGranularity, parsedInput.LatencyHeadSize, parsedInput.LatencyTailSize)
-	readOperations := make([]response.Operation, 0)
+	readOperations := make([]*response.Operation, 0)
 	for i := 0; i < parsedInput.ReadTimes; i++ {
-		readOperations = append(readOperations, *response.CreateInitialOperationResult("read", parsedInput.LatencyBucketLower, parsedInput.LatencyBucketUpper, parsedInput.LatencyBucketGranularity, parsedInput.LatencyHeadSize, parsedInput.LatencyTailSize))
+		readOperations = append(readOperations, response.CreateInitialOperationResult("read", parsedInput.LatencyBucketLower, parsedInput.LatencyBucketUpper, parsedInput.LatencyBucketGranularity, parsedInput.LatencyHeadSize, parsedInput.LatencyTailSize))
 	}
 
 	log.Printf("[INFO] Run loop for %d seconds. Latency bucket granularity is %d. Size of a record is %d", parsedInput.LoopDuration, parsedInput.LatencyBucketGranularity, len(parsedInput.Record))
@@ -69,16 +69,14 @@ func (h *appendReadLoopHandler) Call(ctx context.Context, input []byte) ([]byte,
 		calls++
 
 		// call append
-		log.Print("[INFO] Append start")
 		appendBegin := time.Now()
 		uniqueId := h.env.GenerateUniqueID()
 		tags := []uint64{uniqueId}
 		seqNum, err := operations.Append(ctx, h.env, &operations.AppendInput{Record: parsedInput.Record, Tags: tags})
 		appendDuration := time.Since(appendBegin).Microseconds()
-		log.Printf("[INFO] Append needed %d microseconds\n", appendDuration)
 
 		if err == nil {
-			appendOperation.AddSuccess(appendDuration)
+			appendOperation.AddSuccess(appendDuration, time.Since(startBenchmarkTime).Microseconds())
 		} else {
 			successful = false
 			// skip reading calls
@@ -94,7 +92,7 @@ func (h *appendReadLoopHandler) Call(ctx context.Context, input []byte) ([]byte,
 			_, err := operations.ReadNext(ctx, h.env, uniqueId, seqNum)
 			readDuration := time.Since(readBegin).Microseconds()
 			if err == nil {
-				readOperations[i].AddSuccess(readDuration)
+				readOperations[i].AddSuccess(readDuration, time.Since(startBenchmarkTime).Microseconds())
 			} else {
 				successful = false
 			}
@@ -112,7 +110,7 @@ func (h *appendReadLoopHandler) Call(ctx context.Context, input []byte) ([]byte,
 		Success:             success,
 		Calls:               calls,
 		Throughput:          throughput,
-		Operations:          append([]response.Operation{*appendOperation}, readOperations...),
+		Operations:          append([]*response.Operation{appendOperation}, readOperations...),
 		ConcurrentFunctions: 1,
 		TimeLog: response.TimeLog{
 			LoopDuration: parsedInput.LoopDuration,

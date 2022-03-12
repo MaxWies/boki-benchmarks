@@ -64,7 +64,8 @@ func MergeCall(isAsync bool, encoded []byte, t *testing.T) {
 func SampleRequest_AppendLoop() []byte {
 	req, _ := json.Marshal(utils.JSONValue{
 		"record":                     utils.CreateRecord(1024),
-		"loop_duration":              1,
+		"loop_duration":              2,
+		"snapshot_interval":          1,
 		"latency_bucket_lower":       0,
 		"latency_bucket_upper":       3000,
 		"latency_bucket_granularity": 10,

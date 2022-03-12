@@ -45,15 +45,15 @@ type Description struct {
 }
 
 type Benchmark struct {
-	Id                  uuid.UUID   `json:"uuid"`
-	Success             uint        `json:"calls_success"`
-	Calls               uint        `json:"calls"`
-	ConcurrentFunctions int         `json:"concurrent_functions"`
-	Operations          []Operation `json:"operations"`
-	Message             string      `json:"message,omitempty"`
-	TimeLog             TimeLog     `json:"time_log,omitempty"`
-	Description         Description `json:"description,omitempty"`
-	Throughput          float64     `json:"throughput"`
+	Id                  uuid.UUID    `json:"uuid"`
+	Success             uint         `json:"calls_success"`
+	Calls               uint         `json:"calls"`
+	ConcurrentFunctions int          `json:"concurrent_functions"`
+	Operations          []*Operation `json:"operations"`
+	Message             string       `json:"message,omitempty"`
+	TimeLog             TimeLog      `json:"time_log,omitempty"`
+	Description         Description  `json:"description,omitempty"`
+	Throughput          float64      `json:"throughput"`
 }
 
 type Operation struct {
@@ -66,14 +66,22 @@ type Operation struct {
 	Description    string                 `json:"description"`
 }
 
-func (this *Operation) AddSuccess(operationDuration int64) {
+func (this *Operation) AddSuccess(operationDuration int64, timeSinceStart int64) {
 	this.Calls++
 	this.Success++
 	s := float64(this.Success)
 	this.AverageLatency = ((s-1)/s)*this.AverageLatency + (1/s)*float64(operationDuration)
 	this.BucketLatency.Insert(operationDuration)
-	this.HeadLatency.Add(operationDuration)
-	this.TailLatency.Add(operationDuration)
+	this.HeadLatency.Add(&utils.OperationCallItem{
+		Latency:           operationDuration,
+		Call:              int64(this.Calls),
+		RelativeTimestamp: timeSinceStart,
+	})
+	this.TailLatency.Add(&utils.OperationCallItem{
+		Latency:           operationDuration,
+		Call:              int64(this.Calls),
+		RelativeTimestamp: timeSinceStart,
+	})
 }
 
 func (this *Operation) AddFailure() {
@@ -87,11 +95,11 @@ func CreateInitialOperationResult(Description string, latencyBucketLower int64, 
 		Description:   Description,
 		BucketLatency: *utils.CreateBucket(latencyBucketLower, latencyBucketUpper, latencyBucketGranularity),
 		HeadLatency: utils.PriorityQueueMin{
-			Items: []int64{},
+			Items: []*utils.OperationCallItem{},
 			Limit: latencyHeadSize,
 		},
 		TailLatency: utils.PriorityQueueMax{
-			Items: []int64{},
+			Items: []*utils.OperationCallItem{},
 			Limit: latencyTailSize,
 		},
 	}
@@ -139,7 +147,7 @@ func (this *Benchmark) Merge(object interface{}) {
 		return
 	}
 	for i := range this.Operations {
-		this.Operations[i].Merge(&other.Operations[i])
+		this.Operations[i].Merge(other.Operations[i])
 	}
 	this.Calls += other.Calls
 	this.Success += other.Success

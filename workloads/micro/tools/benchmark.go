@@ -34,9 +34,13 @@ var FLAGS_latency_bucket_granularity int
 var FLAGS_latency_head_size int
 var FLAGS_latency_tail_size int
 
+var FLAGS_snapshot_interval int
+
 var FLAGS_num_engines int
 
 var FLAGS_read_times int
+
+var FLAGS_logbooks int
 
 func init() {
 	flag.StringVar(&FLAGS_faas_gateway, "faas_gateway", "127.0.0.1:8081", "")
@@ -44,9 +48,11 @@ func init() {
 	flag.StringVar(&FLAGS_fn_merge_prefix, "fn_merge_prefix", "", "")
 	flag.IntVar(&FLAGS_num_users, "num_users", 1000, "")
 	flag.IntVar(&FLAGS_concurrency, "concurrency", 1, "")
-	flag.IntVar(&FLAGS_duration, "duration", 10, "")
 	flag.IntVar(&FLAGS_rand_seed, "rand_seed", 23333, "")
 	flag.StringVar(&FLAGS_benchmark_type, "benchmark_type", constants.BenchmarkAppend, "")
+
+	flag.IntVar(&FLAGS_duration, "duration", 10, "")
+	flag.IntVar(&FLAGS_snapshot_interval, "snapshot_interval", 5, "")
 
 	flag.IntVar(&FLAGS_record_length, "record_length", 1024, "")
 	flag.IntVar(&FLAGS_latency_bucket_lower, "latency_bucket_lower", 300, "")            //microsec
@@ -56,6 +62,8 @@ func init() {
 	flag.IntVar(&FLAGS_latency_tail_size, "latency_tail_size", 20, "")
 	flag.IntVar(&FLAGS_num_engines, "num_engines", 1, "")
 	flag.IntVar(&FLAGS_read_times, "read_times", 1, "")
+
+	flag.IntVar(&FLAGS_logbooks, "logbooks", 1, "")
 
 	rand.Seed(int64(FLAGS_rand_seed))
 }
@@ -70,6 +78,7 @@ func buildAppendLoopRequest() utils.JSONValue {
 	return utils.JSONValue{
 		"record":                     record,
 		"loop_duration":              FLAGS_duration,
+		"snapshot_interval":          FLAGS_snapshot_interval,
 		"latency_bucket_lower":       FLAGS_latency_bucket_lower,
 		"latency_bucket_upper":       FLAGS_latency_bucket_upper,
 		"latency_bucket_granularity": FLAGS_latency_bucket_granularity,
@@ -80,10 +89,6 @@ func buildAppendLoopRequest() utils.JSONValue {
 }
 
 func buildReadRequest() utils.JSONValue {
-	return utils.JSONValue{}
-}
-
-func buildAppendndReadRequest() utils.JSONValue {
 	return utils.JSONValue{}
 }
 
@@ -171,40 +176,23 @@ func clientLoopBenchmark(functionName string, requestInputBuilder func() utils.J
 	}
 }
 
-func clientLoopAsyncBenchmark(functionName string, requestInputBuilder func() utils.JSONValue) {
-	// prepare
+func mergeSync(mergeFunction string, functionName string) {
 	clientDirectory := path.Join(constants.BASE_PATH_CLIENT_BOKI_BENCHMARK, FLAGS_benchmark_type)
 	engineDirectory := path.Join(constants.BASE_PATH_ENGINE_BOKI_BENCHMARK, FLAGS_benchmark_type) // created by engine(s)
 	utils.CreateOutputDirectory(clientDirectory)
 
-	// run benchmark
-	log.Printf("[INFO] Run loop function %s. Concurrency: %d. Duration: %d", functionName, FLAGS_concurrency, FLAGS_duration)
-	appendClient := client.NewSimpleClient(FLAGS_faas_gateway, &client.CallAsync{})
-	c := 0
-	for c < FLAGS_concurrency {
-		appendClient.SendRequest(FLAGS_fn_prefix+functionName, requestInputBuilder())
-		c++
-	}
-	success := 0
-	for _, r := range appendClient.HttpResults {
-		if r.Success {
-			success++
-		}
-	}
-	log.Printf("[INFO] %d successful results from %d total results.", success, len(appendClient.HttpResults))
-	time.Sleep(time.Duration(FLAGS_duration*2) * time.Second)
-
-	// merge
 	mergeClient := client.NewSimpleClient(FLAGS_faas_gateway, &client.CallSync{})
 	e := 0
 	for e < FLAGS_num_engines {
+		// merge at engine
 		// we assume round robin
-		mergeClient.SendRequest(FLAGS_fn_merge_prefix+constants.FunctionMergeResults, utils.JSONValue{
+		mergeClient.SendRequest(mergeFunction, utils.JSONValue{
 			"directory": engineDirectory,
 			"function":  functionName,
 		})
 		e++
 	}
+	// merge results from engines
 	mergedResponse := response.Benchmark{}
 	mergedEngineResults := 0
 	for i, httpResult := range mergeClient.HttpResults {
@@ -232,8 +220,50 @@ func clientLoopAsyncBenchmark(functionName string, requestInputBuilder func() ut
 	// write all engines result to file
 	if err := (&mergedResponse).WriteToFile(clientDirectory, fmt.Sprintf("engine-%s", functionName)); err != nil {
 		log.Printf("[ERROR] Merge responses of all engines not successful")
-		return
 	}
+}
+
+func clientLoopAsyncBenchmark(functionName string, requestInputBuilder func() utils.JSONValue) {
+	log.Printf("[INFO] Run loop function %s. Concurrency: %d. Duration: %d", functionName, FLAGS_concurrency, FLAGS_duration)
+	appendClient := client.NewSimpleClient(FLAGS_faas_gateway, &client.CallAsync{})
+	c := 0
+	for c < FLAGS_concurrency {
+		appendClient.SendRequest(FLAGS_fn_prefix+functionName, requestInputBuilder())
+		c++
+	}
+	success := 0
+	for _, r := range appendClient.HttpResults {
+		if r.Success {
+			success++
+		}
+	}
+	log.Printf("[INFO] %d successful results from %d total results.", success, len(appendClient.HttpResults))
+	time.Sleep(time.Duration(FLAGS_duration*2) * time.Second)
+
+	mergeFunction := fmt.Sprintf("%s%s", FLAGS_fn_merge_prefix, constants.FunctionMergeResults)
+	mergeSync(mergeFunction, functionName)
+}
+
+func logbookVirtualizationBenchmark(functionName string, requestInputBuilder func() utils.JSONValue) {
+	log.Printf("[INFO] Run logbook virtualization benchmark using function %s. Logbooks: %d. Duration: %d", functionName, FLAGS_logbooks, FLAGS_duration)
+	client := client.NewSimpleClient(FLAGS_faas_gateway, &client.CallAsync{})
+	c := 1
+	for c <= FLAGS_logbooks {
+		functionName := fmt.Sprintf("%s%s%d", FLAGS_fn_prefix, functionName, c)
+		client.SendRequest(functionName, requestInputBuilder())
+		c++
+	}
+	success := 0
+	for _, r := range client.HttpResults {
+		if r.Success {
+			success++
+		}
+	}
+	log.Printf("[INFO] %d successful results from %d total results.", success, len(client.HttpResults))
+	time.Sleep(time.Duration(FLAGS_duration*2) * time.Second)
+
+	mergeFunction := fmt.Sprintf("%s%s%d", FLAGS_fn_merge_prefix, constants.FunctionMergeResults, c)
+	mergeSync(mergeFunction, functionName)
 }
 
 func main() {
@@ -254,6 +284,9 @@ func main() {
 	case constants.BenchmarkAppendAndReadThroughput:
 		builder := buildAppendReadLoopRequest
 		clientLoopAsyncBenchmark(constants.FunctionAppendAndReadLoopAsync, builder)
+	case constants.BenchmarkLogbookVirtualization:
+		builder := buildAppendLoopRequest
+		logbookVirtualizationBenchmark(constants.FunctionAppendLoopAsync, builder)
 	default:
 		fmt.Printf("Unknown argument %s", FLAGS_benchmark_type)
 		break

@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"strings"
 
 	"faas-micro/constants"
 	"faas-micro/handlers"
@@ -14,6 +15,17 @@ type funcHandlerFactory struct {
 }
 
 func (f *funcHandlerFactory) New(env types.Environment, funcName string) (types.FuncHandler, error) {
+	//TODO
+	funcName = strings.Replace(funcName, "0", "", -1)
+	funcName = strings.Replace(funcName, "1", "", -1)
+	funcName = strings.Replace(funcName, "2", "", -1)
+	funcName = strings.Replace(funcName, "3", "", -1)
+	funcName = strings.Replace(funcName, "4", "", -1)
+	funcName = strings.Replace(funcName, "5", "", -1)
+	funcName = strings.Replace(funcName, "6", "", -1)
+	funcName = strings.Replace(funcName, "7", "", -1)
+	funcName = strings.Replace(funcName, "8", "", -1)
+	funcName = strings.Replace(funcName, "9", "", -1)
 	switch funcName {
 	case constants.FunctionAppend:
 		return handlers.NewAppendHandler(env), nil

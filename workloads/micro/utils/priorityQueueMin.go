@@ -2,19 +2,20 @@ package utils
 
 import (
 	"container/heap"
+	"errors"
 	"faas-micro/merge"
 	"log"
 )
 
 type PriorityQueueMin struct {
-	Items []int64 `json:"items"`
-	Limit int     `json:"limit"`
+	Items []*OperationCallItem `json:"items"`
+	Limit int                  `json:"limit"`
 }
 
 func (pq PriorityQueueMin) Len() int { return len(pq.Items) }
 
 func (pq PriorityQueueMin) Less(i, j int) bool {
-	return pq.Items[i] > pq.Items[j]
+	return pq.Items[i].Latency > pq.Items[j].Latency
 }
 
 func (pq PriorityQueueMin) Swap(i, j int) {
@@ -22,7 +23,7 @@ func (pq PriorityQueueMin) Swap(i, j int) {
 }
 
 func (pq *PriorityQueueMin) Push(x interface{}) {
-	item := x.(int64)
+	item := x.(*OperationCallItem)
 	pq.Items = append(pq.Items, item)
 }
 
@@ -30,14 +31,14 @@ func (pq *PriorityQueueMin) Pop() interface{} {
 	old := pq.Items
 	n := len(old)
 	item := old[n-1]
-	old[n-1] = 0 // avoid memory leak
+	old[n-1] = &OperationCallItem{} // avoid memory leak
 	pq.Items = old[0 : n-1]
 	return item
 }
 
-func (pq *PriorityQueueMin) Peek() (int64, error) {
+func (pq *PriorityQueueMin) Peek() (*OperationCallItem, error) {
 	if len(pq.Items) <= 0 {
-		return -1, nil
+		return &OperationCallItem{}, errors.New("Queue empty")
 	}
 	return pq.Items[0], nil
 }
@@ -53,7 +54,7 @@ func (pq *PriorityQueueMin) Shrink() {
 	}
 }
 
-func (pq *PriorityQueueMin) Add(item int64) {
+func (pq *PriorityQueueMin) Add(item *OperationCallItem) {
 	if pq.Limit == 0 {
 		return
 	}
@@ -67,7 +68,7 @@ func (pq *PriorityQueueMin) Add(item int64) {
 		return
 	}
 	highest, _ := pq.Peek()
-	if highest > item {
+	if highest.Latency > item.Latency {
 		heap.Pop(pq)
 		heap.Push(pq, item)
 	}

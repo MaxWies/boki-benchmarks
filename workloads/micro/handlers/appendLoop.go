@@ -12,8 +12,6 @@ import (
 	"faas-micro/operations"
 	"faas-micro/response"
 
-	"faas-micro/utils"
-
 	"cs.utexas.edu/zjia/faas/types"
 	"github.com/google/uuid"
 )
@@ -22,6 +20,7 @@ import (
 type AppendLoopInput struct {
 	Record                   []byte `json:"record"`
 	LoopDuration             int    `json:"loop_duration"`
+	SnapshotInterval         int    `json:"snapshot_interval"`
 	LatencyBucketLower       int64  `json:"latency_bucket_lower"`
 	LatencyBucketUpper       int64  `json:"latency_bucket_upper"`
 	LatencyBucketGranularity int64  `json:"latency_bucket_granularity"`
@@ -52,56 +51,50 @@ func (h *appendLoopHandler) Call(ctx context.Context, input []byte) ([]byte, err
 		return nil, err
 	}
 	log.Printf("[INFO] Run loop for %d seconds. Latency bucket granularity is %d. Size of a record is %d", parsedInput.LoopDuration, parsedInput.LatencyBucketGranularity, len(parsedInput.Record))
-	success := float64(0)
+	if parsedInput.SnapshotInterval < 1 {
+		// no snapshots
+		parsedInput.SnapshotInterval = parsedInput.LoopDuration + 1000
+	}
+	success := 0
 	calls := uint(0)
-	avg_latency := float64(0)
-	bucketLatency := utils.CreateBucket(parsedInput.LatencyBucketLower, parsedInput.LatencyBucketUpper, parsedInput.LatencyBucketGranularity)
-	headLatency := utils.PriorityQueueMin{
-		Items: []int64{},
-		Limit: parsedInput.LatencyHeadSize,
-	}
-	tailLatency := utils.PriorityQueueMax{
-		Items: []int64{},
-		Limit: parsedInput.LatencyTailSize,
-	}
+	appendOperations := make([]*response.Operation, 0)
+	appendOperation := response.CreateInitialOperationResult("append", parsedInput.LatencyBucketLower, parsedInput.LatencyBucketUpper, parsedInput.LatencyBucketGranularity, parsedInput.LatencyHeadSize, parsedInput.LatencyTailSize)
+	appendOperations = append(appendOperations, appendOperation)
 	startTime := time.Now()
 	endTime := time.Now()
+	snapshotCounter := 1
 	for {
 		if time.Since(startTime) > time.Duration(parsedInput.LoopDuration)*time.Second {
 			break
 		}
+		if time.Since(startTime) > time.Duration(parsedInput.SnapshotInterval*snapshotCounter)*time.Second {
+			appendOperation = response.CreateInitialOperationResult("append", parsedInput.LatencyBucketLower, parsedInput.LatencyBucketUpper, parsedInput.LatencyBucketGranularity, parsedInput.LatencyHeadSize, parsedInput.LatencyTailSize)
+			appendOperations = append(appendOperations, appendOperation)
+			snapshotCounter++
 
-		// call append
-		log.Print("[INFO] Append start")
+		}
 		appendBegin := time.Now()
 		output, err := operations.Append(ctx, h.env, &operations.AppendInput{Record: parsedInput.Record})
 		appendDuration := time.Since(appendBegin).Microseconds()
-		log.Printf("[INFO] Append needed %d microseconds\n", appendDuration)
 		endTime = time.Now()
 
-		calls++
 		if err == nil {
+			appendOperation.AddSuccess(appendDuration, time.Since(startTime).Microseconds())
 			success++
-			avg_latency = ((success-1)/success)*avg_latency + (1/success)*float64(appendDuration)
-			bucketLatency.Insert(appendDuration)
-			headLatency.Add(appendDuration)
-			tailLatency.Add(appendDuration)
+		} else {
+			appendOperation.AddFailure()
 		}
+		calls++
 		_ = output
 	}
 	throughput := float64(success) / float64(time.Since(startTime).Seconds())
 
 	benchmark := &response.Benchmark{
-		Id:         uuid.New(),
-		Success:    uint(success),
-		Calls:      calls,
-		Throughput: throughput,
-		Operations: []response.Operation{{
-			AverageLatency: float64(avg_latency),
-			BucketLatency:  *bucketLatency,
-			HeadLatency:    headLatency,
-			TailLatency:    tailLatency,
-		}},
+		Id:                  uuid.New(),
+		Success:             uint(success),
+		Calls:               calls,
+		Throughput:          throughput,
+		Operations:          appendOperations,
 		ConcurrentFunctions: 1,
 		TimeLog: response.TimeLog{
 			LoopDuration: parsedInput.LoopDuration,
@@ -114,7 +107,7 @@ func (h *appendLoopHandler) Call(ctx context.Context, input []byte) ([]byte, err
 			Valid:        true,
 		},
 		Description: response.Description{
-			Benchmark:  "Append to Log",
+			Benchmark:  parsedInput.BenchmarkType,
 			Throughput: "[Op/s] Operations per second",
 			Latency:    "[microsec] Operation latency",
 			RecordSize: fmt.Sprintf("[byte] %d", len((parsedInput.Record))),
