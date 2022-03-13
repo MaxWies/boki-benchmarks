@@ -16,6 +16,9 @@ export LATENCY_BUCKET_LOWER=300
 export LATENCY_BUCKET_UPPER=10000
 export LATENCY_HEAD_SIZE=20
 export LATENCY_TAIL_SIZE=20
+export SNAPSHOT_INTERVAL=0
+export CONCURRENCY_WORKER=1
+export CONCURRENCY_OPERATION=1
 
 for s in $(echo $values | jq -r ".exp_variables | to_entries | map(\"\(.key)=\(.value|tostring)\") | .[]" $EXP_SPEC_FILE); do
     export $s
@@ -48,7 +51,6 @@ ssh -q $CLIENT_HOST -- /tmp/benchmark \
     --faas_gateway=$ENTRY_HOST:8080 \
     --benchmark_type=$BENCHMARK_TYPE \
     --duration=$DURATION \
-    --concurrency=$CONCURRENCY \
     --record_length=$RECORD_LENGTH \
     --latency_bucket_lower=$LATENCY_BUCKET_LOWER \
     --latency_bucket_upper=$LATENCY_BUCKET_UPPER \
@@ -56,6 +58,9 @@ ssh -q $CLIENT_HOST -- /tmp/benchmark \
     --latency_head_size=$LATENCY_HEAD_SIZE \
     --latency_tail_size=$LATENCY_TAIL_SIZE \
     --num_engines=$NUM_ENGINES \
+    --snapshot_interval=$SNAPSHOT_INTERVAL \
+    --concurrency_worker=$CONCURRENCY_WORKER \
+    --concurrency_operation=$CONCURRENCY_OPERATION
     >$EXP_DIR/results.log
 
 sleep 10

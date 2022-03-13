@@ -9,6 +9,6 @@
     },
     "exp_variables": {
         "BENCHMARK_TYPE": "append-throughput",
-        "CONCURRENCY": "2560"
+        "CONCURRENCY_WORKER": "2560"
     }
 }
