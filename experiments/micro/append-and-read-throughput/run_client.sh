@@ -8,6 +8,19 @@ EXP_DIR=$2
 HELPER_SCRIPT=$ROOT_DIR/scripts/exp_helper
 BENCHMARK_SCRIPT=$ROOT_DIR/scripts/benchmark/summarize_benchmarks
 
+export COLLECT_CONTAINER_LOGS=false
+export RECORD_LENGTH=1024
+export READ_TIMES=4
+export DURATION=20
+export LATENCY_BUCKET_GRANULARITY=10
+export LATENCY_BUCKET_LOWER=300
+export LATENCY_BUCKET_UPPER=10000
+export LATENCY_HEAD_SIZE=20
+export LATENCY_TAIL_SIZE=20
+export SNAPSHOT_INTERVAL=0
+export CONCURRENCY_WORKER=1
+export CONCURRENCY_OPERATION=1
+
 for s in $(echo $values | jq -r ".exp_variables | to_entries | map(\"\(.key)=\(.value|tostring)\") | .[]" $EXP_SPEC_FILE); do
     export $s
 done
@@ -39,10 +52,17 @@ ssh -q $CLIENT_HOST -- /tmp/benchmark \
     --faas_gateway=$ENTRY_HOST:8080 \
     --benchmark_type=$BENCHMARK_TYPE \
     --duration=$DURATION \
-    --concurrency=$CONCURRENCY \
     --record_length=$RECORD_LENGTH \
-    --num_engines=$NUM_ENGINES \
     --read_times=$READ_TIMES \
+    --latency_bucket_lower=$LATENCY_BUCKET_LOWER \
+    --latency_bucket_upper=$LATENCY_BUCKET_UPPER \
+    --latency_bucket_granularity=$LATENCY_BUCKET_GRANULARITY \
+    --latency_head_size=$LATENCY_HEAD_SIZE \
+    --latency_tail_size=$LATENCY_TAIL_SIZE \
+    --num_engines=$NUM_ENGINES \
+    --snapshot_interval=$SNAPSHOT_INTERVAL \
+    --concurrency_worker=$CONCURRENCY_WORKER \
+    --concurrency_operation=$CONCURRENCY_OPERATION \
     >$EXP_DIR/results.log
 
 sleep 10
@@ -56,3 +76,4 @@ scp -r -q $CLIENT_HOST:/tmp/boki/output/benchmark/$BENCHMARK_TYPE $EXP_DIR/bench
 for engine_result in $EXP_DIR/benchmark/$BENCHMARK_TYPE/*; do
     $BENCHMARK_SCRIPT --result-file=$engine_result
 done
+echo "Results published at $EXP_DIR/benchmark/$BENCHMARK_TYPE"

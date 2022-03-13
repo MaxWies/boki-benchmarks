@@ -7,27 +7,67 @@ import json
 import argparse
 import subprocess as sp
 import matplotlib.pyplot as plt
+import  matplotlib.offsetbox as offsetbox
 import numpy as np
 
-# TODO: improve
-USER_NAME = 'mrc'
-
-def run_remote_command(ssh_ip, cmd):
-    print(cmd, file=sys.stderr)
-    ret = sp.run(['ssh', '-q', ssh_ip + '-' + USER_NAME, '--'] + cmd,
-                 stdout=sp.PIPE, stderr=sp.PIPE, encoding='utf8')
-    if ret.returncode != 0:
-        raise Exception('Failed to run remote command: ' + ' '.join(cmd) + '\n' + ret.stderr)
-    return ret.stdout, ret.stderr
-
-def present_latencies_on_timeline(directory, items, type, exp_duration_sec):
-    latencies = [i['latency'] for i in items]
-    events = [i['relative_timestamp'] for i in items]
+def present_latencies_on_timeline(directory, items, type, calls_success, exp_duration_sec):
+    latencies = [i['latency']for i in items]
+    events = [i['relative_timestamp']/10**6 for i in items]
     plt.plot(events, latencies, 'ro')
-    plt.xlabel('Relative time in msec')
-    plt.xlim([0, 10**6 * exp_duration_sec])
-    plt.ylabel('Latency in msec')
+    plt.title('Latencies-'+type+ ':' + ' {} from {} successful operation calls'.format(len(items), calls_success))
+    plt.xlabel('Relative time (s)')
+    plt.xlim([0, exp_duration_sec])
+    plt.ylabel('Latency (\u03BCs)')
     plt.savefig(os.path.join(directory, 'latencies-'+type+'.png'))
+    plt.close()
+
+def present_operation_latencies_on_cdf(operation):
+    cdf = []
+    latencies = []
+    calls_success_until = 0
+    highest_slot_with_entry = 0
+    bucket = operation['bucket']
+    _, ax = plt.subplots()
+    for i in range(len(bucket['slots'])):
+        latencies.append(bucket['lower'] + i * bucket['interval'])
+        calls_success_until += bucket['slots'][i]
+        cdf.append(calls_success_until/operation['calls_success'])
+        if 0 < bucket['slots'][i]:
+            highest_slot_with_entry = i
+    plt.plot(latencies, cdf, label=operation['description'])
+    percentiles = [0.5, 0.75, 0.9, 0.99]
+
+    latencies_percentiles = [operation["latency_p50"],operation["latency_p75"],operation["latency_p90"],operation["latency_p99"]]
+    plt.plot(latencies_percentiles, percentiles, 'bo')
+    for i, v in enumerate(latencies_percentiles):
+        plt.annotate('  ' + str(v) + '\u03BCs', (latencies_percentiles[i], percentiles[i]*0.97))
+
+    #plt.text(0.95, 0.01, 'latency min: %{}'.format(operation['latency_min']), verticalalignment='bottom', horizontalalignment='right', color='green', fontsize=15)
+    at = offsetbox.AnchoredText('calls: {}\ncalls success: {}\nlatency min: {}\u03BCs\nlatency max: {}\u03BCs'.format(operation['calls'], operation['calls_success'], operation['latency_min'], operation['latency_max']), loc='lower right')
+    ax.add_artist(at)
+
+
+    plt.xlabel('Latency (\u03BCs)')
+    plt.xlim([bucket['lower'], bucket['lower'] + highest_slot_with_entry * bucket['interval']])
+    plt.ylim([0,1])
+    #plt.axhline(0.5, color='gray', linestyle='--')
+    #plt.axhline(0.9, color='gray', linestyle='--')
+    #plt.axhline(0.99, color='gray', linestyle='--')
+    plt.legend()
+
+def present_latencies_on_cdf(directory, benchmark):
+    fig = plt.figure()
+    for i in range(len(benchmark['operations'])):
+        fig.add_subplot(2,2,i+1)
+        present_operation_latencies_on_cdf(benchmark['operations'][i])
+    #sub_fig, ax = fig.subplots()
+    bottom_text = plt.figtext(0.93, 0.5, 'record size per operation: {}\nthroughput: {}\nboki: todo'.format(benchmark['description']['record_size'], benchmark['throughput']))
+    # ax.annotate(
+    #     'record size per operation: {}\n, throughput: {}\n,boki: todo'.format(benchmark['description']['record_size'], benchmark['throughput']),
+    #     xy=(0.5,0), xytext=(0,10), xycoords=('axes fraction', 'figure fraction'), textcoords='offset points', ha='center', va='bottom')
+    plt.title('Cumulative latencies of benchmark {}'.format(benchmark['description']['benchmark']))
+    plt.savefig(os.path.join(directory, 'latencies-cdf.png'), bbox_extra_artists=(bottom_text,), bbox_inches='tight')
+    plt.close()
 
 def compute_bucket_percentile(bucket, number_of_entries, percentile):
     bucket_slot_index = 0
@@ -56,12 +96,13 @@ def show_benchmark_results(result_file):
     file_directory = os.path.dirname(result_file)
     file_name = os.path.basename(result_file)
     file_name_extensionless = file_name.split('.')[0]
-    pretty_benchmark = None
+    long_benchmark_result = None
+    short_benchmark_result = None
     with open(result_file) as f:
         benchmark = json.load(f)
         for operation in benchmark["operations"]:
             e = sum(operation["bucket"]["slots"])
-            print("Successful calls {}. Bucket entries {}".format(operation["calls_success"], e))
+            #print("Successful calls {}. Bucket entries {}".format(operation["calls_success"], e))
             if "bucket" in operation:
                 operation["latency_p10"] = compute_bucket_percentile(operation["bucket"], e, 0.10)
                 operation["latency_p50"] = compute_bucket_percentile(operation["bucket"], e, 0.5)
@@ -69,33 +110,41 @@ def show_benchmark_results(result_file):
                 operation["latency_p90"] = compute_bucket_percentile(operation["bucket"], e, 0.90)
                 operation["latency_p99"] = compute_bucket_percentile(operation["bucket"], e, 0.99)
                 operation["latency_p99.9"] = compute_bucket_percentile(operation["bucket"], e, 0.999)
-                del operation["bucket"]
             if "latency_head" in operation and 0 < len(operation["latency_head"]["items"]):
                 operation["latency_min"] = min([i["latency"] for i in operation["latency_head"]["items"]])
                 operation["latency_head"]["items"] = sort_operation_item_calls(operation["latency_head"]["items"])
             if "latency_tail" in operation and 0 < len(operation["latency_tail"]["items"]):
                 operation["latency_max"] = max([i["latency"] for i in operation["latency_tail"]["items"]])
                 operation["latency_tail"]["items"] = sort_operation_item_calls(operation["latency_tail"]["items"])
-                #present_latencies_on_timeline(os.path.dirname(result_file), operation["latency_tail"]["items"])
+                present_latencies_on_timeline(file_directory, operation["latency_tail"]["items"], 'tail', operation["calls_success"], benchmark['time_log']['loop_duration'])
         if "time_log" in benchmark:
             make_timestamps_human_readable(benchmark["time_log"], 'time')
-        pretty_benchmark = json.dumps(benchmark, sort_keys=True, indent=4)
-    if pretty_benchmark is None:
+        present_latencies_on_cdf(file_directory, benchmark)
+        for operation in benchmark["operations"]:
+            del operation["bucket"]
+        long_benchmark_result = json.dumps(benchmark, sort_keys=True, indent=4)
+        for operation in benchmark["operations"]:
+            del operation['latency_head']
+            del operation['latency_tail']
+        short_benchmark_result = json.dumps(benchmark, sort_keys=True, indent=4)
+    if long_benchmark_result is None or short_benchmark_result is None:
         raise Exception
-    with open(os.path.join(file_directory, 'pretty-'+file_name_extensionless+'.json'), 'w') as f:
-        f.write(pretty_benchmark)
+    with open(os.path.join(file_directory, 'long-'+file_name_extensionless+'.json'), 'w') as f:
+        f.write(long_benchmark_result)
+    with open(os.path.join(file_directory, 'short-'+file_name_extensionless+'.json'), 'w') as f:
+        f.write(short_benchmark_result)
 
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--result-file', type=str)
-    args = parser.parse_args()
-    try:
-        show_benchmark_results(args.result_file)
-    except Exception as e:
-        err_str = str(e)
-        if not err_str.endswith('\n'):
-            err_str += '\n'
-        sys.stderr.write(err_str)
-        sys.exit(1)
+# if __name__ == '__main__':
+#     parser = argparse.ArgumentParser()
+#     parser.add_argument('--result-file', type=str)
+#     args = parser.parse_args()
+#     try:
+#         show_benchmark_results(args.result_file)
+#     except Exception as e:
+#         err_str = str(e)
+#         if not err_str.endswith('\n'):
+#             err_str += '\n'
+#         sys.stderr.write(err_str)
+#         sys.exit(1)
 
-# show_benchmark_results('test.json')
+show_benchmark_results('test2.json')

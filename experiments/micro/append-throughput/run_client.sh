@@ -60,7 +60,7 @@ ssh -q $CLIENT_HOST -- /tmp/benchmark \
     --num_engines=$NUM_ENGINES \
     --snapshot_interval=$SNAPSHOT_INTERVAL \
     --concurrency_worker=$CONCURRENCY_WORKER \
-    --concurrency_operation=$CONCURRENCY_OPERATION
+    --concurrency_operation=$CONCURRENCY_OPERATION \
     >$EXP_DIR/results.log
 
 sleep 10
@@ -74,3 +74,4 @@ scp -r -q $CLIENT_HOST:/tmp/boki/output/benchmark/$BENCHMARK_TYPE $EXP_DIR/bench
 for engine_result in $EXP_DIR/benchmark/$BENCHMARK_TYPE/*; do
     $BENCHMARK_SCRIPT --result-file=$engine_result
 done
+echo "Results published at $EXP_DIR/benchmark/$BENCHMARK_TYPE"
