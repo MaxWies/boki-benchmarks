@@ -1,4 +1,4 @@
-package response
+package operations
 
 import (
 	"encoding/json"
@@ -37,36 +37,37 @@ func (this *TimeLog) Merge(object interface{}) {
 }
 
 type Description struct {
-	Latency    string `json:"latency"`
-	Throughput string `json:"throughput"`
-	RecordSize string `json:"record_size"`
-	Benchmark  string `json:"benchmark"`
-	Engines    int    `json:"engines"`
+	Latency          string `json:"latency"`
+	Throughput       string `json:"throughput"`
+	RecordSize       string `json:"record_size"`
+	Benchmark        string `json:"benchmark"`
+	Engines          int    `json:"engines"`
+	SnapshotInterval int    `json:"snapshot_interval"`
 }
 
 type Benchmark struct {
-	Id                  uuid.UUID    `json:"uuid"`
-	Success             uint         `json:"calls_success"`
-	Calls               uint         `json:"calls"`
-	ConcurrentFunctions int          `json:"concurrent_functions"`
-	Operations          []*Operation `json:"operations"`
-	Message             string       `json:"message,omitempty"`
-	TimeLog             TimeLog      `json:"time_log,omitempty"`
-	Description         Description  `json:"description,omitempty"`
-	Throughput          float64      `json:"throughput"`
+	Id                  uuid.UUID             `json:"uuid"`
+	Success             uint                  `json:"calls_success"`
+	Calls               uint                  `json:"calls"`
+	ConcurrentFunctions int                   `json:"concurrent_functions"`
+	Operations          []*OperationBenchmark `json:"operations"`
+	Message             string                `json:"message,omitempty"`
+	TimeLog             TimeLog               `json:"time_log,omitempty"`
+	Description         Description           `json:"description,omitempty"`
+	Throughput          float64               `json:"throughput"`
 }
 
-type Operation struct {
-	Calls          uint                   `json:"calls"`
-	Success        uint                   `json:"calls_success"`
-	AverageLatency float64                `json:"latency_average"`
-	BucketLatency  utils.Bucket           `json:"bucket"`
-	HeadLatency    utils.PriorityQueueMin `json:"latency_head"`
-	TailLatency    utils.PriorityQueueMax `json:"latency_tail"`
-	Description    string                 `json:"description"`
+type OperationBenchmark struct {
+	Calls          uint             `json:"calls"`
+	Success        uint             `json:"calls_success"`
+	AverageLatency float64          `json:"latency_average"`
+	BucketLatency  Bucket           `json:"bucket"`
+	HeadLatency    PriorityQueueMin `json:"latency_head"`
+	TailLatency    PriorityQueueMax `json:"latency_tail"`
+	Description    string           `json:"description"`
 }
 
-func (this *Operation) AddSuccess(item *utils.OperationCallItem) {
+func (this *OperationBenchmark) AddSuccess(item *OperationCallItem) {
 	this.Calls++
 	this.Success++
 	s := float64(this.Success)
@@ -76,33 +77,33 @@ func (this *Operation) AddSuccess(item *utils.OperationCallItem) {
 	this.TailLatency.Add(item)
 }
 
-func (this *Operation) AddFailure() {
+func (this *OperationBenchmark) AddFailure() {
 	this.Calls++
 }
 
-func CreateInitialOperationResult(Description string, latencyBucketLower int64, latencyBucketUpper int64, latencyBucketGranularity int64, latencyHeadSize int, latencyTailSize int) *Operation {
-	return &Operation{
+func CreateInitialOperationResult(Description string, latencyBucketLower int64, latencyBucketUpper int64, latencyBucketGranularity int64, latencyHeadSize int, latencyTailSize int) *OperationBenchmark {
+	return &OperationBenchmark{
 		Calls:         0,
 		Success:       0,
 		Description:   Description,
-		BucketLatency: *utils.CreateBucket(latencyBucketLower, latencyBucketUpper, latencyBucketGranularity),
-		HeadLatency: utils.PriorityQueueMin{
-			Items: []*utils.OperationCallItem{},
+		BucketLatency: *CreateBucket(latencyBucketLower, latencyBucketUpper, latencyBucketGranularity),
+		HeadLatency: PriorityQueueMin{
+			Items: []*OperationCallItem{},
 			Limit: latencyHeadSize,
 		},
-		TailLatency: utils.PriorityQueueMax{
-			Items: []*utils.OperationCallItem{},
+		TailLatency: PriorityQueueMax{
+			Items: []*OperationCallItem{},
 			Limit: latencyTailSize,
 		},
 	}
 }
 
-func CreateEmptyOperationResult() *Operation {
-	return &Operation{}
+func CreateEmptyOperationResult() *OperationBenchmark {
+	return &OperationBenchmark{}
 }
 
-func (this *Operation) Merge(object interface{}) {
-	other := (object).(merge.Mergable).(*Operation)
+func (this *OperationBenchmark) Merge(object interface{}) {
+	other := (object).(merge.Mergable).(*OperationBenchmark)
 	this.Calls += other.Calls
 	if this.Description != other.Description {
 		log.Print("[WARNING] Cannot merge different operations")

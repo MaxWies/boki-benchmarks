@@ -2,7 +2,7 @@ package test
 
 import (
 	"container/heap"
-	"faas-micro/utils"
+	"faas-micro/operations"
 	"math"
 	"testing"
 )
@@ -14,19 +14,21 @@ func TestPriorityQueueMax(t *testing.T) {
 		10000,
 		0,
 	}
-	pq := utils.PriorityQueueMax{
+	pq := operations.PriorityQueueMax{
 		Limit: 10,
-		Items: make([]*utils.OperationCallItem, len(items)),
+		Items: make([]*operations.OperationCallItem, len(items)),
 	}
 	for i, p := range items {
-		pq.Items[i] = &utils.OperationCallItem{
+		pq.Items[i] = &operations.OperationCallItem{
 			Latency:           p,
-			Call:              int64(i + 1),
 			RelativeTimestamp: int64(i),
 		}
 	}
 	heap.Init(&pq)
-	heap.Push(&pq, int64(16))
+	heap.Push(&pq, &operations.OperationCallItem{
+		Latency:           16,
+		RelativeTimestamp: 4,
+	})
 	sortedItems := []int64{
 		0,
 		7,
@@ -35,8 +37,8 @@ func TestPriorityQueueMax(t *testing.T) {
 		math.MaxInt64,
 	}
 	for i := range sortedItems {
-		item := heap.Pop(&pq).(int64)
-		if item != sortedItems[i] {
+		item := heap.Pop(&pq).(*operations.OperationCallItem)
+		if item.Latency != sortedItems[i] {
 			t.Error("Wrong priority")
 		}
 	}
@@ -49,21 +51,19 @@ func TestPriorityQueueMin(t *testing.T) {
 		10000,
 		0,
 	}
-	pq := utils.PriorityQueueMin{
+	pq := operations.PriorityQueueMin{
 		Limit: 10,
-		Items: make([]*utils.OperationCallItem, len(items)),
+		Items: make([]*operations.OperationCallItem, len(items)),
 	}
 	for i, p := range items {
-		pq.Items[i] = &utils.OperationCallItem{
+		pq.Items[i] = &operations.OperationCallItem{
 			Latency:           p,
-			Call:              int64(i + 1),
 			RelativeTimestamp: int64(i),
 		}
 	}
 	heap.Init(&pq)
-	heap.Push(&pq, &utils.OperationCallItem{
+	heap.Push(&pq, &operations.OperationCallItem{
 		Latency:           16,
-		Call:              5,
 		RelativeTimestamp: 4,
 	})
 	sortedItems := []int64{
@@ -74,7 +74,7 @@ func TestPriorityQueueMin(t *testing.T) {
 		0,
 	}
 	for i := range sortedItems {
-		item := heap.Pop(&pq).(*utils.OperationCallItem)
+		item := heap.Pop(&pq).(*operations.OperationCallItem)
 		if item.Latency != sortedItems[i] {
 			t.Error("Wrong priority")
 		}
@@ -91,21 +91,20 @@ func TestPriorityQueueMax_Shrinking(t *testing.T) {
 		1,
 		1,
 	}
-	pq := utils.PriorityQueueMax{
+	pq := operations.PriorityQueueMax{
 		Limit: 1,
-		Items: make([]*utils.OperationCallItem, len(items)),
+		Items: make([]*operations.OperationCallItem, len(items)),
 	}
 	for i, p := range items {
-		pq.Items[i] = &utils.OperationCallItem{
+		pq.Items[i] = &operations.OperationCallItem{
 			Latency:           p,
-			Call:              int64(i + 1),
 			RelativeTimestamp: int64(i),
 		}
 	}
 	heap.Init(&pq)
 	//heap.Fix(&pq)
 	pq.Shrink()
-	item := pq.Pop().(*utils.OperationCallItem)
+	item := pq.Pop().(*operations.OperationCallItem)
 	if item.Latency != 10000 {
 		t.Error("Wrong priority")
 	}
@@ -116,29 +115,26 @@ func TestPriorityQueueMax_Add(t *testing.T) {
 		1000,
 		10000,
 	}
-	pq := utils.PriorityQueueMax{
+	pq := operations.PriorityQueueMax{
 		Limit: 3,
-		Items: make([]*utils.OperationCallItem, len(items)),
+		Items: make([]*operations.OperationCallItem, len(items)),
 	}
 	for i, p := range items {
-		pq.Items[i] = &utils.OperationCallItem{
+		pq.Items[i] = &operations.OperationCallItem{
 			Latency:           p,
-			Call:              int64(i + 1),
 			RelativeTimestamp: int64(i),
 		}
 	}
 	heap.Init(&pq)
-	pq.Add(&utils.OperationCallItem{
+	pq.Add(&operations.OperationCallItem{
 		Latency:           5,
-		Call:              3,
 		RelativeTimestamp: 2,
 	})
 	if item, _ := pq.Peek(); item.Latency != 5 {
 		t.Error("Wrong priority")
 	}
-	pq.Add(&utils.OperationCallItem{
+	pq.Add(&operations.OperationCallItem{
 		Latency:           5000,
-		Call:              4,
 		RelativeTimestamp: 3,
 	})
 	if item, _ := pq.Peek(); item.Latency != 1000 {
@@ -146,11 +142,11 @@ func TestPriorityQueueMax_Add(t *testing.T) {
 	}
 	pq.Limit = 2
 	pq.Shrink()
-	v := heap.Pop(&pq).(*utils.OperationCallItem)
+	v := heap.Pop(&pq).(*operations.OperationCallItem)
 	if v.Latency != 5000 {
 		t.Error("Wrong priority")
 	}
-	v = heap.Pop(&pq).(*utils.OperationCallItem)
+	v = heap.Pop(&pq).(*operations.OperationCallItem)
 	if v.Latency != 10000 {
 		t.Error("Wrong priority")
 	}

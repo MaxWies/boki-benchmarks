@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"faas-micro/merge"
-	"faas-micro/response"
+	"faas-micro/operations"
 	"io/ioutil"
 	"log"
 	"path"
@@ -34,7 +34,7 @@ func (h *MergeHandler) CreateMergable(mergerType string) (merge.Mergable, error)
 	// default:
 	// 	return nil, fmt.Errorf("Unknown merger type %s", mergerType)
 	// }
-	return &response.Benchmark{
+	return &operations.Benchmark{
 		Message: "No Results",
 	}, nil
 }
@@ -48,7 +48,7 @@ func (h *MergeHandler) CreateMergableFromJson(mergerType string, marshalled []by
 	// default:
 	// 	return nil, fmt.Errorf("Unknown merger type %s", mergerType)
 	// }
-	var benchmarkResponse response.Benchmark
+	var benchmarkResponse operations.Benchmark
 	err := json.Unmarshal(marshalled, &benchmarkResponse)
 	return &benchmarkResponse, err
 }

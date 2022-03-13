@@ -3,18 +3,17 @@ package client
 import (
 	"bytes"
 	"encoding/json"
+	"faas-micro/operations"
 	"fmt"
 	"log"
 	"net/http"
-
-	"faas-micro/response"
 )
 
 type HttpResultLoop struct {
 	Err        error
 	Success    bool
 	StatusCode int
-	Benchmark  response.Benchmark
+	Benchmark  operations.Benchmark
 }
 
 type CallSync struct {
@@ -37,7 +36,7 @@ func (callSync *CallSync) JsonPostRequest(client *http.Client, url string, reque
 		return &HttpResult{Success: false, StatusCode: resp.StatusCode}
 	}
 
-	var benchmark response.Benchmark
+	var benchmark operations.Benchmark
 	err = json.NewDecoder(resp.Body).Decode(&benchmark)
 	if err != nil {
 		log.Fatalf("[FATAL] Failed to decode JSON response: %v", err)

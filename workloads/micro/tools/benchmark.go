@@ -10,7 +10,7 @@ import (
 
 	"faas-micro/client"
 	"faas-micro/constants"
-	"faas-micro/response"
+	"faas-micro/operations"
 	"faas-micro/utils"
 
 	"github.com/montanaflynn/stats"
@@ -67,6 +67,7 @@ func init() {
 
 	flag.IntVar(&FLAGS_logbooks, "logbooks", 1, "")
 
+	flag.IntVar(&FLAGS_concurrency_operation, "concurrency_client", 1, "") //todo
 	flag.IntVar(&FLAGS_concurrency_operation, "concurrency_operation", 1, "")
 
 	rand.Seed(int64(FLAGS_rand_seed))
@@ -76,11 +77,12 @@ func buildAppendRequest() utils.JSONValue {
 	return utils.JSONValue{}
 }
 
-func buildAppendLoopRequest() utils.JSONValue {
+func buildMicrobenchmarkRequest() utils.JSONValue {
 	record := utils.CreateRecord(FLAGS_record_length)
 	fmt.Printf("Length of record is %d", len(record))
 	return utils.JSONValue{
 		"record":                     record,
+		"read_times":                 FLAGS_read_times,
 		"loop_duration":              FLAGS_duration,
 		"snapshot_interval":          FLAGS_snapshot_interval,
 		"latency_bucket_lower":       FLAGS_latency_bucket_lower,
@@ -89,7 +91,7 @@ func buildAppendLoopRequest() utils.JSONValue {
 		"latency_head_size":          FLAGS_latency_head_size,
 		"latency_tail_size":          FLAGS_latency_tail_size,
 		"benchmark_type":             FLAGS_benchmark_type,
-		"concurrency_operation":      FLAGS_concurrency_operation,
+		"concurrent_operations":      FLAGS_concurrency_operation,
 	}
 }
 
@@ -97,21 +99,21 @@ func buildReadRequest() utils.JSONValue {
 	return utils.JSONValue{}
 }
 
-func buildAppendReadLoopRequest() utils.JSONValue {
-	record := utils.CreateRecord(FLAGS_record_length)
-	fmt.Printf("Length of record is %d", len(record))
-	return utils.JSONValue{
-		"record":                     record,
-		"read_times":                 FLAGS_read_times,
-		"loop_duration":              FLAGS_duration,
-		"latency_bucket_lower":       FLAGS_latency_bucket_lower,
-		"latency_bucket_upper":       FLAGS_latency_bucket_upper,
-		"latency_bucket_granularity": FLAGS_latency_bucket_granularity,
-		"latency_head_size":          FLAGS_latency_head_size,
-		"latency_tail_size":          FLAGS_latency_tail_size,
-		"benchmark_type":             FLAGS_benchmark_type,
-	}
-}
+// func buildAppendReadLoopRequest() utils.JSONValue {
+// 	record := utils.CreateRecord(FLAGS_record_length)
+// 	fmt.Printf("Length of record is %d", len(record))
+// 	return utils.JSONValue{
+// 		"record":                     record,
+// 		"read_times":                 FLAGS_read_times,
+// 		"loop_duration":              FLAGS_duration,
+// 		"latency_bucket_lower":       FLAGS_latency_bucket_lower,
+// 		"latency_bucket_upper":       FLAGS_latency_bucket_upper,
+// 		"latency_bucket_granularity": FLAGS_latency_bucket_granularity,
+// 		"latency_head_size":          FLAGS_latency_head_size,
+// 		"latency_tail_size":          FLAGS_latency_tail_size,
+// 		"benchmark_type":             FLAGS_benchmark_type,
+// 	}
+// }
 
 func printFnResult(fnName string, duration time.Duration, results []*utils.FaasCall) {
 	total := 0
@@ -172,7 +174,7 @@ func clientLoopBenchmark(functionName string, requestInputBuilder func() utils.J
 	faasCalls := client.WaitForHttpResults()
 	for _, faasCall := range faasCalls {
 		if faasCall.HttpResult.Success {
-			appendLoopOutput := faasCall.HttpResult.Result.(response.Benchmark)
+			appendLoopOutput := faasCall.HttpResult.Result.(operations.Benchmark)
 			fmt.Printf("Calls Total: %d", appendLoopOutput.Calls)
 			fmt.Printf("Calls Success: %d", appendLoopOutput.Success)
 			fmt.Printf("Calls Failure: %d", appendLoopOutput.Calls-appendLoopOutput.Success)
@@ -198,14 +200,14 @@ func mergeSync(mergeFunction string, functionName string) {
 		e++
 	}
 	// merge results from engines
-	mergedResponse := response.Benchmark{}
+	mergedResponse := operations.Benchmark{}
 	mergedEngineResults := 0
 	for i, httpResult := range mergeClient.HttpResults {
 		if httpResult.Err != nil || !httpResult.Success {
 			log.Printf("[ERROR] Merge request failed. Response status code %d", httpResult.StatusCode)
 			continue
 		}
-		mergeInput := httpResult.Result.(response.Benchmark)
+		mergeInput := httpResult.Result.(operations.Benchmark)
 		// write per-engine result to file
 		if err := (&mergeInput).WriteToFile(clientDirectory, fmt.Sprintf("engine-%d-%s", i, functionName)); err != nil {
 			log.Printf("[ERROR] Merge responses of all engines not successful")
@@ -284,13 +286,13 @@ func main() {
 	// 	builder := buildAppendToLogLoopRequest
 	// 	clientLoopBenchmark(constants.AppendLoop, builder)
 	case constants.BenchmarkAppendThroughput:
-		builder := buildAppendLoopRequest
+		builder := buildMicrobenchmarkRequest
 		clientLoopAsyncBenchmark(constants.FunctionAppendLoopAsync, builder)
 	case constants.BenchmarkAppendAndReadThroughput:
-		builder := buildAppendReadLoopRequest
+		builder := buildMicrobenchmarkRequest
 		clientLoopAsyncBenchmark(constants.FunctionAppendAndReadLoopAsync, builder)
 	case constants.BenchmarkLogbookVirtualization:
-		builder := buildAppendLoopRequest
+		builder := buildMicrobenchmarkRequest
 		logbookVirtualizationBenchmark(constants.FunctionAppendLoopAsync, builder)
 	default:
 		fmt.Printf("Unknown argument %s", FLAGS_benchmark_type)

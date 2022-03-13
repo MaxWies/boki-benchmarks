@@ -1,4 +1,4 @@
-package response
+package operations
 
 type BenchmarkAsync struct {
 }

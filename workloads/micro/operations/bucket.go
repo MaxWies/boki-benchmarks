@@ -1,4 +1,4 @@
-package utils
+package operations
 
 type Bucket struct {
 	Lower       int64   `json:"lower"`

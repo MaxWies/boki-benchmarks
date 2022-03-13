@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"faas-micro/constants"
 	"faas-micro/handlers"
-	"faas-micro/response"
+	"faas-micro/operations"
 	"faas-micro/utils"
 	"fmt"
 	"log"
@@ -18,18 +18,18 @@ const (
 	outputDirectory   string = constants.BASE_PATH_ENGINE_BOKI_BENCHMARK + "/" + testBenchmarkType
 )
 
-func OperationCall(handler types.FuncHandler, request []byte) (*response.Benchmark, error) {
+func OperationCall(handler types.FuncHandler, request []byte) (*operations.Benchmark, error) {
 	contextMock := &ContextMock{}
 	result, err := handler.Call(contextMock, request)
 	if err != nil {
 		return nil, err
 	}
-	var appendLoopOutput response.Benchmark
-	err = json.Unmarshal(result, &appendLoopOutput)
+	var benchmark operations.Benchmark
+	err = json.Unmarshal(result, &benchmark)
 	if err != nil {
 		return nil, err
 	}
-	return &appendLoopOutput, nil
+	return &benchmark, nil
 }
 
 func SampleMergeRequest(isAsync bool, function string) ([]byte, error) {
@@ -46,7 +46,7 @@ func MergeCall(isAsync bool, encoded []byte, t *testing.T) {
 	if err != nil {
 		t.Error("Error is not nil")
 	}
-	var benchmark response.Benchmark
+	var benchmark operations.Benchmark
 	err = json.Unmarshal(result, &benchmark)
 	if err != nil {
 		log.Fatalf("[FATAL] Failed to decode JSON response: %v", err)
@@ -72,7 +72,7 @@ func SampleRequest_AppendLoop() []byte {
 		"latency_head_size":          10,
 		"latency_tail_size":          10,
 		"benchmark_type":             testBenchmarkType,
-		"concurrency":                4,
+		"concurrent_operations":      4,
 	})
 	return req
 }
@@ -88,6 +88,7 @@ func SampleRequest_AppendReadLoop() []byte {
 		"latency_head_size":          10,
 		"latency_tail_size":          10,
 		"benchmark_type":             testBenchmarkType,
+		"concurrent_operations":      2,
 	})
 	return req
 }
