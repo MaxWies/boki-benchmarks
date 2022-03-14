@@ -31,9 +31,15 @@ mkdir -p $EXP_DIR
 MANAGER_HOST=`$HELPER_SCRIPT get-docker-manager-host --base-dir=$BASE_DIR`
 CLIENT_HOST=`$HELPER_SCRIPT get-client-host --base-dir=$BASE_DIR`
 ENTRY_HOST=`$HELPER_SCRIPT get-service-host --base-dir=$BASE_DIR --service=boki-gateway`
-ALL_ENGINE_HOSTS=`$HELPER_SCRIPT get-machine-with-label --base-dir=$BASE_DIR --machine-label=engine_node`
 
-NUM_ENGINES=$(wc -w <<< $ALL_ENGINE_HOSTS)
+ALL_ENGINE_HOSTS=`$HELPER_SCRIPT get-machine-with-label --base-dir=$BASE_DIR --machine-label=engine_node`
+ALL_STORAGE_HOSTS=`$HELPER_SCRIPT get-machine-with-label --base-dir=$BASE_DIR --machine-label=storage_node`
+ALL_SEQUENCER_HOSTS=`$HELPER_SCRIPT get-machine-with-label --base-dir=$BASE_DIR --machine-label=sequencer_node`
+
+ENGINE_NODES=$(wc -w <<< $ALL_ENGINE_HOSTS)
+STORAGE_NODES=$(wc -w <<< $ALL_STORAGE_HOSTS)
+SEQUENCER_NODES=$(wc -w <<< $ALL_SEQUENCER_HOSTS)
+
 for HOST in $ALL_ENGINE_HOSTS; do
     ssh -q $HOST -- sudo rm -rf /mnt/inmem/boki/output/benchmark/$BENCHMARK_TYPE
     ssh -q $HOST -- sudo mkdir -p /mnt/inmem/boki/output/benchmark/$BENCHMARK_TYPE
@@ -59,7 +65,9 @@ ssh -q $CLIENT_HOST -- /tmp/benchmark \
     --latency_bucket_granularity=$LATENCY_BUCKET_GRANULARITY \
     --latency_head_size=$LATENCY_HEAD_SIZE \
     --latency_tail_size=$LATENCY_TAIL_SIZE \
-    --num_engines=$NUM_ENGINES \
+    --engine_nodes=$ENGINE_NODES \
+    --storage_nodes=$STORAGE_NODES \
+    --sequencer_nodes=$SEQUENCER_NODES \
     --snapshot_interval=$SNAPSHOT_INTERVAL \
     --concurrency_worker=$CONCURRENCY_WORKER \
     --concurrency_operation=$CONCURRENCY_OPERATION \
