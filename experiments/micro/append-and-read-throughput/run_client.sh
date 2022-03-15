@@ -25,6 +25,8 @@ for s in $(echo $values | jq -r ".exp_variables | to_entries | map(\"\(.key)=\(.
     export $s
 done
 
+BENCHMARK_DESCRIPTION="Append-and-read-${READ_TIMES}-times"
+
 rm -rf $EXP_DIR
 mkdir -p $EXP_DIR
 
@@ -56,6 +58,7 @@ ssh -q $CLIENT_HOST -- docker run \
 
 ssh -q $CLIENT_HOST -- /tmp/benchmark \
     --faas_gateway=$ENTRY_HOST:8080 \
+    --benchmark_description=$BENCHMARK_DESCRIPTION \
     --benchmark_type=$BENCHMARK_TYPE \
     --duration=$DURATION \
     --record_length=$RECORD_LENGTH \
