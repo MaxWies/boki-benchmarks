@@ -7,9 +7,6 @@ cp $CONFIG_DIR/config.json $BASE_DIR
 
 HELPER_SCRIPT=$ROOT_DIR/scripts/exp_helper
 
+cp $BASE_DIR/machines_eng1-st1-seq3.json $BASE_DIR/machines.json
 $HELPER_SCRIPT start-machines --base-dir=$BASE_DIR
-
-$BASE_DIR/run_once.sh con320 320 60 append
-#$BASE_DIR/run_once.sh con640 640 append
-#$BASE_DIR/run_once.sh con1280 1280 append
-#$BASE_DIR/run_once.sh con2560 2560 append
+./run_once.sh $BASE_DIR/specs/eng1-st1-seq3.json $BASE_DIR/specs/exp.json

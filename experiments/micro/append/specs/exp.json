@@ -1,0 +1,12 @@
+{
+    "functions": {
+        "Append" : {
+            "concurrency": 1
+        }
+    },
+    "exp_variables": {
+        "BENCHMARK_TYPE": "append",
+        "CONCURRENCY_WORKER": "1",
+        "USE_TAGS": "FALSE"
+    }
+}
