@@ -11,6 +11,7 @@ BENCHMARK_SCRIPT=$ROOT_DIR/scripts/benchmark/summarize_benchmarks
 export COLLECT_CONTAINER_LOGS=false
 export RECORD_LENGTH=1024
 export READ_TIMES=1
+export USE_TAGS=true
 export DURATION=20
 export LATENCY_BUCKET_GRANULARITY=20
 export LATENCY_BUCKET_LOWER=10
@@ -63,6 +64,7 @@ ssh -q $CLIENT_HOST -- /tmp/benchmark \
     --duration=$DURATION \
     --record_length=$RECORD_LENGTH \
     --read_times=$READ_TIMES \
+    --use_tags=$USE_TAGS \
     --latency_bucket_lower=$LATENCY_BUCKET_LOWER \
     --latency_bucket_upper=$LATENCY_BUCKET_UPPER \
     --latency_bucket_granularity=$LATENCY_BUCKET_GRANULARITY \
