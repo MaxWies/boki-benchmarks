@@ -17,7 +17,7 @@ services:
     restart: always
 
   boki-engine:
-    image: zjia/boki:sosp-ae
+    image: maxwie/boki:latest
     hostname: faas-engine-{{.Task.Slot}}
     entrypoint:
       - /boki/engine
@@ -111,7 +111,7 @@ services:
                 hard: 67108864
 
   boki-storage:
-    image: zjia/boki:sosp-ae
+    image: maxwie/boki:latest
     hostname: faas-storage-{{.Task.Slot}}
     entrypoint:
       - /boki/storage
@@ -139,7 +139,7 @@ services:
                 hard: 67108864
 
   boki-sequencer:
-    image: zjia/boki:sosp-ae
+    image: maxwie/boki:latest
     hostname: faas-sequencer-{{.Task.Slot}}
     entrypoint:
       - /boki/sequencer
