@@ -134,16 +134,10 @@ def generate_swarm_config_engines(config, boki_spec):
         "placement_label": "engine_node", 
         "replicas": boki_spec['boki_engine_replicas'] 
     }
-    if "boki_index_engine" in boki_spec.keys():
-        replicas_value = boki_spec["boki_index_engine"]["replicas"]
-        if replicas_value <= 0:
-            return
-        placement_label_value = "engine_node"
-        if not boki_spec["boki_index_engine"]["function_host"]:
-            placement_label_value = "engine_node_no_services"
+    if "boki_index_engine_replicas" in boki_spec.keys():
         config["services"]["boki-index-engine"] = { 
-            "placement_label": placement_label_value, 
-            "replicas": replicas_value
+            "placement_label": "index_engine_node", 
+            "replicas": boki_spec['boki_index_engine_replicas']
         }   
 
 
