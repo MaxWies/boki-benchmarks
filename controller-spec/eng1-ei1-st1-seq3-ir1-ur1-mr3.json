@@ -4,7 +4,7 @@
     "boki_sequencers_replicas": 3,
     "boki_index_engine_replicas": 1,
     "boki_controller": {
-        "image": "zjia/boki:sosp-ae",
+        "image": "maxwie/boki:latest",
         "entrypoint" : [
             "/boki/controller", 
             "--zookeeper_host=zookeeper:2181", 
