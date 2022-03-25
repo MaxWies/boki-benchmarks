@@ -129,6 +129,24 @@ def generate_swarm_application_less(base_dir, config, boki_spec, exp_spec):
                 "replicas": boki_spec['boki_engine_replicas']
         }
 
+def generate_swarm_config_engines(config, boki_spec):
+    config["services"]["boki-engine"] = { 
+        "placement_label": "engine_node", 
+        "replicas": boki_spec['boki_engine_replicas'] 
+    }
+    if "boki_index_engine" in boki_spec.keys():
+        replicas_value = boki_spec["boki_index_engine"]["replicas"]
+        if replicas_value <= 0:
+            return
+        placement_label_value = "engine_node"
+        if not boki_spec["boki_index_engine"]["function_host"]:
+            placement_label_value = "engine_node_no_services"
+        config["services"]["boki-index-engine"] = { 
+            "placement_label": placement_label_value, 
+            "replicas": replicas_value
+        }   
+
+
 def generate_swarm_config(base_dir, boki_spec, exp_spec):
     config = {}
     #config["services"] = spec["services"]
@@ -138,9 +156,9 @@ def generate_swarm_config(base_dir, boki_spec, exp_spec):
         "boki-controller": { "placement": "bokiexp-gateway" },
         "boki-gateway": { "placement": "bokiexp-gateway" },
         "boki-storage": { "placement_label": "storage_node", "replicas": boki_spec['boki_storage_replicas'] },
-        "boki-sequencer": { "placement_label": "sequencer_node", "replicas": boki_spec['boki_sequencers_replicas'] },
-        "boki-engine": { "placement_label": "engine_node", "replicas": boki_spec['boki_engine_replicas'] },
+        "boki-sequencer": { "placement_label": "sequencer_node", "replicas": boki_spec['boki_sequencers_replicas'] }
     }
+    generate_swarm_config_engines(config, boki_spec)
     if 'applications' in exp_spec.keys():
         generate_swarm_with_applications()
     else:
