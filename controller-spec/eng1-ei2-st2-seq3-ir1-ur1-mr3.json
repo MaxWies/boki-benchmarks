@@ -1,0 +1,22 @@
+{
+    "boki_engine_replicas": 1,
+    "boki_storage_replicas": 1,
+    "boki_sequencers_replicas": 3,
+    "boki_index_engine_replicas": 2,
+    "boki_controller": {
+        "image": "maxwie/boki:latest",
+        "entrypoint" : [
+            "/boki/controller", 
+            "--zookeeper_host=zookeeper:2181", 
+            "--metalog_replicas=3", 
+            "--userlog_replicas=1", 
+            "--index_replicas=1"
+        ],
+        "depends_on": [
+            "zookeeper-setup"
+        ]
+    },
+    "exp_variables": {
+        "BOKI_SETTING": "eng1-st1-seq3"
+    }
+}

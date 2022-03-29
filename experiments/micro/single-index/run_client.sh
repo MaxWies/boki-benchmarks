@@ -86,7 +86,5 @@ fi
 
 mkdir -p $EXP_DIR/benchmark
 scp -r -q $CLIENT_HOST:/tmp/boki/output/benchmark/$BENCHMARK_TYPE $EXP_DIR/benchmark
-for engine_result in $EXP_DIR/benchmark/$BENCHMARK_TYPE/*; do
-    $BENCHMARK_SCRIPT --result-file=$engine_result
-done
+$BENCHMARK_SCRIPT --result-directory=$EXP_DIR/benchmark/$BENCHMARK_TYPE
 echo "Results published at $EXP_DIR/benchmark/$BENCHMARK_TYPE"
