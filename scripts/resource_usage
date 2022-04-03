@@ -5,69 +5,84 @@ import sys
 import argparse
 import subprocess as sp
 import csv
-import math
+from datetime import datetime
 
 USER_NAME = 'mrc'
 
-def run_remote_command(ssh_ip, cmd):
-    print(cmd, file=sys.stderr)
-    ret = sp.run(['ssh', ssh_ip + '-' + USER_NAME, '--'] + cmd,
-                 stdout=sp.PIPE, stderr=sp.PIPE, encoding='utf8')
+def run_command(cmd):
+    ret = sp.run(cmd, stdout=sp.PIPE, stderr=sp.PIPE, encoding='utf8')
     if ret.returncode != 0:
         raise Exception('Failed to run remote command: ' + ' '.join(cmd) + '\n' + ret.stderr)
     return ret.stdout, ret.stderr
 
-def run_remote_copy(ssh_ip, target_file_remote, target_file_local):
-    ret = sp.run(
-        ['scp', '-q', ssh_ip + '-' + USER_NAME, '--', target_file_remote, target_file_local],
-        stdout=sp.PIPE, stderr=sp.PIPE, encoding='utf8'
-    )
-
-def sample_resource_usage(ip, script, process_name, sample_rate, samples, log_path, log_file_name):
+def sample_resource_usage(script, pid, sample_rate, samples, log_path, log_file_name):
     log_file_remote = os.path.join(log_path, log_file_name)
     log_file_local = os.path.join('/tmp', log_file_name)
-    run_remote_command(ip, [script, process_name, str(sample_rate), str(samples), log_file_remote])
-    run_remote_copy(ip, log_file_remote, log_file_local)
+    run_command([script, str(pid), str(sample_rate), str(samples), log_file_remote])
     cpu_min = sys.maxsize
     cpu_max = 0
     mem_sta = -1
     mem_end = 0
     cpu_agg = 0
     entries = 0
+    cpu_values = []
+    cpu_snapshots = []
+    mem_snapshots = []
+    time_log = None
     with open(log_file_local, newline='') as csv_file:
         reader = csv.reader(csv_file, delimiter=',')
-        for row in reader:                
-            cpu = row[4]
-            mem = row[5]
+        for row in reader:
+            time_log_c = datetime.strptime('{},{}'.format(row[0],row[1]), '%Y-%m-%d,%H:%M:%S')                
+            cpu = float(row[4])
+            mem = float(row[5])
             cpu_min = min(cpu_min, cpu)
             cpu_max = max(cpu_max, cpu)
             cpu_agg += cpu
+            cpu_values.append(cpu)
             if mem_sta < 0:
+                # first row
                 mem_sta = mem
+                cpu_snapshots.append(cpu)
+                mem_snapshots.append(mem)
+                time_log = time_log_c
+            if 60 <= (time_log_c - time_log).seconds:
+                cpu_snapshots.append(round(sum(cpu_values)/len(cpu_values),2))
+                cpu_values = []
+                mem_snapshots.append(mem)
+                time_log = time_log_c
             mem_end = mem
             entries += 1
-    cpu_avg = math.round(cpu_agg / entries, 2)
-    mem_dif = mem_end - mem_sta
-    print("CPU_MIN: {}\nCPU_MAX: {}\nCPU_AVG: {}\nMEM_STA: {}\nMEM_END: {}\nMEM_DIF: {}".format(
-        str(cpu_min), str(cpu_max), str(cpu_avg), str(mem_sta), str(mem_end), str(mem_dif)
+    cpu_avg = round(cpu_agg / entries, 2)
+    mem_dif = round(mem_end - mem_sta, 2)
+    cpu_snapshots_result = ' '.join(str(c) for c in cpu_snapshots)
+    mem_snapshots_result = ' '.join(str(m) for m in mem_snapshots)
+    print("CPU_MIN: {}\nCPU_MAX: {}\nCPU_AVG: {}\nMEM_STA: {}\nMEM_END: {}\nMEM_DIF: {}\nCPU_SNS: {}\nMEM_SNS: {}".format(
+        str(cpu_min), str(cpu_max), str(cpu_avg), str(mem_sta), str(mem_end), str(mem_dif), cpu_snapshots_result, mem_snapshots_result
     ))
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('cmd', type=str)
-    parser.add_argument('--ip', type=str)
+    parser.add_argument('--process-id', type=str, default='')
+    parser.add_argument('--process-name', type=str, default='')
     parser.add_argument('--resource-usage-script', type=str, default='/home/{}/resource_usage.sh'.format(USER_NAME))
     parser.add_argument('--sample-rate', type=int, default=2)
     parser.add_argument('--samples', type=int, default=100)
-    parser.add_argument('--process-name', type=str)
-    #parser.add_argument('--log-file', type=str, default='resource_usage.txt')
     parser.add_argument('--log-path', type=str, default='/tmp')
     args = parser.parse_args()
     try:
-        if args.cmd == 'sample-resource-usage':
+        if args.cmd == 'sample-resource-usage-by-name':
             log_file_name = 'resource_usage_{}.csv'.format(args.process_name)
+            process_id, _ = run_command(['pidof', args.process_name])
+            process_id = int(process_id.strip())
             sample_resource_usage(
-                args.ip, args.resource_usage_script, args.process_name, 
+                args.resource_usage_script, process_id, 
+                args.sample_rate, args.samples, args.log_path, log_file_name
+            )
+        elif args.cmd == 'sample-resource-usage-by-id':
+            log_file_name = 'resource_usage_{}.csv'.format(args.process_id)
+            sample_resource_usage(
+                args.resource_usage_script, args.process_id, 
                 args.sample_rate, args.samples, args.log_path, log_file_name
             )
         else:
