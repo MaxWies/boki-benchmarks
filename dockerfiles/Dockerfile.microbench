@@ -1,6 +1,6 @@
 # run build in micro directory
 
-FROM maxwie/boki:latest as boki
+FROM maxwie/boki-ws:latest as boki
 FROM golang:1.14-buster as builder
 
 RUN apt install -y ca-certificates
