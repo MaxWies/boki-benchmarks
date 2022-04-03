@@ -18,7 +18,7 @@ func mergeSync(mergeFunction string, functionName string) {
 
 	mergeClient := client.NewSimpleClient(FLAGS_faas_gateway, &client.CallSync{})
 	e := 0
-	for e < FLAGS_num_engines {
+	for e < FLAGS_engine_nodes {
 		// merge at engine
 		// we assume round robin
 		mergeClient.SendRequest(mergeFunction, utils.JSONValue{
@@ -50,7 +50,21 @@ func mergeSync(mergeFunction string, functionName string) {
 		mergedEngineResults++
 	}
 
-	(&mergedResponse).Description.Engines = mergedEngineResults
+	(&mergedResponse).Description = operations.Description{
+		Benchmark:            FLAGS_benchmark_description,
+		Throughput:           "[Op/s] Operations per second",
+		Latency:              "[microsec] Operation latency",
+		RecordSize:           FLAGS_record_length,
+		SnapshotInterval:     FLAGS_snapshot_interval,
+		ConcurrentClients:    FLAGS_concurrency_client,
+		ConcurrentEngines:    mergedEngineResults,
+		ConcurrentWorkers:    FLAGS_concurrency_worker,
+		ConcurrentOperations: FLAGS_concurrency_operation,
+		EngineNodes:          FLAGS_engine_nodes,
+		StorageNodes:         FLAGS_storage_nodes,
+		SequencerNodes:       FLAGS_sequencer_nodes,
+		UseTags:              FLAGS_use_tags,
+	}
 
 	// write all engines result to file
 	if err := (&mergedResponse).WriteToFile(clientDirectory, fmt.Sprintf("engine-%s", functionName)); err != nil {
@@ -62,7 +76,7 @@ func workerLoopBenchmark(functionName string, requestInputBuilder func() utils.J
 	log.Printf("[INFO] Run loop function %s. Concurrency: %d. Duration: %d", functionName, FLAGS_concurrency_worker, FLAGS_duration)
 	appendClient := client.NewSimpleClient(FLAGS_faas_gateway, &client.CallAsync{})
 	c := 0
-	for c < FLAGS_concurrency_worker {
+	for c < FLAGS_engine_nodes*FLAGS_concurrency_worker {
 		appendClient.SendRequest(FLAGS_fn_prefix+functionName, requestInputBuilder())
 		c++
 	}

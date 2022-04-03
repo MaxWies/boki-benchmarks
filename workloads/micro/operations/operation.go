@@ -2,6 +2,8 @@ package operations
 
 import (
 	"context"
+	"faas-micro/constants"
+	"faas-micro/utils"
 	"fmt"
 	"strings"
 	"sync"
@@ -13,6 +15,7 @@ import (
 type OperationInput struct {
 	Record                   []byte `json:"record"`
 	ReadTimes                int    `json:"read_times"`
+	UseTags                  bool   `json:"use_tags"`
 	LoopDuration             int    `json:"loop_duration"`
 	SnapshotInterval         int    `json:"snapshot_interval"`
 	LatencyBucketLower       int64  `json:"latency_bucket_lower"`
@@ -139,9 +142,13 @@ func (o *OperationHandler) AppendCall(ctx context.Context, startTime time.Time, 
 	o.operationCalls <- struct{}{}
 }
 
-func (o *OperationHandler) AppendAndReadCall(ctx context.Context, startTime time.Time, record []byte, readTimes int) {
-	uniqueId := o.env.GenerateUniqueID()
-	tags := []uint64{uniqueId}
+func (o *OperationHandler) AppendAndReadCall(ctx context.Context, startTime time.Time, record []byte, readTimes int, useTag bool) {
+	tags := make([]uint64, 0)
+	tag := constants.TagEmpty
+	if useTag {
+		tag = o.env.GenerateUniqueID()
+		tags = append(tags, tag)
+	}
 
 	// append
 	logEntry, opItem := o.subOperationCall(
@@ -163,7 +170,7 @@ func (o *OperationHandler) AppendAndReadCall(ctx context.Context, startTime time
 	for i := 1; i <= readTimes; i++ {
 		logEntry, opItem = o.subOperationCall(
 			func() (*types.LogEntry, error) {
-				return ReadNext(ctx, o.env, uniqueId, logEntry.SeqNum)
+				return ReadNext(ctx, o.env, tag, logEntry.SeqNum)
 			}, startTime)
 		if !opItem.Success {
 			// skip remaining reading calls
@@ -173,6 +180,7 @@ func (o *OperationHandler) AppendAndReadCall(ctx context.Context, startTime time
 			o.operationCalls <- struct{}{}
 			return
 		}
+		opItem.EngineCacheHit = utils.IsUint64InSlice(constants.TagEngineCacheHit, logEntry.Tags)
 		(*(*o.operationBenchmarkMatrix)[o.snapshot])[i].AddSuccess(opItem)
 	}
 	o.operationCalls <- struct{}{}

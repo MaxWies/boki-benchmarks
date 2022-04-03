@@ -2,6 +2,7 @@ package operations
 
 import (
 	"context"
+	"log"
 
 	"cs.utexas.edu/zjia/faas/types"
 )
@@ -22,6 +23,9 @@ func Append(ctx context.Context, env types.Environment, input *AppendInput) (*ty
 		input.Tags = make([]uint64, 0)
 	}
 	seqNum, err := env.SharedLogAppend(ctx, input.Tags, input.Record)
+	if err != nil {
+		log.Printf("[ERROR] %v", err)
+	}
 	return &types.LogEntry{
 			SeqNum: seqNum,
 		},

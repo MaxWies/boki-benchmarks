@@ -37,12 +37,19 @@ func (this *TimeLog) Merge(object interface{}) {
 }
 
 type Description struct {
-	Latency          string `json:"latency"`
-	Throughput       string `json:"throughput"`
-	RecordSize       string `json:"record_size"`
-	Benchmark        string `json:"benchmark"`
-	Engines          int    `json:"engines"`
-	SnapshotInterval int    `json:"snapshot_interval"`
+	Latency              string `json:"latency"`
+	Throughput           string `json:"throughput"`
+	RecordSize           int    `json:"record_size"`
+	Benchmark            string `json:"benchmark"`
+	SnapshotInterval     int    `json:"snapshot_interval"`
+	EngineNodes          int    `json:"engine_nodes"`
+	StorageNodes         int    `json:"storage_nodes"`
+	SequencerNodes       int    `json:"sequencer_nodes"`
+	ConcurrentClients    int    `json:"concurrency_client"`
+	ConcurrentEngines    int    `json:"concurrency_engines"`
+	ConcurrentWorkers    int    `json:"concurrency_workers"`
+	ConcurrentOperations int    `json:"concurrency_operations"`
+	UseTags              bool   `json:"use_tags"`
 }
 
 type Benchmark struct {
@@ -64,6 +71,7 @@ type OperationBenchmark struct {
 	BucketLatency  Bucket           `json:"bucket"`
 	HeadLatency    PriorityQueueMin `json:"latency_head"`
 	TailLatency    PriorityQueueMax `json:"latency_tail"`
+	EngineCacheHit uint             `json:"engine_cache_hit"`
 	Description    string           `json:"description"`
 }
 
@@ -75,6 +83,9 @@ func (this *OperationBenchmark) AddSuccess(item *OperationCallItem) {
 	this.BucketLatency.Insert(item.Latency)
 	this.HeadLatency.Add(item)
 	this.TailLatency.Add(item)
+	if item.EngineCacheHit {
+		this.EngineCacheHit++
+	}
 }
 
 func (this *OperationBenchmark) AddFailure() {
@@ -115,6 +126,7 @@ func (this *OperationBenchmark) Merge(object interface{}) {
 		this.AverageLatency = other.AverageLatency
 		this.BucketLatency = other.BucketLatency
 		this.HeadLatency = other.HeadLatency
+		this.EngineCacheHit = other.EngineCacheHit
 	} else {
 		this.AverageLatency =
 			this.AverageLatency*(float64(this.Success)/(float64(this.Success)+float64(other.Success))) +
@@ -125,6 +137,7 @@ func (this *OperationBenchmark) Merge(object interface{}) {
 		}
 		this.HeadLatency.Merge(&other.HeadLatency)
 		this.TailLatency.Merge(&other.TailLatency)
+		this.EngineCacheHit += other.EngineCacheHit
 	}
 
 }

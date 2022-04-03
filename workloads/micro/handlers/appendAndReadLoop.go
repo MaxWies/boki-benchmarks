@@ -57,7 +57,7 @@ func (h *appendReadLoopHandler) Call(ctx context.Context, input []byte) ([]byte,
 		}
 		operationHandler.WaitForFreeGoRoutine()
 		operationHandler.StartOperation()
-		go operationHandler.AppendAndReadCall(ctx, startTime, parsedInput.Record, parsedInput.ReadTimes)
+		go operationHandler.AppendAndReadCall(ctx, startTime, parsedInput.Record, parsedInput.ReadTimes, parsedInput.UseTags)
 	}
 	operationHandler.WaitForOperationsEnd()
 	operationHandler.CloseChannels()
@@ -96,7 +96,7 @@ func (h *appendReadLoopHandler) Call(ctx context.Context, input []byte) ([]byte,
 			Benchmark:        fmt.Sprintf("Append and Read %d times from Log", parsedInput.ReadTimes),
 			Throughput:       "[Op/s] Operations per second",
 			Latency:          "[microsec] Operation latency",
-			RecordSize:       fmt.Sprintf("[byte] %d", len((parsedInput.Record))),
+			RecordSize:       len(parsedInput.Record),
 			SnapshotInterval: parsedInput.SnapshotInterval,
 		},
 	}

@@ -3,13 +3,16 @@ package handlers
 import (
 	"context"
 	"encoding/json"
+	"log"
 
+	"faas-micro/constants"
 	"faas-micro/utils"
 
 	"cs.utexas.edu/zjia/faas/types"
 )
 
 type AppendInput struct {
+	UseTags bool `json:"use_tags"`
 }
 
 type AppendOutput struct {
@@ -31,10 +34,15 @@ func NewAppendHandler(env types.Environment) types.FuncHandler {
 }
 
 func (h *appendHandler) append(ctx context.Context, env types.Environment, input *AppendInput) (*AppendOutput, error) {
-	uniqueId := env.GenerateUniqueID()
-	tags := []uint64{uniqueId}
+	tags := make([]uint64, 0)
+	tag := constants.TagEmpty
+	if input.UseTags {
+		tag = env.GenerateUniqueID()
+		tags = append(tags, tag)
+	}
 	seqNum, err := env.SharedLogAppend(ctx, tags, []byte(utils.KbString()))
 	if err != nil {
+		log.Printf("[ERROR] %v", err)
 		return &AppendOutput{
 			Success: false,
 			Seqnum:  0,

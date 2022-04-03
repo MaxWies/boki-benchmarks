@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"faas-micro/constants"
 	"faas-micro/operations"
-	"fmt"
 	"log"
 	"path"
 	"time"
@@ -101,7 +100,7 @@ func (h *appendLoopHandler) Call(ctx context.Context, input []byte) ([]byte, err
 			Benchmark:        parsedInput.BenchmarkType,
 			Throughput:       "[Op/s] Operations per second",
 			Latency:          "[microsec] Operation latency",
-			RecordSize:       fmt.Sprintf("[byte] %d", len((parsedInput.Record))),
+			RecordSize:       len(parsedInput.Record),
 			SnapshotInterval: parsedInput.SnapshotInterval,
 		},
 	}
