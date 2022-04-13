@@ -141,19 +141,6 @@ def generate_docker_compose_main(base_dir):
             }
         service_docker_compose['environment'] = []
         service_docker_compose['volumes'] = []
-        # if 'need_aws_env' in service_config and service_config['need_aws_env']:
-        #     if 'aws_access_key_id' in config:
-        #         service_docker_compose['environment'].append(
-        #             'AWS_ACCESS_KEY_ID=%s' % (config['aws_access_key_id'],))
-        #     if 'aws_secret_access_key' in config:
-        #         service_docker_compose['environment'].append(
-        #             'AWS_SECRET_ACCESS_KEY=%s' % (config['aws_secret_access_key'],))
-        #     if 'aws_region' in config:
-        #         service_docker_compose['environment'].append(
-        #             'AWS_REGION=%s' % (config['aws_region'],))
-        # if 'mount_certs' in service_config and service_config['mount_certs']:
-        #     service_docker_compose['volumes'].append(
-        #         '/etc/ssl/certs/ca-certificates.crt:/etc/ssl/certs/ca-certificates.crt')
     with open(os.path.join(base_dir, 'docker-compose-generated.yml'), 'w') as fout:
         yaml.dump(docker_compose, fout, default_flow_style=False)
 

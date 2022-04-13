@@ -63,6 +63,7 @@ func mergeSync(mergeFunction string, functionName string) {
 		EngineNodes:          FLAGS_engine_nodes,
 		StorageNodes:         FLAGS_storage_nodes,
 		SequencerNodes:       FLAGS_sequencer_nodes,
+		IndexNodes:           FLAGS_index_nodes,
 		UseTags:              FLAGS_use_tags,
 	}
 

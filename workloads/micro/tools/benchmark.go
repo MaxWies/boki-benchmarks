@@ -43,6 +43,7 @@ var FLAGS_concurrency_operation int
 var FLAGS_engine_nodes int
 var FLAGS_storage_nodes int
 var FLAGS_sequencer_nodes int
+var FLAGS_index_nodes int
 
 func init() {
 	flag.StringVar(&FLAGS_faas_gateway, "faas_gateway", "127.0.0.1:8081", "")
@@ -74,6 +75,7 @@ func init() {
 	flag.IntVar(&FLAGS_engine_nodes, "engine_nodes", 1, "")
 	flag.IntVar(&FLAGS_storage_nodes, "storage_nodes", 1, "")
 	flag.IntVar(&FLAGS_sequencer_nodes, "sequencer_nodes", 1, "")
+	flag.IntVar(&FLAGS_sequencer_nodes, "index_nodes", 0, "")
 
 	rand.Seed(int64(FLAGS_rand_seed))
 }
