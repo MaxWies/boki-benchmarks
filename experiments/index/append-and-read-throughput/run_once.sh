@@ -25,7 +25,7 @@ scp -q $BASE_DIR/docker-compose-generated.yml $MANAGER_HOST:~
 
 ssh -q $MANAGER_HOST -- docker stack rm boki-experiment
 
-sleep 40
+sleep 20
 
 scp -q $ROOT_DIR/scripts/zk_setup.sh $MANAGER_HOST:/tmp/zk_setup.sh
 ssh $MANAGER_HOST -- sudo mkdir -p /mnt/inmem/store

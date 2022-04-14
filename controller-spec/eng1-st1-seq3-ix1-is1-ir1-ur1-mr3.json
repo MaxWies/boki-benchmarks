@@ -2,6 +2,7 @@
     "boki_engine_replicas": 1,
     "boki_storage_replicas": 1,
     "boki_sequencers_replicas": 3,
+    "boki_index_shards": 1,
     "boki_index_replicas": 1,
     "boki_controller": {
         "image": "maxwie/boki:latest",
@@ -10,6 +11,7 @@
             "--zookeeper_host=zookeeper:2181", 
             "--metalog_replicas=3", 
             "--userlog_replicas=1", 
+            "--index_shards=1",
             "--index_replicas=1"
         ],
         "depends_on": [

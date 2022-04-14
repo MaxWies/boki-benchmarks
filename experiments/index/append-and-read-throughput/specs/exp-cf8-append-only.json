@@ -1,7 +1,7 @@
 {
     "functions": {
         "AppendAndReadLoopAsync" : {
-            "concurrency": 8
+            "concurrency": 1
         },
         "MergeResults": {
             "concurrency": 1
@@ -9,8 +9,8 @@
     },
     "exp_variables": {
         "BENCHMARK_TYPE": "append-and-read-throughput",
-        "CONCURRENCY_WORKER": "8",
-        "DURATION": "30",
+        "CONCURRENCY_WORKER": "1",
+        "DURATION": "5",
         "READ_TIMES": "0"
     }
 }
