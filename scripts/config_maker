@@ -151,7 +151,7 @@ def generate_swarm_config(base_dir, boki_spec, exp_spec):
         "boki-gateway": { "placement": "bokiexp-gateway" },
         "boki-storage": { "placement_label": "storage_node", "replicas": boki_spec['boki_storage_replicas'] },
         "boki-sequencer": { "placement_label": "sequencer_node", "replicas": boki_spec['boki_sequencers_replicas'] },
-        "boki-index": { "placement_label": "index_node", "replicas": boki_spec['boki_index_replicas'] }
+        "boki-index": { "placement_label": "index_node", "replicas": boki_spec['boki_index_shards'] * boki_spec['boki_index_replicas'] }
     }
     generate_swarm_config_engines(config, boki_spec)
     if 'applications' in exp_spec.keys():
