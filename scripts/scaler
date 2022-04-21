@@ -5,9 +5,11 @@ import sys
 import json
 import argparse
 import subprocess as sp
+import time
 
 # TODO: improve
 USER_NAME = 'mrc'
+SWARM_MANAGER_PORT = 2377
 
 def run_remote_command(ssh_ip, cmd):
     print(cmd, file=sys.stderr) # print to stderr for debugging
@@ -17,8 +19,8 @@ def run_remote_command(ssh_ip, cmd):
         raise Exception('Failed to run remote command: ' + ' '.join(cmd) + '\n' + ret.stderr)
     return ret.stdout, ret.stderr
 
-def docker_swarm_join(ip, token):
-    return run_remote_command(ip, ['docker', 'swarm', 'join', '--token', token])
+def docker_swarm_join(ip, token, swarm_manager_ip):
+    return run_remote_command(ip, ['docker', 'swarm', 'join', '--token', token, '{}:{}'.format(swarm_manager_ip, str(SWARM_MANAGER_PORT))])
 
 def docker_swarm_leave(ip):
     return run_remote_command(ip, ['docker', 'swarm', 'leave', '--force'])
@@ -38,16 +40,13 @@ def docker_swarm_rm_label(ip, target_hostname, label):
     return run_remote_command(ip, ['docker', 'node', 'update', '--label-rm', label, target_hostname])
 
 def get_docker_swarm_manager_properties(machine_config):
-    for _, properties in machine_config['machines']:
-        if properties['role'] == 'manager':
-            return properties
+    for machine in machine_config['machines'].values():
+        if machine['role'] == 'manager':
+            return machine
     raise Exception
 
 def get_docker_swarm_worker_properties(machine_config, hostname):
-    for machine, properties in machine_config['machines']:
-        if machine == hostname:
-            return properties
-    raise Exception
+    return machine_config['machines'][hostname]
 
 def load_machine_config(base_dir):
     machine_config_file = 'machines.json'
@@ -73,17 +72,19 @@ def node_rejoin_script(base_dir, hostname, swarm_token):
     manager_ip = manager_prop['ip']
     worker_ip = worker_prop['ip']
     docker_swarm_leave(worker_ip)
+    time.sleep(10)
     worker_node, _ = docker_swarm_get_node_id_by_hostname(manager_ip, hostname)
+    worker_node = worker_node.strip()
     docker_swarm_remove_node(manager_ip, worker_node)
-    docker_swarm_join(worker_ip, swarm_token)
+    docker_swarm_join(worker_ip, swarm_token, manager_ip)
     docker_swarm_add_label(manager_ip, hostname, worker_prop['labels'][0])
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('cmd', type=str)
-    parser.add_argument('--base-dir', type=str, default='.')
-    parser.add_argument('--hostname', type=str, default=None)
-    parser.add_argument('--swarm-token', type=str, default=None)
+    parser.add_argument('--base-dir', type=str)
+    parser.add_argument('--hostname', type=str)
+    parser.add_argument('--swarm-token', type=str)
     args = parser.parse_args()
     try:
         if args.cmd == 'node-join':
