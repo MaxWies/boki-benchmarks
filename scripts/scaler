@@ -1,0 +1,100 @@
+#!/usr/bin/python3
+
+import os
+import sys
+import json
+import argparse
+import subprocess as sp
+
+# TODO: improve
+USER_NAME = 'mrc'
+
+def run_remote_command(ssh_ip, cmd):
+    print(cmd, file=sys.stderr) # print to stderr for debugging
+    ret = sp.run(['ssh', '-q', ssh_ip + '-' + USER_NAME, '--'] + cmd,
+                 stdout=sp.PIPE, stderr=sp.PIPE, encoding='utf8')
+    if ret.returncode != 0:
+        raise Exception('Failed to run remote command: ' + ' '.join(cmd) + '\n' + ret.stderr)
+    return ret.stdout, ret.stderr
+
+def docker_swarm_join(ip, token):
+    return run_remote_command(ip, ['docker', 'swarm', 'join', '--token', token])
+
+def docker_swarm_leave(ip):
+    return run_remote_command(ip, ['docker', 'swarm', 'leave', '--force'])
+
+def docker_swarm_remove_node(ip, node_id):
+    return run_remote_command(ip, ['docker', 'node', 'rm', node_id])
+
+def docker_swarm_get_node_id_by_hostname(ip, hostname):
+    return run_remote_command(ip, 
+        ['docker', 'node', 'ls', '-f', 'name={}'.format(hostname), '--format', '"{{.ID}}"']
+    )
+
+def docker_swarm_add_label(ip, target_hostname, label):
+    return run_remote_command(ip, ['docker', 'node', 'update', '--label-add', label, target_hostname])
+
+def docker_swarm_rm_label(ip, target_hostname, label):
+    return run_remote_command(ip, ['docker', 'node', 'update', '--label-rm', label, target_hostname])
+
+def get_docker_swarm_manager_properties(machine_config):
+    for _, properties in machine_config['machines']:
+        if properties['role'] == 'manager':
+            return properties
+    raise Exception
+
+def get_docker_swarm_worker_properties(machine_config, hostname):
+    for machine, properties in machine_config['machines']:
+        if machine == hostname:
+            return properties
+    raise Exception
+
+def load_machine_config(base_dir):
+    machine_config_file = 'machines.json'
+    if not os.path.exists(os.path.join(base_dir, machine_config_file)):
+        raise Exception('Could not find file {}!'.format(machine_config_file))
+    with open(os.path.join(base_dir, machine_config_file)) as fin:
+        machine_config = json.load(fin)
+    return machine_config
+
+def node_join_script(base_dir, hostname, swarm_token):
+    machine_config = load_machine_config(base_dir)
+    manager_prop = get_docker_swarm_manager_properties(machine_config)
+    worker_prop = get_docker_swarm_worker_properties(machine_config, hostname)
+    manager_ip = manager_prop['ip']
+    worker_ip = worker_prop['ip']
+    docker_swarm_join(worker_ip, swarm_token)
+    docker_swarm_add_label(manager_ip, hostname, worker_prop['labels'][0])
+
+def node_rejoin_script(base_dir, hostname, swarm_token):
+    machine_config = load_machine_config(base_dir)
+    manager_prop = get_docker_swarm_manager_properties(machine_config)
+    worker_prop = get_docker_swarm_worker_properties(machine_config, hostname)
+    manager_ip = manager_prop['ip']
+    worker_ip = worker_prop['ip']
+    docker_swarm_leave(worker_ip)
+    worker_node, _ = docker_swarm_get_node_id_by_hostname(manager_ip, hostname)
+    docker_swarm_remove_node(manager_ip, worker_node)
+    docker_swarm_join(worker_ip, swarm_token)
+    docker_swarm_add_label(manager_ip, hostname, worker_prop['labels'][0])
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('cmd', type=str)
+    parser.add_argument('--base-dir', type=str, default='.')
+    parser.add_argument('--hostname', type=str, default=None)
+    parser.add_argument('--swarm-token', type=str, default=None)
+    args = parser.parse_args()
+    try:
+        if args.cmd == 'node-join':
+            node_join_script(args.base_dir, args.hostname, args.swarm_token)
+        elif args.cmd == 'node-rejoin':
+            node_rejoin_script(args.base_dir, args.hostname, args.swarm_token)
+        else:
+            raise Exception('Unknown command: ' + args.cmd)
+    except Exception as e:
+        err_str = str(e)
+        if not err_str.endswith('\n'):
+            err_str += '\n'
+        sys.stderr.write(err_str)
+        sys.exit(1)
