@@ -40,6 +40,10 @@ def docker_swarm_leave(ip):
 def docker_swarm_remove_node(ip, node_id):
     return run_remote_command(ip, ['docker', 'node', 'rm', node_id])
 
+def docker_swarm_get_nodes_hostnames(ip):
+    hostnames, _ = run_remote_command(ip, ['docker', 'node', 'ls', '--format', '{{.Hostname}}'])
+    return hostnames.split('\n')
+
 def docker_swarm_get_node_id_by_hostname(ip, hostname):
     node, _ = run_remote_command(ip, 
         ['docker', 'node', 'ls', '-f', 'name={}'.format(hostname), '--format', '"{{.ID}}"']
@@ -51,6 +55,10 @@ def docker_swarm_add_label(ip, target_hostname, label):
 
 def docker_swarm_rm_label(ip, target_hostname, label):
     return run_remote_command(ip, ['docker', 'node', 'update', '--label-rm', label, target_hostname])
+
+def docker_swarm_get_services_names(ip):
+    service_names, _ = run_remote_command(ip, ['docker', 'service', 'ls', '--format', '"{{.Name}}"'])
+    return service_names.split('\n')
 
 def docker_swarm_get_service_id_by_name(ip, hostname):
     service_id, _ = run_remote_command(ip, ['docker', 'service', 'ls', '-f', 'name={}'.format(hostname), '--format', '"{{.ID}}"'])
@@ -160,6 +168,8 @@ def node_leave_script(base_dir, hostname):
     worker_prop = get_docker_swarm_worker_properties(machine_config, hostname)
     manager_ip = manager_prop['ip']
     worker_ip = worker_prop['ip']
+    if hostname not in docker_swarm_get_nodes_hostnames(manager_ip):
+        raise Exception('Hostname {} does not exist'.format(hostname))
     docker_swarm_leave(worker_ip)
     time.sleep(10)
     worker_node = docker_swarm_get_node_id_by_hostname(manager_ip, hostname)
@@ -180,15 +190,17 @@ def service_scale_script(base_dir, service, replicas, service_has_dependencies =
         swarm_config = load_swarm_config(base_dir)
         placement_label = get_placement_label_from_service(swarm_config, service)
         services_to_scale.add(get_services_by_placement_label(placement_label))
-    full_service_name = 'boki-experiment_' + service
+    service_full_name = 'boki-experiment_' + service
+    if service_full_name not in docker_swarm_get_services_names(get_manager_ip(base_dir)):
+        raise Exception("Service {} does not exist".format(service))
     for service in services_to_scale:
-        service_id = docker_swarm_get_service_id_by_name(full_service_name)
+        service_id = docker_swarm_get_service_id_by_name(service_full_name)
         docker_swarm_scale_service(manager_ip, service_id, replicas)
         print('Manager has scaled service {} to {} replicas'.format(service, replicas))
 
 def service_scale_in_script(base_dir, leaving_nodes_hostnames, service, replicas, service_has_dependencies = True):
-    full_service_name = 'boki-experiment_' + service
-    current_replicas = docker_swarm_get_service_current_replicas(get_manager_ip(base_dir), full_service_name)
+    service_full_name = 'boki-experiment_' + service
+    current_replicas = docker_swarm_get_service_current_replicas(get_manager_ip(base_dir), service_full_name)
     if (current_replicas - replicas) is not len(leaving_nodes_hostnames):
         raise Exception('Cannot scale in because leaving nodes not same as removing replicas')
     for hostname in leaving_nodes_hostnames:
