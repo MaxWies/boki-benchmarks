@@ -40,7 +40,7 @@ ALL_STORAGE_HOSTS=`$HELPER_SCRIPT get-machine-with-label --base-dir=$BASE_DIR --
 ALL_SEQUENCER_HOSTS=`$HELPER_SCRIPT get-machine-with-label --base-dir=$BASE_DIR --machine-label=sequencer_node`
 ALL_INDEX_HOSTS=`$HELPER_SCRIPT get-machine-with-label --base-dir=$BASE_DIR --machine-label=index_node`
 
-ENGINE_NODES=$(wc -w <<< $ALL_ENGINE_HOSTS)
+ENGINE_NODES=`$HELPER_SCRIPT get-num-active-service-replicas --base-dir=$BASE_DIR --service=boki-engine`
 STORAGE_NODES=$(wc -w <<< $ALL_STORAGE_HOSTS)
 SEQUENCER_NODES=$(wc -w <<< $ALL_SEQUENCER_HOSTS)
 INDEX_NODES=$(wc -w <<< $ALL_INDEX_HOSTS)

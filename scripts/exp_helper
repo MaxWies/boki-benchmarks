@@ -203,6 +203,33 @@ def get_client_with_merged_results(base_dir):
                 return
     print('Warning: No client with label {}'.format(label))
 
+def load_machine_config(base_dir):
+    machine_config_file = 'machines.json'
+    if not os.path.exists(os.path.join(base_dir, machine_config_file)):
+        raise Exception('Could not find file {}!'.format(machine_config_file))
+    with open(os.path.join(base_dir, machine_config_file)) as f:
+        machine_config = json.load(f)
+    return machine_config
+
+def get_docker_swarm_manager_properties(machine_config):
+    for machine in machine_config['machines'].values():
+        if machine['role'] == 'manager':
+            return machine
+    raise Exception
+
+def get_manager_ip(base_dir):
+    machine_config = load_machine_config(base_dir)
+    manager_prop = get_docker_swarm_manager_properties(machine_config)
+    return manager_prop['ip']
+
+def get_num_active_service_replicas(base_dir, service_name):
+    service_full_name = "boki-experiment_" + service_name
+    replicas_info, _ = run_remote_command(get_manager_ip(base_dir), ['docker', 'service', 'ls', '-f', 'name={}'.format(service_full_name), '--format', '"{{.Replicas}}"'])
+    replicas_info = replicas_info.strip()
+    if len(replicas_info) < 3:
+        raise Exception("The replicas info cannot be parsed. Message is {}".format(replicas_info))
+    print(int(replicas_info[0])) # a bit dirty
+
 def get_client_ip(base_dir):
     for machine_info in load_machines_file(base_dir)['machines'].values():
         if machine_info['role'] == 'client':
@@ -282,6 +309,8 @@ if __name__ == '__main__':
             get_container_id_main(args.base_dir, args.service, args.machine_name, args.machine_host)
         elif args.cmd == 'collect-container-logs':
             collect_container_logs_main(args.base_dir, args.log_path)
+        elif args.cmd == 'get-num-active-service-replicas':
+            get_num_active_service_replicas(args.base_dir, args.service)
         else:
             raise Exception('Unknown command: ' + args.cmd)
     except Exception as e:

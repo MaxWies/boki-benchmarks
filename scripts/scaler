@@ -190,12 +190,13 @@ def service_scale_script(base_dir, main_service, replicas, service_has_dependenc
         swarm_config = load_swarm_config(base_dir)
         placement_label = get_placement_label_from_service(swarm_config, main_service)
         dependent_services.update(get_services_by_placement_label(swarm_config, placement_label))
+        dependent_services.remove(main_service)
     service_full_name = 'boki-experiment_' + main_service
     if service_full_name not in docker_swarm_get_services_names(manager_ip):
         raise Exception("Service {} does not exist".format(service_full_name))
     service_id = docker_swarm_get_service_id_by_name(manager_ip, service_full_name)
     docker_swarm_scale_service(manager_ip, service_id, replicas)
-    print('Manager has scaled service {} to {} replicas'.format(service, replicas))
+    print('Manager has scaled service {} to {} replicas'.format(main_service, replicas))
     for service in dependent_services:
         time.sleep(5)
         service_full_name = 'boki-experiment_' + service
