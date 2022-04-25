@@ -81,7 +81,7 @@ def docker_swarm_scale_service(ip, service_id, replicas):
     return run_remote_command(ip, ['docker', 'service', 'scale', '{}={}'.format(service_id, replicas)])
 
 def docker_swarm_get_task_name_by_hostname(ip, service_fullname, hostname):
-    task_name, _ = run_remote_command(ip, ['docker', 'service', 'ps', service_fullname, '-f', 'node={}'.format(hostname), '--format', '"{{.Name}}"'])
+    task_name, _ = run_remote_command(ip, ['docker', 'service', 'ps', service_fullname, '-f', 'node={}'.format(hostname), '-f', 'desired-state=running', '--format', '"{{.Name}}"'])
     return task_name.strip()
 
 def get_docker_swarm_manager_properties(machine_config):
@@ -94,11 +94,11 @@ def get_docker_swarm_worker_properties(machine_config, hostname):
     return machine_config['machines'][hostname]
 
 def get_services_by_placement_label(swarm_config, label):
-    services = []
-    for service, properties in swarm_config['services']:
+    services = set()
+    for service, properties in swarm_config['services'].items():
         if 'placement_label' in properties.keys():
             if properties['placement_label'] == label:
-                services.append(service)
+                services.add(service)
     return services
 
 def get_placement_label_from_service(swarm_config, service):
@@ -107,11 +107,11 @@ def get_placement_label_from_service(swarm_config, service):
     raise Exception('Service {} has no placement label'.format(service))
 
 def get_engine_grace_period(compose_config):
-    for value in compose_config['services']['boki-engine']['entrypoint'].values():
-        if 'scale_in_grace_period' in value:
+    for value in compose_config['services']['boki-engine']['entrypoint']:
+        if '--scale_in_grace_period' in value:
             key_value = value.split('=')
-            return key_value[1].split()
-    raise Exception('No engine period defined')
+            return key_value[1].strip()
+    raise Exception('No engine grace period defined')
 
 def get_shared_log_node_id(ip, hostname, service_fullname):
     # convention: task is foo.X where X is a number
@@ -137,7 +137,7 @@ def load_swarm_config(base_dir):
     return swarm_config
 
 def load_compose_config(base_dir):
-    compose_config_file = 'docker-compose.yaml'
+    compose_config_file = 'docker-compose.yml'
     if not os.path.exists(os.path.join(base_dir, compose_config_file)):
         raise Exception('Could not find file {}!'.format(compose_config_file))
     with open(os.path.join(base_dir, compose_config_file)) as f:
@@ -157,7 +157,7 @@ def node_join_script(base_dir, hostname):
     manager_ip = manager_prop['ip']
     worker_ip = worker_prop['ip']
     swarm_token = docker_swarm_get_worker_token(manager_ip)
-    docker_swarm_join(worker_ip, swarm_token)
+    docker_swarm_join(worker_ip, swarm_token, manager_ip)
     docker_swarm_add_label(manager_ip, hostname, worker_prop['labels'][0])
     print('{} has joint the swarm'.format(hostname))
 
@@ -181,22 +181,32 @@ def node_rejoin_script(base_dir, hostname):
     time.sleep(5)
     node_join_script(base_dir, hostname)
 
-def service_scale_script(base_dir, service, replicas, service_has_dependencies = True):
+def service_scale_script(base_dir, main_service, replicas, service_has_dependencies = True):
     machine_config = load_machine_config(base_dir)
     manager_prop = get_docker_swarm_manager_properties(machine_config)
     manager_ip = manager_prop['ip']
-    services_to_scale = {service}
+    services_to_scale = {main_service}
     if service_has_dependencies:
         swarm_config = load_swarm_config(base_dir)
-        placement_label = get_placement_label_from_service(swarm_config, service)
-        services_to_scale.add(get_services_by_placement_label(placement_label))
-    service_full_name = 'boki-experiment_' + service
-    if service_full_name not in docker_swarm_get_services_names(get_manager_ip(base_dir)):
-        raise Exception("Service {} does not exist".format(service))
+        placement_label = get_placement_label_from_service(swarm_config, main_service)
+        services_to_scale.update(get_services_by_placement_label(swarm_config, placement_label))
+    service_full_name = 'boki-experiment_' + main_service
+    if service_full_name not in docker_swarm_get_services_names(manager_ip):
+        raise Exception("Service {} does not exist".format(service_full_name))
     for service in services_to_scale:
-        service_id = docker_swarm_get_service_id_by_name(service_full_name)
+        service_full_name = 'boki-experiment_' + service
+        service_id = docker_swarm_get_service_id_by_name(manager_ip, service_full_name)
         docker_swarm_scale_service(manager_ip, service_id, replicas)
         print('Manager has scaled service {} to {} replicas'.format(service, replicas))
+
+def service_scale_out_script(base_dir, joining_nodes_hostnames, service, replicas, service_has_dependencies = True):
+    full_service_name = 'boki-experiment_' + service
+    current_replicas = docker_swarm_get_service_current_replicas(get_manager_ip(base_dir), full_service_name)
+    if replicas <= current_replicas:
+        raise Exception('Cannot scale out because desired replicas {} not higher than current replicas {}'.format(replicas, current_replicas))
+    for hostname in joining_nodes_hostnames:
+        node_join_script(base_dir, hostname)
+    service_scale_script(base_dir, service, replicas, service_has_dependencies)
 
 def service_scale_in_script(base_dir, leaving_nodes_hostnames, service, replicas, service_has_dependencies = True):
     service_full_name = 'boki-experiment_' + service
@@ -206,18 +216,10 @@ def service_scale_in_script(base_dir, leaving_nodes_hostnames, service, replicas
     for hostname in leaving_nodes_hostnames:
         node_leave_script(base_dir, hostname)
     service_scale_script(base_dir, service, replicas, service_has_dependencies)
-    
 
-def service_scale_out_script(base_dir, service, replicas, service_has_dependencies = True):
-    full_service_name = 'boki-experiment_' + service
-    current_replicas = docker_swarm_get_service_current_replicas(get_manager_ip(base_dir), full_service_name)
-    if replicas <= current_replicas:
-        raise Exception('Cannot scale out because desired replicas {} not higher than current replicas {}'.format(replicas, current_replicas))
-    service_scale_script(base_dir, service, replicas, service_has_dependencies)
-
-def boki_engine_scale_out_script(base_dir, engine_service, replicas, service_has_dependencies = True):
+def boki_engine_scale_out_script(base_dir, engine_hostnames, engine_service, replicas, service_has_dependencies = True):
     print('Service {} of boki engines will be scaled out to {} replicas'.format(engine_service, replicas))
-    service_scale_out_script(base_dir, engine_service, replicas, service_has_dependencies)
+    service_scale_out_script(base_dir, engine_hostnames, engine_service, replicas, service_has_dependencies)
 
 def boki_engine_scale_in_script(base_dir, engine_hostname, engine_service, zk_client, zk_server_host, zk_server_port):
     print('Service {} of boki engines will be scaled in by removing 1 replica'.format(engine_service))
@@ -230,7 +232,7 @@ def boki_engine_scale_in_script(base_dir, engine_hostname, engine_service, zk_cl
     print('Grace period of engine node {} started'.format(slog_node_id))
     time.sleep(grace_period + 5)
     run_command([zk_client, '-server', '{}:{}'.format(zk_server_host, str(zk_server_port)), 'delete', '/faas/scale/in_engine_{}'.format(str(slog_node_id))])
-    print('Remove engine node {} from system'.format(slog_node_id))
+    print('Remove log engine {} from system'.format(slog_node_id))
     current_replicas = docker_swarm_get_service_current_replicas(get_manager_ip(base_dir), service_full_name)
     service_scale_in_script(base_dir, [engine_hostname], engine_service, current_replicas - 1, True)
     
@@ -240,6 +242,7 @@ if __name__ == '__main__':
     parser.add_argument('cmd', type=str)
     parser.add_argument('--base-dir', type=str)
     parser.add_argument('--hostname', type=str)
+    parser.add_argument('--hostnames', default=[], nargs='+')
     parser.add_argument('--service', type=str, default='')
     parser.add_argument('--replicas', type=int, default=1)
     parser.add_argument('--zk_client', type=str, default='')
@@ -254,7 +257,7 @@ if __name__ == '__main__':
         elif args.cmd == 'node-leave':
             node_leave_script(args.base_dir, args.hostname)
         elif args.cmd == 'boki-engine-scale-out':
-            boki_engine_scale_out_script(args.base_dir, args.service, args.replicas)
+            boki_engine_scale_out_script(args.base_dir, args.hostnames, args.service, args.replicas)
         elif args.cmd == 'boki-engine-scale-in':
             boki_engine_scale_in_script(args.base_dir, args.hostname, args.service, args.zk_client, args.zk_server_host, args.zk_server_port)
         else:
