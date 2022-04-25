@@ -28,7 +28,7 @@ def run_remote_command(ssh_ip, cmd):
     return ret.stdout, ret.stderr
 
 def docker_swarm_get_worker_token(ip):
-    join_token, _ = run_remote_command(ip, 'docker', 'swarm', 'join-token', '-q', 'worker')
+    join_token, _ = run_remote_command(ip, ['docker', 'swarm', 'join-token', '-q', 'worker'])
     return join_token.strip()
 
 def docker_swarm_join(ip, token, swarm_manager_ip):
@@ -150,7 +150,7 @@ def get_manager_ip(base_dir):
     return manager_prop['ip']
 
 def node_join_script(base_dir, hostname):
-    print('{} will leave the swarm'.format(hostname))
+    print('{} will join the swarm'.format(hostname))
     machine_config = load_machine_config(base_dir)
     manager_prop = get_docker_swarm_manager_properties(machine_config)
     worker_prop = get_docker_swarm_worker_properties(machine_config, hostname)
@@ -171,7 +171,7 @@ def node_leave_script(base_dir, hostname):
     if hostname not in docker_swarm_get_nodes_hostnames(manager_ip):
         raise Exception('Hostname {} does not exist'.format(hostname))
     docker_swarm_leave(worker_ip)
-    time.sleep(10)
+    time.sleep(20)
     worker_node = docker_swarm_get_node_id_by_hostname(manager_ip, hostname)
     docker_swarm_remove_node(manager_ip, worker_node)
     print('{} has left the swarm and its node {} was removed'.format(hostname, worker_node))
