@@ -11,6 +11,9 @@ create /faas/node
 create /faas/view
 create /faas/freeze
 create /faas/cmd
+create /faas/scale
+create /faas/storage_shard_req
+create /faas/storage_shard_resp
 quit
 EOF
 if [[ $? != 0 ]]; then

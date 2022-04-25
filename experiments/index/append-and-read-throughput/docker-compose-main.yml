@@ -73,6 +73,8 @@ services:
       - /tmp/nightcore_config.json:/tmp/boki/func_config.json
       - /mnt/inmem/store:/tmp/store
     restart: always
+    environment:
+      - FAAS_NODE_ID={{.Task.Slot}}
     ulimits:
         memlock:
                 soft: 67108864
