@@ -108,7 +108,7 @@ def get_engine_grace_period(compose_config):
 def get_shared_log_node_id(ip, hostname, service_fullname):
     # convention: task is foo.X where X is a number
     task_name = docker_swarm_get_task_name_by_hostname(ip, service_fullname, hostname)
-    if task_name.count('.') is not 1:
+    if task_name.count('.') != 1:
         raise Exception('Bad task naming')
     return(int(task_name.split('.')[1]))
 
@@ -142,6 +142,7 @@ def get_manager_ip(base_dir):
     return manager_prop['ip']
 
 def node_join_script(base_dir, hostname):
+    print('{} will leave the swarm'.format(hostname))
     machine_config = load_machine_config(base_dir)
     manager_prop = get_docker_swarm_manager_properties(machine_config)
     worker_prop = get_docker_swarm_worker_properties(machine_config, hostname)
@@ -153,6 +154,7 @@ def node_join_script(base_dir, hostname):
     print('{} has joint the swarm'.format(hostname))
 
 def node_leave_script(base_dir, hostname):
+    print('{} will leave the swarm'.format(hostname))
     machine_config = load_machine_config(base_dir)
     manager_prop = get_docker_swarm_manager_properties(machine_config)
     worker_prop = get_docker_swarm_worker_properties(machine_config, hostname)
@@ -202,9 +204,11 @@ def service_scale_out_script(base_dir, service, replicas, service_has_dependenci
     service_scale_script(base_dir, service, replicas, service_has_dependencies)
 
 def boki_engine_scale_out_script(base_dir, engine_service, replicas, service_has_dependencies = True):
+    print('Service {} of boki engines will be scaled out to {} replicas'.format(engine_service, replicas))
     service_scale_out_script(base_dir, engine_service, replicas, service_has_dependencies)
 
 def boki_engine_scale_in_script(base_dir, engine_hostname, engine_service, zk_client, zk_server_host, zk_server_port):
+    print('Service {} of boki engines will be scaled in by removing 1 replica'.format(engine_service))
     compose_config = load_compose_config(base_dir)
     service_full_name = 'boki-experiment_' + engine_service
     grace_period = int(get_engine_grace_period(compose_config))
