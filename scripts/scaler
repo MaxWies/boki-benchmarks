@@ -185,15 +185,19 @@ def service_scale_script(base_dir, main_service, replicas, service_has_dependenc
     machine_config = load_machine_config(base_dir)
     manager_prop = get_docker_swarm_manager_properties(machine_config)
     manager_ip = manager_prop['ip']
-    services_to_scale = {main_service}
+    dependent_services = set()
     if service_has_dependencies:
         swarm_config = load_swarm_config(base_dir)
         placement_label = get_placement_label_from_service(swarm_config, main_service)
-        services_to_scale.update(get_services_by_placement_label(swarm_config, placement_label))
+        dependent_services.update(get_services_by_placement_label(swarm_config, placement_label))
     service_full_name = 'boki-experiment_' + main_service
     if service_full_name not in docker_swarm_get_services_names(manager_ip):
         raise Exception("Service {} does not exist".format(service_full_name))
-    for service in services_to_scale:
+    service_id = docker_swarm_get_service_id_by_name(manager_ip, service_full_name)
+    docker_swarm_scale_service(manager_ip, service_id, replicas)
+    print('Manager has scaled service {} to {} replicas'.format(service, replicas))
+    for service in dependent_services:
+        time.sleep(5)
         service_full_name = 'boki-experiment_' + service
         service_id = docker_swarm_get_service_id_by_name(manager_ip, service_full_name)
         docker_swarm_scale_service(manager_ip, service_id, replicas)
@@ -206,6 +210,7 @@ def service_scale_out_script(base_dir, joining_nodes_hostnames, service, replica
         raise Exception('Cannot scale out because desired replicas {} not higher than current replicas {}'.format(replicas, current_replicas))
     for hostname in joining_nodes_hostnames:
         node_join_script(base_dir, hostname)
+        time.sleep(5)
     service_scale_script(base_dir, service, replicas, service_has_dependencies)
 
 def service_scale_in_script(base_dir, leaving_nodes_hostnames, service, replicas, service_has_dependencies = True):
