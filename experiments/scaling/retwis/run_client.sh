@@ -32,14 +32,17 @@ ssh -q $MANAGER_HOST -- uname -a >>$EXP_DIR/kernel_version
 
 # ssh -q $CLIENT_HOST -- curl -X POST http://$ENTRY_HOST:8080/function/RetwisInit
 
-ssh -q $CLIENT_HOST -- docker run -v /tmp:/tmp \
+ssh -q $CLIENT_HOST -- docker run \
+    --pull always \
+    -v /tmp:/tmp \
     maxwie/boki-retwisbench:latest \
     cp /retwisbench-bin/init /tmp/init
 
 ssh -q $CLIENT_HOST -- /tmp/init \
     --faas_gateway=$ENTRY_HOST:8080
 
-ssh -q $CLIENT_HOST -- docker run -v /tmp:/tmp \
+ssh -q $CLIENT_HOST -- docker run \
+    -v /tmp:/tmp \
     maxwie/boki-retwisbench:latest \
     cp /retwisbench-bin/create_users /tmp/create_users
 
@@ -48,7 +51,8 @@ ssh -q $CLIENT_HOST -- /tmp/create_users \
     --num_users=$NUM_USERS \
     --concurrency=16
 
-ssh -q $CLIENT_HOST -- docker run -v /tmp:/tmp \
+ssh -q $CLIENT_HOST -- docker run \
+    -v /tmp:/tmp \
     maxwie/boki-retwisbench:latest \
     cp /retwisbench-bin/benchmark /tmp/benchmark
 
