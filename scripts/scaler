@@ -83,10 +83,12 @@ def docker_swarm_scale_service(ip, service_id, replicas):
     return run_remote_command(ip, ['docker', 'service', 'scale', '{}={}'.format(service_id, replicas)])
 
 def docker_swarm_scale_service_set(ip, service_ids, replicas):
-    services_to_scale = []
+    if len(service_ids) < 1:
+        raise Exception("No service ids to scale")
+    cmd = ['docker', 'service', 'scale']
     for service_id in service_ids:
-        services_to_scale.append('{}={}'.format(service_id, replicas))
-    return run_remote_command(ip, ['docker', 'service', 'scale'].extend(services_to_scale))
+        cmd.append('{}={}'.format(service_id, replicas))
+    return run_remote_command(ip, cmd)
 
 def docker_swarm_get_task_name_by_hostname(ip, service_fullname, hostname):
     task_name, _ = run_remote_command(ip, ['docker', 'service', 'ps', service_fullname, '-f', 'node={}'.format(hostname), '-f', 'desired-state=running', '--format', '"{{.Name}}"'])
