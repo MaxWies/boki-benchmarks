@@ -63,8 +63,10 @@ def docker_swarm_get_services_names(ip):
     return service_names.split('\n')
 
 def docker_swarm_get_service_id_by_name(ip, hostname):
-    service_id, _ = run_remote_command(ip, ['docker', 'service', 'ls', '-f', 'name={}'.format(hostname), '--format', '"{{.ID}}"'])
-    return service_id.strip()
+    # no regex support in docker service
+    service_id_and_name, _ = run_remote_command(ip, ['docker', 'service', 'ls', '-f', 'name={}'.format(hostname), '--format', '"{{.ID}}" "{{.Name}}"', '|', 'grep', '{}$'.format(hostname)])
+    values = service_id_and_name.split(' ')
+    return values[0].strip() # return id only
 
 def docker_swarm_get_service_replicas(ip, service_fullname):
     replicas_info, _ = run_remote_command(ip, ['docker', 'service', 'ls', '-f', 'name={}'.format(service_fullname), '--format', '"{{.Replicas}}"'])
