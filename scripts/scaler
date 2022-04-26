@@ -309,6 +309,8 @@ if __name__ == '__main__':
             node_rejoin_script(args.base_dir, args.hostname)
         elif args.cmd == 'node-leave':
             node_leave_script(args.base_dir, args.hostname)
+        elif args.cmd == 'scale-service-and-dependencies':
+            service_scale_script(args.base_dir, args.service, args.replicas, True)
         elif args.cmd == 'boki-engine-scale-out':
             hostnames = args.hostnames.split(',')
             boki_engine_scale_out_script(args.base_dir, hostnames, args.service, args.replicas)
