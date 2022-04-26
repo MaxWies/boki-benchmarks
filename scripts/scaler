@@ -267,6 +267,8 @@ if __name__ == '__main__':
     parser.add_argument('--hostnames', type=str, default='')
     parser.add_argument('--service', type=str, default='')
     parser.add_argument('--replicas', type=int, default=1)
+    parser.add_argument('--duration', type=str, default=60)
+    parser.add_argument('--interval', type=str, default=15)
     parser.add_argument('--zk_client', type=str, default='')
     parser.add_argument('--zk_server_host', type=str, default='')
     parser.add_argument('--zk_server_port', type=int, default=2181)
