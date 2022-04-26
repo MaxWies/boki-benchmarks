@@ -126,13 +126,13 @@ def generate_swarm_application_less(base_dir, config, boki_spec, exp_spec):
     for key, _ in exp_spec['functions'].items():
         config["services"][function_definitions['functions'][key]['service_name']] = {
                 "placement_label": "engine_node",
-                "replicas": boki_spec['boki_engine_replicas']
+                "replicas": boki_spec['boki_engine_replicas_init']
         }
 
 def generate_swarm_config_engines(config, boki_spec):
     config["services"]["boki-engine"] = { 
         "placement_label": "engine_node", 
-        "replicas": boki_spec['boki_engine_replicas'] 
+        "replicas": boki_spec['boki_engine_replicas_init'] 
     }
     if "boki_index_engine_replicas" in boki_spec.keys():
         config["services"]["boki-index-engine"] = { 

@@ -1,8 +1,10 @@
 #!/usr/bin/python3
 
+from datetime import timedelta
 import os
 import sys
 import json
+from typing import List
 import yaml
 import argparse
 import subprocess as sp
@@ -242,13 +244,27 @@ def boki_engine_scale_in_script(base_dir, engine_hostname, engine_service, zk_cl
     current_replicas = docker_swarm_get_service_current_replicas(get_manager_ip(base_dir), service_full_name)
     service_scale_in_script(base_dir, [engine_hostname], engine_service, current_replicas - 1, True)
     
+def boki_engine_scale_out_script(base_dir, engine_hostnames : List[str], engine_service, duration, interval):
+    service_full_name = 'boki-experiment_' + engine_service
+    t_start = time.time()
+    t_end = time.time()
+    t_elapsed = t_end - t_start
+    c = 0
+    while t_elapsed < duration or 0 < len(engine_hostnames):
+        time.sleep(interval)
+        current_replicas = docker_swarm_get_service_current_replicas(get_manager_ip(base_dir), service_full_name)
+        boki_engine_scale_out_script(base_dir, [engine_hostnames.pop()], engine_service, current_replicas+1, True)
+        t_end = time.time()
+        t_elapsed = t_end - t_start
+        c += 1
+    print('Scaling finished. Scaled out {} replicas in total'.format(c))
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('cmd', type=str)
     parser.add_argument('--base-dir', type=str)
     parser.add_argument('--hostname', type=str)
-    parser.add_argument('--hostnames', default=[], nargs='+')
+    parser.add_argument('--hostnames', type=str, default='')
     parser.add_argument('--service', type=str, default='')
     parser.add_argument('--replicas', type=int, default=1)
     parser.add_argument('--zk_client', type=str, default='')
@@ -263,9 +279,13 @@ if __name__ == '__main__':
         elif args.cmd == 'node-leave':
             node_leave_script(args.base_dir, args.hostname)
         elif args.cmd == 'boki-engine-scale-out':
-            boki_engine_scale_out_script(args.base_dir, args.hostnames, args.service, args.replicas)
+            hostnames = args.hostnames.split(',')
+            boki_engine_scale_out_script(args.base_dir, hostnames, args.service, args.replicas)
         elif args.cmd == 'boki-engine-scale-in':
             boki_engine_scale_in_script(args.base_dir, args.hostname, args.service, args.zk_client, args.zk_server_host, args.zk_server_port)
+        elif args.cmd == 'boki-engine-scale-out-continously':
+            hostnames = args.hostnames.split(',')
+            boki_engine_scale_out_script(args.base_dir, hostnames, args.service, args.duration, args.interval)
         else:
             raise Exception('Unknown command: ' + args.cmd)
     except Exception as e:
