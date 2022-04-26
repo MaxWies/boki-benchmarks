@@ -92,6 +92,10 @@ def setup_docker_swarm_for_machines(machine_configs):
     for name, machine_config in machine_configs.items():
         if machine_config['role'] == 'worker':
             docker_swarm_leave(machine_config['ip'])
+            if 'init' in machine_config.keys():
+                if not machine_config['init']:
+                    print('Machine {} not in init group'.format(name), file=sys.stderr)
+                    continue
             run_remote_command(
                 machine_config['ip'],
                 ['docker', 'swarm', 'join', '--token', join_token,
