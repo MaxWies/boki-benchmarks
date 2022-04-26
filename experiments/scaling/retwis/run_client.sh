@@ -14,6 +14,7 @@ export DURATION=60
 export CONCURRENCY_CLIENT=16
 export CONCURRENCY_CLIENT_STEP_SIZE=16
 export CONCURRENCY_CLIENT_STEP_INTERVAL=15
+export NUM_USERS=1000
 
 for s in $(echo $values | jq -r ".exp_variables | to_entries | map(\"\(.key)=\(.value|tostring)\") | .[]" $EXP_SPEC_FILE); do
     export $s
@@ -29,7 +30,14 @@ ENTRY_HOST=`$HELPER_SCRIPT get-service-host --base-dir=$BASE_DIR --service=boki-
 ssh -q $MANAGER_HOST -- cat /proc/cmdline >>$EXP_DIR/kernel_cmdline
 ssh -q $MANAGER_HOST -- uname -a >>$EXP_DIR/kernel_version
 
-ssh -q $CLIENT_HOST -- curl -X POST http://$ENTRY_HOST:8080/function/RetwisInit
+# ssh -q $CLIENT_HOST -- curl -X POST http://$ENTRY_HOST:8080/function/RetwisInit
+
+ssh -q $CLIENT_HOST -- docker run -v /tmp:/tmp \
+    maxwie/boki-retwisbench:latest \
+    cp /retwisbench-bin/init /tmp/init
+
+ssh -q $CLIENT_HOST -- /tmp/init \
+    --faas_gateway=$ENTRY_HOST:8080
 
 ssh -q $CLIENT_HOST -- docker run -v /tmp:/tmp \
     maxwie/boki-retwisbench:latest \
