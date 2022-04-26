@@ -311,7 +311,7 @@ if __name__ == '__main__':
             boki_engine_continously_scale_out_script(args.base_dir, hostnames, args.service, args.duration, args.interval)
         elif args.cmd == 'boki-engine-scale-in-continously':
             hostnames = args.hostnames.split(',')
-            boki_engine_continously_scale_out_script(args.base_dir, hostnames, args.service, args.zk_client, args.zk_server_host, args.zk_server_port, args.duration, args.interval)
+            boki_engine_continously_scale_in_script(args.base_dir, hostnames, args.service, args.zk_client, args.zk_server_host, args.zk_server_port, args.duration, args.interval)
         else:
             raise Exception('Unknown command: ' + args.cmd)
     except Exception as e:
