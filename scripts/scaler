@@ -82,6 +82,12 @@ def docker_swarm_get_service_max_replicas(ip, service_fullname):
 def docker_swarm_scale_service(ip, service_id, replicas):
     return run_remote_command(ip, ['docker', 'service', 'scale', '{}={}'.format(service_id, replicas)])
 
+def docker_swarm_scale_service_set(ip, service_ids, replicas):
+    services_to_scale = []
+    for service_id in service_ids:
+        services_to_scale.append('{}={}'.format(service_id, replicas))
+    return run_remote_command(ip, ['docker', 'service', 'scale'].extend(services_to_scale))
+
 def docker_swarm_get_task_name_by_hostname(ip, service_fullname, hostname):
     task_name, _ = run_remote_command(ip, ['docker', 'service', 'ps', service_fullname, '-f', 'node={}'.format(hostname), '-f', 'desired-state=running', '--format', '"{{.Name}}"'])
     return task_name.strip()
@@ -198,13 +204,15 @@ def service_scale_script(base_dir, main_service, replicas, service_has_dependenc
         raise Exception("Service {} does not exist".format(service_full_name))
     service_id = docker_swarm_get_service_id_by_name(manager_ip, service_full_name)
     docker_swarm_scale_service(manager_ip, service_id, replicas)
-    print('Manager has scaled service {} to {} replicas'.format(main_service, replicas))
+    print('Manager has scaled main service {} to {} replicas'.format(main_service, replicas))
+    time.sleep(3)
+    dependent_services_ids = set()
     for service in dependent_services:
-        time.sleep(5)
         service_full_name = 'boki-experiment_' + service
         service_id = docker_swarm_get_service_id_by_name(manager_ip, service_full_name)
-        docker_swarm_scale_service(manager_ip, service_id, replicas)
-        print('Manager has scaled service {} to {} replicas'.format(service, replicas))
+        dependent_services_ids.add(service_id)
+    docker_swarm_scale_service_set(manager_ip, dependent_services_ids, replicas)
+    print('Manager has scaled dependent services {} to {} replicas'.format(' '.join(dependent_services), replicas))
 
 def service_scale_out_script(base_dir, joining_nodes_hostnames, service, replicas, service_has_dependencies = True):
     full_service_name = 'boki-experiment_' + service
