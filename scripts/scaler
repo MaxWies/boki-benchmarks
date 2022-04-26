@@ -274,7 +274,7 @@ def boki_engine_continously_scale_in_script(base_dir, engine_hostnames : List[st
     c = 0
     while t_elapsed < duration or 0 < len(engine_hostnames):
         time.sleep(interval)
-        boki_engine_scale_in_script(base_dir, [engine_hostnames.pop()], engine_service, zk_client, zk_server_host, zk_server_port)
+        boki_engine_scale_in_script(base_dir, engine_hostnames.pop(), engine_service, zk_client, zk_server_host, zk_server_port)
         t_end = time.time()
         t_elapsed = t_end - t_start
         c += 1
