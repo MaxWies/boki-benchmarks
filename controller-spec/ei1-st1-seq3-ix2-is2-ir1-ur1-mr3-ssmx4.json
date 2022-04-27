@@ -1,6 +1,6 @@
 {
     "boki_engine_replicas_init": 1,
-    "boki_storage_replicas": 2,
+    "boki_storage_replicas": 1,
     "boki_sequencers_replicas": 3,
     "boki_index_shards": 2,
     "boki_index_replicas": 1,
@@ -20,6 +20,6 @@
         ]
     },
     "exp_variables": {
-        "BOKI_SETTING": "st1-seq3-ix2-ei1-em4"
+        "BOKI_SETTING": "ei1-st1-seq3-ix2-ssmx4"
     }
 }

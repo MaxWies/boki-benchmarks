@@ -1,5 +1,5 @@
 {
-    "boki_engine_replicas": 2,
+    "boki_engine_replicas_init": 2,
     "boki_storage_replicas": 2,
     "boki_sequencers_replicas": 3,
     "boki_index_shards": 2,
@@ -12,13 +12,14 @@
             "--metalog_replicas=3", 
             "--userlog_replicas=1", 
             "--index_shards=2",
-            "--index_replicas=1"
+            "--index_replicas=1",
+            "--max_num_storage_shards=4"
         ],
         "depends_on": [
             "zookeeper-setup"
         ]
     },
     "exp_variables": {
-        "BOKI_SETTING": "eng2-st2-seq3-ix2"
+        "BOKI_SETTING": "ei2-st2-seq3-ix2-ssmx4"
     }
 }
