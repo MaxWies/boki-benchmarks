@@ -1,0 +1,17 @@
+{
+    "functions": {
+        "AppendAndReadLoopAsync" : {
+            "concurrency": 1
+        },
+        "MergeResults": {
+            "concurrency": 1
+        }
+    },
+    "exp_variables": {
+        "BENCHMARK_TYPE": "append-and-read-throughput",
+        "CONCURRENCY_WORKER": "1",
+        "DURATION": "5",
+        "READ_TIMES": "0",
+        "USE_TAGS": "false"
+    }
+}
