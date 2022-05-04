@@ -21,6 +21,10 @@ export LATENCY_TAIL_SIZE=20
 export SNAPSHOT_INTERVAL=0
 export CONCURRENCY_WORKER=1
 export CONCURRENCY_OPERATION=1
+export OPERATION_SEMANTICS_PERCENTAGES=50,50
+export SEQNUM_READ_PERCENTAGES=30,30,20,10,10
+export TAG_APPEND_PERCENTAGES=50,50
+export TAG_READ_PERCENTAGES=40,30,30
 
 for s in $(echo $values | jq -r ".exp_variables | to_entries | map(\"\(.key)=\(.value|tostring)\") | .[]" $EXP_SPEC_FILE); do
     export $s
@@ -79,6 +83,10 @@ ssh -q $CLIENT_HOST -- /tmp/benchmark \
     --snapshot_interval=$SNAPSHOT_INTERVAL \
     --concurrency_worker=$CONCURRENCY_WORKER \
     --concurrency_operation=$CONCURRENCY_OPERATION \
+    --operation_semantics_percentages=$OPERATION_SEMANTICS_PERCENTAGES \
+    --seqnum_read_percentages=$SEQNUM_READ_PERCENTAGES \
+    --tag_append_percentages=$TAG_APPEND_PERCENTAGES \
+    --tag_read_percentages=$TAG_READ_PERCENTAGES \
     >$EXP_DIR/results.log
 
 sleep 10

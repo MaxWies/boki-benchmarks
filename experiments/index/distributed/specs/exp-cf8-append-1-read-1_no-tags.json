@@ -1,6 +1,6 @@
 {
     "functions": {
-        "AppendAndReadLoopAsync" : {
+        "RandomAppendAndReadLoopAsync" : {
             "concurrency": 1
         },
         "MergeResults": {
@@ -8,10 +8,11 @@
         }
     },
     "exp_variables": {
-        "BENCHMARK_TYPE": "append-and-read-throughput",
+        "BENCHMARK_TYPE": "random-append-and-read-throughput",
         "CONCURRENCY_WORKER": "1",
         "DURATION": "5",
         "READ_TIMES": "1",
-        "USE_TAGS": "false"
+        "OPERATION_SEMANTICS_PERCENTAGES": "100,0",
+        "SEQNUM_READ_PERCENTAGES": "30,30,20,10,10"
     }
 }

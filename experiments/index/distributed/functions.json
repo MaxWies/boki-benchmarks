@@ -1,7 +1,7 @@
 {
     "functions": {
-        "AppendAndReadLoopAsync": {
-            "service_name": "append-read-service",
+        "RandomAppendAndReadLoopAsync": {
+            "service_name": "random-append-read-service",
             "docker": {
                 "image": "maxwie/boki-microbench:latest",
                 "entrypoint" : ["/tmp/boki/run_launcher", "/microbench-bin/main"],
