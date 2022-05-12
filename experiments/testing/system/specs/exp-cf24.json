@@ -1,0 +1,13 @@
+{
+    "functions": {
+        "TestSystem" : {
+            "concurrency": 24
+        }
+    },
+    "exp_variables": {
+        "BENCHMARK_TYPE": "test-system",
+        "CONCURRENCY_CLIENT": "24",
+        "DURATION": "30",
+        "READ_TIMES": "4"
+    }
+}
