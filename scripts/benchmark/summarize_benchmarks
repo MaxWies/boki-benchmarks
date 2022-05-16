@@ -117,7 +117,7 @@ def sort_operation_item_calls(items):
     return sorted(items, key=itemgetter('relative_timestamp'))
 
 
-def show_benchmark_results(result_file, output_directory):
+def generate_benchmark_log_loop_result(result_file, output_directory):
     file_name = os.path.basename(result_file)
     file_name_extensionless = file_name.split('.')[0]
     long_benchmark_result = None
@@ -156,7 +156,7 @@ def show_benchmark_results(result_file, output_directory):
     with open(os.path.join(output_directory, 'short-'+file_name_extensionless+'.json'), 'w') as f:
         f.write(short_benchmark_result)
 
-def show_all_benchmark_results(directory):
+def generate_benchmark_log_loop_results(directory):
     output_directory = os.path.join(directory, 'output')
     if not os.path.isdir(output_directory):
         os.mkdir(output_directory)
@@ -164,14 +164,56 @@ def show_all_benchmark_results(directory):
         file = os.path.join(directory, f)
         if not os.path.isfile(file):
             continue
-        show_benchmark_results(file, output_directory)
+        generate_benchmark_log_loop_result(file, output_directory)
+
+def get_newest_file(ip, file_match):
+    file, _ = run_command(ip, ['ls', '-v', file_match, '|', 'tail', '-n', '1'])
+
+def merge_engine_stats(output_directory, counter, files):
+    stat_merged = None
+    for i in range(files):
+        stat_next = None
+        with open(files[i]) as f:
+            stat_next = json.loads(f)
+        if stat_merged == None:
+            stat_merged == stat_next
+            continue
+        for main_key in stat_merged.keys():
+            for key in stat_merged[main_key]:
+                stat_merged[main_key][key] += stat_next[main_key][key]
+    stat_merged_result = json.dumps(stat_merged, indent=4)
+    with open(os.path.join(output_directory, 'merged-'+str(counter)+'.json'), 'w') as f:
+        f.write(stat_merged_result)
+
+def generate_engine_stats(directory):
+    per_engine_stat_files = {}
+    for f in os.listdir(directory):
+        s = f.split('-')
+        if s[2] not in per_engine_stat_files.keys:
+            per_engine_stat_files[s[2]] = []
+        per_engine_stat_files[s[2]].append(f)
+    per_counter_stat_files = {}
+    counter = len(per_engine_stat_files(per_engine_stat_files.keys()[0]))
+    for c in range(counter):
+        if c not in per_counter_stat_files.keys():
+            per_counter_stat_files[c] = []
+        for key in per_engine_stat_files.keys():
+            per_counter_stat_files[c].append(list(per_engine_stat_files[key])[c])
+    for c in range(counter):
+        merge_engine_stats(directory, c, per_counter_stat_files[c])    
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--result-directory', type=str)
+    parser.add_argument('cmd', type=str)
+    parser.add_argument('--directory', type=str)
     args = parser.parse_args()
     try:
-        show_all_benchmark_results(args.result_directory)
+        if args.cmd == 'benchmark-log-loop':
+            generate_benchmark_log_loop_results(args.directory)
+        elif args.cmd == 'benchmark-engine-stats':
+            generate_engine_stats(args.directory)
+        else:
+            raise Exception('Unknown command: ' + args.cmd)
     except Exception as e:
         err_str = str(e)
         if not err_str.endswith('\n'):
