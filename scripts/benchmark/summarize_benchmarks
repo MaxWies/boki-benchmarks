@@ -166,34 +166,31 @@ def generate_benchmark_log_loop_results(directory):
             continue
         generate_benchmark_log_loop_result(file, output_directory)
 
-def get_newest_file(ip, file_match):
-    file, _ = run_command(ip, ['ls', '-v', file_match, '|', 'tail', '-n', '1'])
-
 def merge_engine_stats(output_directory, counter, files):
     stat_merged = None
-    for i in range(files):
+    for i in range(len(files)):
         stat_next = None
         with open(files[i]) as f:
-            stat_next = json.loads(f)
+            stat_next = json.load(f)
         if stat_merged == None:
-            stat_merged == stat_next
+            stat_merged = stat_next
             continue
         for main_key in stat_merged.keys():
             for key in stat_merged[main_key]:
                 stat_merged[main_key][key] += stat_next[main_key][key]
     stat_merged_result = json.dumps(stat_merged, indent=4)
-    with open(os.path.join(output_directory, 'merged-'+str(counter)+'.json'), 'w') as f:
+    with open(os.path.join(output_directory, 'engines-merged-'+str(counter)+'.json'), 'w') as f:
         f.write(stat_merged_result)
 
 def generate_engine_stats(directory):
     per_engine_stat_files = {}
-    for f in os.listdir(directory):
-        s = f.split('-')
-        if s[2] not in per_engine_stat_files.keys:
-            per_engine_stat_files[s[2]] = []
-        per_engine_stat_files[s[2]].append(f)
+    for file_name in sorted(os.listdir(directory)):
+        engine_id = file_name.split('-')[1]
+        if engine_id not in per_engine_stat_files.keys():
+            per_engine_stat_files[engine_id] = []
+        per_engine_stat_files[engine_id].append(os.path.join(directory, file_name))
     per_counter_stat_files = {}
-    counter = len(per_engine_stat_files(per_engine_stat_files.keys()[0]))
+    counter = len(per_engine_stat_files[list(per_engine_stat_files.keys())[0]])
     for c in range(counter):
         if c not in per_counter_stat_files.keys():
             per_counter_stat_files[c] = []

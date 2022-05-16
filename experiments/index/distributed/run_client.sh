@@ -95,11 +95,11 @@ if [ $COLLECT_CONTAINER_LOGS == 'true' ]; then
     $HELPER_SCRIPT collect-container-logs --base-dir=$BASE_DIR --log-path=$EXP_DIR/logs
 fi
 
-mkdir -p $EXP_DIR/benchmark $EXP_DIR/benchmark/stats
+mkdir -p $EXP_DIR/benchmark $EXP_DIR/stats/engine
 scp -r -q $CLIENT_HOST:/tmp/boki/output/benchmark/$BENCHMARK_TYPE $EXP_DIR/benchmark
 for HOST in $ALL_ENGINE_HOSTS; do
-    scp -r -q $HOST:/mnt/inmem/boki/stats $EXP_DIR/stats
+    scp -r -q $HOST:/mnt/inmem/boki/stats/* $EXP_DIR/stats/engine
 done
 $BENCHMARK_SCRIPT benchmark-log-loop --directory=$EXP_DIR/benchmark/$BENCHMARK_TYPE
-$BENCHMARK_SCRIPT benchmark-engine-stats --directory=$EXP_DIR/stats
+$BENCHMARK_SCRIPT benchmark-engine-stats --directory=$EXP_DIR/stats/engine
 echo "Results published at $EXP_DIR"
