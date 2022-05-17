@@ -60,7 +60,9 @@ func (h *MergeHandler) Call(ctx context.Context, input []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+	log.Printf("[INFO] Target directory is %s. Target function is %s", mergeRequest.Directory, mergeRequest.Function)
 	files, err := ioutil.ReadDir(mergeRequest.Directory)
+	log.Printf("[INFO] Found %d files in directory", len(files))
 	mergable, err := h.CreateMergable(mergeRequest.Function)
 	if err != nil {
 		return nil, err
@@ -68,14 +70,17 @@ func (h *MergeHandler) Call(ctx context.Context, input []byte) ([]byte, error) {
 	merged := 0
 	for i, file := range files {
 		if !strings.Contains(file.Name(), mergeRequest.Function) {
+			log.Printf("[WARNING] %s is not a relevant file", file.Name())
 			continue
 		}
 		marshalled, err := ioutil.ReadFile(path.Join(mergeRequest.Directory, file.Name()))
 		if err != nil {
+			log.Printf("[ERROR] Could not read file %s", file.Name())
 			return nil, err
 		}
 		mergeInput, err := h.CreateMergableFromJson(mergeRequest.Function, marshalled)
 		if err != nil {
+			log.Printf("[ERROR] Could not create merge object from json in file %s", file.Name())
 			return nil, err
 		}
 		if i == 0 {

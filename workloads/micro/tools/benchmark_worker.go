@@ -88,7 +88,7 @@ func workerLoopBenchmark(functionName string, requestInputBuilder func() utils.J
 		}
 	}
 	log.Printf("[INFO] %d successful results from %d total results.", success, len(appendClient.HttpResults))
-	time.Sleep(time.Duration(FLAGS_duration*2) * time.Second)
+	time.Sleep((time.Duration(FLAGS_duration) + 5) * time.Second)
 
 	mergeFunction := fmt.Sprintf("%s%s", FLAGS_fn_merge_prefix, constants.FunctionMergeResults)
 	mergeSync(mergeFunction, functionName)

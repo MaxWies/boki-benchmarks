@@ -26,7 +26,6 @@ func JsonPostRequest(client *http.Client, url string, request JSONValue) *HttpRe
 		log.Fatalf("[FATAL] Failed to encode JSON request: %v", err)
 	}
 	start := time.Now()
-	log.Printf("[Info] HTTP Post to url: %s", url)
 	resp, err := client.Post(url, "application/json", bytes.NewReader(encoded))
 	if err != nil {
 		log.Printf("[ERROR] HTTP Post failed: %v", err)
@@ -43,11 +42,10 @@ func JsonPostRequest(client *http.Client, url string, request JSONValue) *HttpRe
 	if err != nil {
 		log.Fatalf("[FATAL] Failed to decode JSON response: %v", err)
 	}
-	log.Printf("[Info] JSON received: %s", response)
 	success := response["success"].(bool)
 	if !success {
 		message := response["message"].(string)
-		log.Printf("[WARN] Request failed: %v", message)
+		log.Printf("[ERROR] Request failed: %v. At %s", message, time.Now())
 		return &HttpResult{
 			Success:    false,
 			StatusCode: 200,

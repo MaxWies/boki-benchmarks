@@ -24,7 +24,6 @@ func (callSync *CallSync) JsonPostRequest(client *http.Client, url string, reque
 	if err != nil {
 		log.Fatalf("[FATAL] Failed to encode JSON request: %v", err)
 	}
-	log.Printf("[INFO] HTTP Post to url: %s", url)
 	resp, err := client.Post(url, "application/json", bytes.NewReader(encoded))
 	if err != nil {
 		log.Printf("[ERROR] HTTP Post failed: %v", err)
@@ -42,7 +41,6 @@ func (callSync *CallSync) JsonPostRequest(client *http.Client, url string, reque
 		log.Fatalf("[FATAL] Failed to decode JSON response: %v", err)
 		return &HttpResult{Err: err, Success: false, StatusCode: resp.StatusCode}
 	}
-	log.Printf("[INFO] HTTP response received")
 
 	return &HttpResult{
 		StatusCode: resp.StatusCode,

@@ -5,6 +5,9 @@ import (
 	"faas-micro/constants"
 	"faas-micro/utils"
 	"fmt"
+	"log"
+	"math/rand"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -13,18 +16,27 @@ import (
 )
 
 type OperationInput struct {
-	Record                   []byte `json:"record"`
-	ReadTimes                int    `json:"read_times"`
-	UseTags                  bool   `json:"use_tags"`
-	LoopDuration             int    `json:"loop_duration"`
-	SnapshotInterval         int    `json:"snapshot_interval"`
-	LatencyBucketLower       int64  `json:"latency_bucket_lower"`
-	LatencyBucketUpper       int64  `json:"latency_bucket_upper"`
-	LatencyBucketGranularity int64  `json:"latency_bucket_granularity"`
-	LatencyHeadSize          int    `json:"latency_head_size"`
-	LatencyTailSize          int    `json:"latency_tail_size"`
-	BenchmarkType            string `json:"benchmark_type"`
-	ConcurrentOperations     int    `json:"concurrent_operations"`
+	Record                       []byte `json:"record"`
+	ReadTimes                    int    `json:"read_times"`
+	ReadDirection                int    `json:"read_direction"`
+	UseTags                      bool   `json:"use_tags"`
+	LoopDuration                 int    `json:"loop_duration"`
+	SnapshotInterval             int    `json:"snapshot_interval"`
+	LatencyBucketLower           int64  `json:"latency_bucket_lower"`
+	LatencyBucketUpper           int64  `json:"latency_bucket_upper"`
+	LatencyBucketGranularity     int64  `json:"latency_bucket_granularity"`
+	LatencyHeadSize              int    `json:"latency_head_size"`
+	LatencyTailSize              int    `json:"latency_tail_size"`
+	BenchmarkType                string `json:"benchmark_type"`
+	ConcurrentOperations         int    `json:"concurrent_operations"`
+	SuffixSeqnumsCapacity        int    `json:"suffix_seqnums_capacity"`
+	PopularSeqnumsCapacity       int    `json:"popular_seqnums_capacity"`
+	OwnTagsCapacity              int    `json:"own_tags_capacity"`
+	SharedTagsCapacity           int    `json:"shared_tags_capacity"`
+	OperationSemanticsPercentage string `json:"operation_semantics_percentages"`
+	SeqnumReadPercentages        string `json:"seqnum_read_percentages"`
+	TagAppendPercentages         string `json:"tag_append_percentages"`
+	TagReadPercentages           string `json:"tag_read_percentages"`
 }
 
 func (o *OperationInput) LogParameters() {
@@ -36,22 +48,83 @@ func (o *OperationInput) LogParameters() {
 	sb.WriteString(fmt.Sprintf("Record size: %d\n", len(o.Record)))
 }
 
+func createSharedTags(capacity int) utils.TagPool {
+	if capacity < 1 {
+		log.Printf("[INFO] No capacity for 'shared' tags given")
+	}
+	sharedTags := make([]uint64, capacity, capacity)
+	for i := 0; i < capacity; i++ {
+		sharedTags[i] = constants.TagShared + uint64(i)
+	}
+	return utils.CreateTagPool(sharedTags)
+}
+
+func createOwnTags(capacity int, env types.Environment) utils.TagPool {
+	if capacity < 1 {
+		log.Printf("[INFO] No capacity for 'own' tags given")
+	}
+	ownTags := make([]uint64, capacity, capacity)
+	for i := 0; i < capacity; i++ {
+		ownTags[i] = env.GenerateUniqueID()
+	}
+	return utils.CreateTagPool(ownTags)
+}
+
+func parsePercentages(s string) []int {
+	parts := strings.Split(s, ",")
+	results := make([]int, len(parts))
+	for i, part := range parts {
+		if parsed, err := strconv.Atoi(part); err != nil {
+			log.Printf("[ERROR] Failed to parse %d-th part", i)
+			return nil
+		} else {
+			results[i] = parsed
+		}
+	}
+	for i := 1; i < len(results); i++ {
+		results[i] += results[i-1]
+	}
+	if results[len(results)-1] != 100 {
+		log.Print("[ERROR] Sum of all parts is not 100")
+		return nil
+	}
+	return results
+}
+
 type OperationHandler struct {
-	env                      types.Environment
-	operationBenchmarkMatrix *[]*[]*OperationBenchmark
-	operationCalls           chan struct{}
-	concurrentOperations     chan struct{}
-	wg                       *sync.WaitGroup
-	snapshot                 int
+	env                           types.Environment
+	operationBenchmarkMatrix      *[]*[]*OperationBenchmark
+	operationCalls                chan struct{}
+	concurrentOperations          chan struct{}
+	wg                            *sync.WaitGroup
+	snapshot                      int
+	suffixSeqnums                 utils.LogSuffix
+	popularSeqnums                utils.SeqnumPool
+	suffixTags                    utils.LogSuffix
+	ownTags                       utils.TagPool
+	sharedTags                    utils.TagPool
+	operationSemanticsPercentages []int
+	seqnumReadPercentages         []int
+	tagAppendPercentages          []int
+	tagReadPercentages            []int
 }
 
 func newOperationHandler(env types.Environment, input *OperationInput, operationBenchmarkMatrix *[]*[]*OperationBenchmark) *OperationHandler {
+
 	op := &OperationHandler{
-		env:                      env,
-		operationBenchmarkMatrix: operationBenchmarkMatrix,
-		operationCalls:           make(chan struct{}),
-		concurrentOperations:     make(chan struct{}, input.ConcurrentOperations),
-		wg:                       &sync.WaitGroup{},
+		env:                           env,
+		operationBenchmarkMatrix:      operationBenchmarkMatrix,
+		operationCalls:                make(chan struct{}),
+		concurrentOperations:          make(chan struct{}, input.ConcurrentOperations),
+		wg:                            &sync.WaitGroup{},
+		suffixSeqnums:                 utils.CreateLogSuffix(input.SuffixSeqnumsCapacity),
+		popularSeqnums:                utils.CreateEmptySeqnumPool(input.PopularSeqnumsCapacity),
+		ownTags:                       createOwnTags(input.OwnTagsCapacity, env),
+		sharedTags:                    createSharedTags(input.SharedTagsCapacity),
+		operationSemanticsPercentages: parsePercentages(input.OperationSemanticsPercentage),
+		seqnumReadPercentages:         parsePercentages(input.SeqnumReadPercentages),
+		tagAppendPercentages:          parsePercentages(input.TagAppendPercentages),
+		tagReadPercentages:            parsePercentages(input.TagReadPercentages),
 	}
 	for i := 0; i < input.ConcurrentOperations; i++ {
 		op.concurrentOperations <- struct{}{}
@@ -142,7 +215,7 @@ func (o *OperationHandler) AppendCall(ctx context.Context, startTime time.Time, 
 	o.operationCalls <- struct{}{}
 }
 
-func (o *OperationHandler) AppendAndReadCall(ctx context.Context, startTime time.Time, record []byte, readTimes int, useTag bool) {
+func (o *OperationHandler) AppendAndReadCall(ctx context.Context, startTime time.Time, record []byte, readTimes int, readDirection int, useTag bool) {
 	tags := make([]uint64, 0)
 	tag := constants.TagEmpty
 	if useTag {
@@ -162,6 +235,7 @@ func (o *OperationHandler) AppendAndReadCall(ctx context.Context, startTime time
 			(*(*o.operationBenchmarkMatrix)[o.snapshot])[i].AddFailure()
 		}
 		o.operationCalls <- struct{}{}
+		log.Print("[WARNING] Append to log failed")
 		return
 	}
 	(*(*o.operationBenchmarkMatrix)[o.snapshot])[0].AddSuccess(opItem)
@@ -170,7 +244,7 @@ func (o *OperationHandler) AppendAndReadCall(ctx context.Context, startTime time
 	for i := 1; i <= readTimes; i++ {
 		logEntry, opItem = o.subOperationCall(
 			func() (*types.LogEntry, error) {
-				return ReadNext(ctx, o.env, tag, logEntry.SeqNum)
+				return Read(ctx, o.env, tag, logEntry.SeqNum, readDirection)
 			}, startTime)
 		if !opItem.Success {
 			// skip remaining reading calls
@@ -178,10 +252,105 @@ func (o *OperationHandler) AppendAndReadCall(ctx context.Context, startTime time
 				(*(*o.operationBenchmarkMatrix)[o.snapshot])[j].AddFailure()
 			}
 			o.operationCalls <- struct{}{}
-			return
+			log.Printf("[WARNING] Read from log seqnum %d failed", logEntry.SeqNum)
 		}
 		opItem.EngineCacheHit = utils.IsUint64InSlice(constants.TagEngineCacheHit, logEntry.Tags)
 		(*(*o.operationBenchmarkMatrix)[o.snapshot])[i].AddSuccess(opItem)
+	}
+	o.operationCalls <- struct{}{}
+}
+
+func (o *OperationHandler) appendRecord(ctx context.Context, startTime time.Time, record []byte, tag uint64) uint64 {
+	tags := make([]uint64, 0)
+	if tag != constants.TagEmpty {
+		tags = append(tags, tag)
+	}
+	logEntry, opItem := o.subOperationCall(
+		func() (*types.LogEntry, error) {
+			return Append(ctx, o.env, &AppendInput{Record: record, Tags: tags})
+		}, startTime)
+	if !opItem.Success {
+		(*(*o.operationBenchmarkMatrix)[o.snapshot])[0].AddFailure()
+	} else {
+		(*(*o.operationBenchmarkMatrix)[o.snapshot])[0].AddSuccess(opItem)
+	}
+	return logEntry.SeqNum
+}
+
+func (o *OperationHandler) readRecord(ctx context.Context, startTime time.Time, seqnum uint64, tag uint64, readDirection int, readTime int) {
+	_, opItem := o.subOperationCall(
+		func() (*types.LogEntry, error) {
+			return Read(ctx, o.env, tag, seqnum, readDirection)
+		}, startTime)
+	if !opItem.Success {
+		(*(*o.operationBenchmarkMatrix)[o.snapshot])[readTime].AddFailure()
+		log.Printf("[WARNING] Read from log seqnum %d failed", seqnum)
+		return
+	}
+	//opItem.EngineCacheHit = utils.IsUint64InSlice(constants.TagEngineCacheHit, logEntry.Tags)
+	(*(*o.operationBenchmarkMatrix)[o.snapshot])[readTime].AddSuccess(opItem)
+}
+
+func (o *OperationHandler) RandomAppendAndReadCall(ctx context.Context, startTime time.Time, record []byte, readTimes int) {
+	semanticType := rand.Intn(100)
+	if semanticType < o.operationSemanticsPercentages[0] {
+		// append without tags
+		seqnum := o.appendRecord(ctx, startTime, record, constants.TagEmpty)
+		o.suffixSeqnums.Append(constants.TagEmpty, seqnum)
+		o.popularSeqnums.Append(seqnum) // will be filled until full
+		// read
+		for i := 1; i <= readTimes; i++ {
+			readOp := rand.Intn(100)
+			if readOp < o.seqnumReadPercentages[0] {
+				// read own seqnum
+				o.readRecord(ctx, startTime, seqnum, constants.TagEmpty, rand.Intn(2), i)
+			} else if readOp < o.seqnumReadPercentages[1] {
+				// read popular seqnum
+				o.readRecord(ctx, startTime, o.popularSeqnums.PickRandomSeqnum(), constants.TagEmpty, rand.Intn(2), i)
+			} else if readOp < o.seqnumReadPercentages[2] {
+				// read suffix seqnum
+				o.readRecord(ctx, startTime, o.suffixSeqnums.PickRandomSeqnum(), constants.TagEmpty, rand.Intn(2), i)
+			} else if readOp < o.seqnumReadPercentages[3] {
+				// read from 0
+				o.readRecord(ctx, startTime, 0, constants.TagEmpty, constants.ReadNext, i)
+			} else {
+				// read from tail
+				o.readRecord(ctx, startTime, constants.MaxSeqnum, constants.TagEmpty, constants.ReadPrev, i)
+			}
+		}
+	} else {
+		// append with tags
+		appendOp := rand.Intn(100)
+		var tag uint64
+		var seqnum uint64
+		if appendOp < o.tagAppendPercentages[0] {
+			tag = o.env.GenerateUniqueID()
+			seqnum = o.appendRecord(ctx, startTime, record, tag)
+		} else if appendOp < o.tagAppendPercentages[1] {
+			// append to own tag
+			tag = o.ownTags.PickRandomTag()
+			seqnum = o.appendRecord(ctx, startTime, record, tag)
+			o.ownTags.Update(tag, seqnum)
+		} else {
+			// append to shared tag
+			tag = o.sharedTags.PickRandomTag()
+			seqnum = o.appendRecord(ctx, startTime, record, tag)
+			o.sharedTags.Update(tag, seqnum)
+		}
+		// read
+		for i := 1; i <= readTimes; i++ {
+			readOp := rand.Intn(100)
+			if readOp < o.tagReadPercentages[0] {
+				// read tag directly
+				o.readRecord(ctx, startTime, seqnum, tag, constants.ReadNext, i)
+			} else if readOp < o.tagReadPercentages[1] {
+				// read tag from 0
+				o.readRecord(ctx, startTime, 0, tag, constants.ReadNext, i)
+			} else {
+				// read tag from tail
+				o.readRecord(ctx, startTime, constants.MaxSeqnum, tag, constants.ReadPrev, i)
+			}
+		}
 	}
 	o.operationCalls <- struct{}{}
 }

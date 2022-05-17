@@ -15,22 +15,22 @@ import (
 	"github.com/google/uuid"
 )
 
-type appendReadLoopHandler struct {
+type randomAppendReadLoopHandler struct {
 	kind    string
 	env     types.Environment
 	isAsync bool
 }
 
-func NewAppendReadLoopHandler(env types.Environment, isAsync bool) types.FuncHandler {
-	return &appendReadLoopHandler{
-		kind:    "appendAndRead",
+func NewRandomAppendReadLoopHandler(env types.Environment, isAsync bool) types.FuncHandler {
+	return &randomAppendReadLoopHandler{
+		kind:    "randomAppendAndRead",
 		env:     env,
 		isAsync: isAsync,
 	}
 }
 
-func (h *appendReadLoopHandler) Call(ctx context.Context, input []byte) ([]byte, error) {
-	log.Printf("[INFO] Call AppendReadLoopHandler. Async: %v", h.isAsync)
+func (h *randomAppendReadLoopHandler) Call(ctx context.Context, input []byte) ([]byte, error) {
+	log.Printf("[INFO] Call RandomAppendReadLoopHandler. Async: %v", h.isAsync)
 	parsedInput := &operations.OperationInput{}
 	err := json.Unmarshal(input, parsedInput)
 	if err != nil {
@@ -57,7 +57,7 @@ func (h *appendReadLoopHandler) Call(ctx context.Context, input []byte) ([]byte,
 		}
 		operationHandler.WaitForFreeGoRoutine()
 		operationHandler.StartOperation()
-		go operationHandler.AppendAndReadCall(ctx, startTime, parsedInput.Record, parsedInput.ReadTimes, parsedInput.ReadDirection, parsedInput.UseTags)
+		go operationHandler.RandomAppendAndReadCall(ctx, startTime, parsedInput.Record, parsedInput.ReadTimes)
 	}
 	operationHandler.WaitForOperationsEnd()
 	operationHandler.CloseChannels()
@@ -96,7 +96,7 @@ func (h *appendReadLoopHandler) Call(ctx context.Context, input []byte) ([]byte,
 			Valid:        true,
 		},
 		Description: operations.Description{
-			Benchmark:        fmt.Sprintf("Append and Read %d times from Log", parsedInput.ReadTimes),
+			Benchmark:        fmt.Sprintf("Random Append and Read %d times from Log", parsedInput.ReadTimes),
 			Throughput:       "[Op/s] Operations per second",
 			Latency:          "[microsec] Operation latency",
 			RecordSize:       len(parsedInput.Record),
@@ -108,7 +108,7 @@ func (h *appendReadLoopHandler) Call(ctx context.Context, input []byte) ([]byte,
 
 	if h.isAsync {
 		fileDirectory := path.Join(constants.BASE_PATH_ENGINE_BOKI_BENCHMARK, parsedInput.BenchmarkType)
-		fileName := constants.FunctionAppendAndReadLoopAsync + "_" + benchmark.Id.String()
+		fileName := constants.FunctionRandomAppendAndReadLoopAsync + "_" + benchmark.Id.String()
 		err = benchmark.WriteToFile(fileDirectory, fileName)
 		if err != nil {
 			return nil, err

@@ -16,7 +16,6 @@ func (callAsync *CallAsync) JsonPostRequest(client *http.Client, url string, req
 	if err != nil {
 		log.Fatalf("[FATAL] Failed to encode JSON request: %v", err)
 	}
-	log.Printf("[INFO] HTTP Post to url: %s", url)
 	resp, err := client.Post(url, "application/json", bytes.NewReader(encoded))
 	if err != nil {
 		log.Printf("[ERROR] HTTP Post failed: %v", err)
@@ -27,8 +26,6 @@ func (callAsync *CallAsync) JsonPostRequest(client *http.Client, url string, req
 		log.Printf("[ERROR] Non-OK response: %d", resp.StatusCode)
 		return &HttpResult{Success: false, StatusCode: resp.StatusCode}
 	}
-
-	log.Printf("[INFO] Async HTTP response received")
 
 	return &HttpResult{
 		StatusCode: resp.StatusCode,

@@ -2,6 +2,9 @@ package operations
 
 import (
 	"context"
+	"errors"
+	"faas-micro/constants"
+	"log"
 
 	"cs.utexas.edu/zjia/faas/types"
 )
@@ -15,6 +18,13 @@ type ReadOutput struct {
 	Message string `json:"message,omitempty"`
 }
 
-func ReadNext(ctx context.Context, env types.Environment, tag uint64, seqNum uint64) (*types.LogEntry, error) {
-	return env.SharedLogReadNext(ctx, tag, seqNum)
+func Read(ctx context.Context, env types.Environment, tag uint64, seqNum uint64, readDirection int) (*types.LogEntry, error) {
+	if readDirection == constants.ReadNext {
+		return env.SharedLogReadNext(ctx, tag, seqNum)
+	} else if readDirection == constants.ReadPrev {
+		return env.SharedLogReadPrev(ctx, tag, seqNum)
+	} else {
+		log.Printf("[FATAL] Invalid read direction %d", readDirection)
+		return nil, errors.New("This direction is invalid")
+	}
 }
