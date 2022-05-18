@@ -1,0 +1,38 @@
+{
+    "functions": {
+        "geo" : {
+            "concurrency": 8
+        },
+        "profile" : {
+            "concurrency": 8
+        },
+        "rate" : {
+            "concurrency": 8
+        },
+        "recommendation" : {
+            "concurrency": 8
+        },
+        "user" : {
+            "concurrency": 8
+        },
+        "hotel" : {
+            "concurrency": 8
+        },
+        "search" : {
+            "concurrency": 8
+        },
+        "flight" : {
+            "concurrency": 8
+        },
+        "order" : {
+            "concurrency": 8
+        },
+        "frontend" : {
+            "concurrency": 8
+        },
+        "gateway" : {
+            "concurrency": 8
+        }
+    },
+    "exp_variables": {}
+}
