@@ -48,10 +48,10 @@ def generate_docker_compose_application_less(base_dir, compose_file):
         service_desc["entrypoint"].append(str(func_id))
         compose_file['services'][function_value['service_name']] = service_desc
 
-def generate_docker_compose_file(base_dir, boki_spec, exp_spec):
+def generate_docker_compose_file(base_dir, slog_spec, exp_spec):
     with open(os.path.join(base_dir, 'docker-compose-main.yml')) as f:
         compose_file = yaml.safe_load(f)
-    compose_file['services']['boki-controller'] = boki_spec['boki_controller']
+    compose_file['services']['slog-controller'] = slog_spec['slog_controller']
     if 'applications' in exp_spec.keys():
         generate_docker_compose_with_applications()
     else:
@@ -91,26 +91,26 @@ def generate_nightcore_config(base_dir, exp_spec):
         generate_nightcore_config_application_less(base_dir, exp_spec)
     # nc_config = []
     # id_counter = 0
-    # logspace_counter = 0
+    # slogspace_counter = 0
     # for application in exp_file['applications']:
     #     if application['instances'] == 1:
     #         for function in application['functions']:
     #             nc_config.append({
     #                 "funcName": create_function_name(f, id_counter),
     #                 "funcId": id_counter,
-    #                 "defaultLogSpace": logspace_counter,
+    #                 "defaultLogSpace": slogspace_counter,
     #                 "minWorkers": f["min_workers"],
     #                 "maxWorkers": f["max_workers"]
     #             })
     #     #unique
     #     for i in range(application['instances']):
-    #         logspace_counter += 1
+    #         slogspace_counter += 1
     #         for f in application["functions"]:
     #             id_counter += 1
     #             nc_config.append({
     #                 "funcName": create_function_name(f, id_counter),
     #                 "funcId": id_counter,
-    #                 "defaultLogSpace": logspace_counter,
+    #                 "defaultLogSpace": slogspace_counter,
     #                 "minWorkers": f["min_workers"],
     #                 "maxWorkers": f["max_workers"]
     #             })
@@ -121,43 +121,58 @@ def generate_nightcore_config(base_dir, exp_spec):
 def generate_swarm_with_applications():
     pass
 
-def generate_swarm_application_less(base_dir, config, boki_spec, exp_spec):
+def generate_swarm_application_less(base_dir, config, slog, slog_spec, exp_spec):
     function_definitions = load_json_file(os.path.join(base_dir, 'functions.json'))
-    for key, _ in exp_spec['functions'].items():
-        config["services"][function_definitions['functions'][key]['service_name']] = {
-                "placement_label": "engine_node",
-                "replicas": boki_spec['boki_engine_replicas_init']
+    if slog.to_lower() == 'indilog':
+        for key, _ in exp_spec['functions'].items():
+            config["services"][function_definitions['functions'][key]['service_name']] = {
+                    "placement_label": "engine_node",
+                    "replicas": slog_spec['slog_engine_replicas_init']
+            }
+    elif slog.to_lower() == 'boki':
+        for key, _ in exp_spec['functions'].items():
+                config["services"][function_definitions['functions'][key]['service_name']] = {
+                        "placement_label": "engine_node",
+                        "replicas": slog_spec['slog_engine_replicas']
+                }
+
+def generate_swarm_config_engines(config, slog, slog_spec):
+    if slog.to_lower() == 'indilog':
+        config["services"]["slog-engine"] = { 
+            "placement_label": "engine_node", 
+            "replicas": slog_spec['slog_engine_replicas_init'] 
         }
+        if "slog_index_engine_replicas" in slog_spec.keys():
+            config["services"]["slog-index-engine"] = { 
+                "placement_label": "index_engine_node", 
+                "replicas": slog_spec['slog_index_engine_replicas']
+            }
+    elif slog.to_lower() == 'boki':
+        config["services"]["slog-engine"] = { 
+            "placement_label": "engine_node", 
+            "replicas": slog_spec['slog_engine_replicas'] 
+        }
+    else:
+        raise Exception("Unknown shared log")
 
-def generate_swarm_config_engines(config, boki_spec):
-    config["services"]["boki-engine"] = { 
-        "placement_label": "engine_node", 
-        "replicas": boki_spec['boki_engine_replicas_init'] 
-    }
-    if "boki_index_engine_replicas" in boki_spec.keys():
-        config["services"]["boki-index-engine"] = { 
-            "placement_label": "index_engine_node", 
-            "replicas": boki_spec['boki_index_engine_replicas']
-        }   
 
-
-def generate_swarm_config(base_dir, boki_spec, exp_spec):
+def generate_swarm_config(base_dir, slog, slog_spec, exp_spec):
     config = {}
     #config["services"] = spec["services"]
     config["services"] = {
-        "zookeeper": { "placement": "bokiexp-gateway" },
-        "zookeeper-setup": { "placement": "bokiexp-gateway" },
-        "boki-controller": { "placement": "bokiexp-gateway" },
-        "boki-gateway": { "placement": "bokiexp-gateway" },
-        "boki-storage": { "placement_label": "storage_node", "replicas": boki_spec['boki_storage_replicas'] },
-        "boki-sequencer": { "placement_label": "sequencer_node", "replicas": boki_spec['boki_sequencers_replicas'] },
-        "boki-index": { "placement_label": "index_node", "replicas": boki_spec['boki_index_shards'] * boki_spec['boki_index_replicas'] }
+        "zookeeper": { "placement": "slogexp-gateway" },
+        "zookeeper-setup": { "placement": "slogexp-gateway" },
+        "slog-controller": { "placement": "slogexp-gateway" },
+        "slog-gateway": { "placement": "slogexp-gateway" },
+        "slog-storage": { "placement_label": "storage_node", "replicas": slog_spec['slog_storage_replicas'] },
+        "slog-sequencer": { "placement_label": "sequencer_node", "replicas": slog_spec['slog_sequencers_replicas'] },
+        "slog-index": { "placement_label": "index_node", "replicas": slog_spec['slog_index_shards'] * slog_spec['slog_index_replicas'] }
     }
-    generate_swarm_config_engines(config, boki_spec)
+    generate_swarm_config_engines(config, slog, slog_spec)
     if 'applications' in exp_spec.keys():
         generate_swarm_with_applications()
     else:
-        generate_swarm_application_less(base_dir, config, boki_spec, exp_spec)
+        generate_swarm_application_less(base_dir, config, slog, slog_spec, exp_spec)
 
     # for application in exp_file['applications']:
     #     id_counter = 0
@@ -187,23 +202,24 @@ def generate_swarm_config(base_dir, boki_spec, exp_spec):
     with open(os.path.join(base_dir, "config.json"), 'w') as f:
         f.write(config)
 
-def generate_runtime_config(base_dir, boki_file, exp_file):
-    boki_spec = load_json_file(boki_file)
+def generate_runtime_config(base_dir, slog, slog_file, exp_file):
+    slog_spec = load_json_file(slog_file)
     exp_spec = load_json_file(exp_file)
-    generate_swarm_config(base_dir, boki_spec, exp_spec)
+    generate_swarm_config(base_dir, slog, slog_spec, exp_spec)
     generate_nightcore_config(base_dir, exp_spec)
-    generate_docker_compose_file(base_dir, boki_spec, exp_spec)
+    generate_docker_compose_file(base_dir, slog_spec, exp_spec)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('cmd', type=str)
     parser.add_argument('--base-dir', type=str, default='.')
-    parser.add_argument('--boki-spec-file', type=str, default=None)
+    parser.add_argument('--slog', type=str, default='indilog')
+    parser.add_argument('--slog-spec-file', type=str, default=None)
     parser.add_argument('--exp-spec-file', type=str, default=None)
     args = parser.parse_args()
     try:
         if args.cmd == 'generate-runtime-config':
-            generate_runtime_config(args.base_dir, args.boki_spec_file, args.exp_spec_file)
+            generate_runtime_config(args.base_dir, args.slog, args.slog_spec_file, args.exp_spec_file)
         else:
             raise Exception('Unknown command: ' + args.cmd)
     except Exception as e:

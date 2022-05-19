@@ -1,0 +1,10 @@
+{
+    "functions": {
+        "RandomAppendAndReadLoopAsync" : {
+            "concurrency": 8
+        }
+    },
+    "exp_variables": {
+        "CONCURRENCY_WORKER": "8"
+    }
+}

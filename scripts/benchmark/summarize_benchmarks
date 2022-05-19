@@ -10,6 +10,8 @@ import matplotlib.pyplot as plt
 import matplotlib.offsetbox as offsetbox
 import numpy as np
 import math
+import pandas as pd
+import csv
 
 def present_latencies_on_timeline(directory, op, items, type, calls_success, exp_duration_sec, counter):
     latencies = [i['latency']/10**3 for i in items]
@@ -199,16 +201,71 @@ def generate_engine_stats(directory):
     for c in range(counter):
         merge_engine_stats(directory, c, per_counter_stat_files[c])    
 
+def merge_csv_files(directory, filter, result_file):
+    csv_files = [file for file in os.listdir(directory) if file.endswith('.csv') and filter in file]
+    combined_csv = pd.concat([pd.read_csv(file) for file in csv_files])
+    combined_csv.to_csv(result_file, index=False)
+
+def count_csv_entries(directory, filter):
+    csv_files = [file for file in os.listdir(directory) if file.endswith('.csv') and filter in file]
+    return pd.concat([pd.read_csv(file) for file in csv_files]).shape[0]
+
+def compute_csv_percentile(csv_file, percentile):
+    df = pd.read_csv(csv_file)
+    return df.quantile(
+        q=percentile,
+        axis=0,
+        numeric_only=True,
+        interpolation='linear'
+    )
+
+def add_throughput_latency_row(directory, slog_config, exp_duration, result_file):
+    write_header = not os.path.exists(result_file)
+    with open(result_file, 'w', encoding='UTF8', newline='') as f:
+        writer = csv.writer(f)
+        if write_header:
+            writer.writerow('slog_config', 'throughput(kOp/s)', 'latency-append-50(ms)','latency-append-99(ms)', 'latency-read-50(ms)','latency-read-99(ms)')
+        data = [
+            slog_config,
+            round(count_csv_entries(directory, '') / exp_duration / 1000, 2),
+            compute_csv_percentile(os.path.join(directory, "latencies-append-{}.csv".format(slog_config)), 0.5),
+            compute_csv_percentile(os.path.join(directory, "latencies-append-{}.csv".format(slog_config)), 0.99),
+            compute_csv_percentile(os.path.join(directory, "latencies-read-{}.csv".format(slog_config)), 0.5),
+            compute_csv_percentile(os.path.join(directory, "latencies-reead-{}.csv".format(slog_config)), 0.99)
+        ]
+        writer.writerow(data)
+
+
+def compute_throughput_from_csv_files(directory, filter, result_file):
+    pass
+
+def throughput_vs_latency(directory, result_directory):
+    #systems = [name for name in os.listdir(directory) if os.path.isdir(name) and name != "."]
+    print("Until here")
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('cmd', type=str)
     parser.add_argument('--directory', type=str)
+    parser.add_argument('--file', type=str)
+    parser.add_argument('--slog-config', type=str)
+    parser.add_argument('--exp-duration', type=int)
+    parser.add_argument('--filter', type=str)
+    parser.add_argument('--result-file', type=str)
+    parser.add_argument('--result-directory', type=str)
     args = parser.parse_args()
     try:
         if args.cmd == 'benchmark-log-loop':
             generate_benchmark_log_loop_results(args.directory)
         elif args.cmd == 'benchmark-engine-stats':
             generate_engine_stats(args.directory)
+        elif args.cmd == 'merge-csv':
+            merge_csv_files(args.directory, args.filter, args.result_file)
+        elif args.cmd == 'add-throughput-latency-row':
+            add_throughput_latency_row(args.directory, args.slog_config, args.exp_duration, args.result_file)
+        elif args.cmd == 'throughput-vs-latency':
+            throughput_vs_latency(args.file, args.result_directory)
         else:
             raise Exception('Unknown command: ' + args.cmd)
     except Exception as e:

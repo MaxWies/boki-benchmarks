@@ -230,7 +230,7 @@ def get_manager_ip(base_dir):
     return manager_prop['ip']
 
 def get_num_active_service_replicas(base_dir, service_name):
-    service_full_name = "boki-experiment_" + service_name
+    service_full_name = "slog-experiment_" + service_name
     replicas_info, _ = run_remote_command(get_manager_ip(base_dir), ['docker', 'service', 'ls', '-f', 'name={}'.format(service_full_name), '--format', '"{{.Replicas}}"'])
     replicas_info = replicas_info.strip()
     if len(replicas_info) < 3:

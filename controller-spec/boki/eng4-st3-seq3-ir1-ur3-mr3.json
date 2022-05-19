@@ -1,11 +1,11 @@
 {
-    "boki_engine_replicas": 3,
-    "boki_storage_replicas": 3,
-    "boki_sequencers_replicas": 3,
-    "boki_controller": {
-        "image": "zjia/boki:sosp-ae",
+    "slog_engine_replicas": 4,
+    "slog_storage_replicas": 3,
+    "slog_sequencers_replicas": 3,
+    "slog_controller": {
+        "image": "maxwie/boki:latest",
         "entrypoint" : [
-            "/boki/controller", 
+            "/slog/controller", 
             "--zookeeper_host=zookeeper:2181", 
             "--metalog_replicas=3", 
             "--userlog_replicas=3", 
@@ -16,6 +16,6 @@
         ]
     },
     "exp_variables": {
-        "BOKI_SETTING": "eng3-st3-seq3"
+        "SLOG_SETTING": "eng4-st3-seq3"
     }
 }
