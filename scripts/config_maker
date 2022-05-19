@@ -123,13 +123,13 @@ def generate_swarm_with_applications():
 
 def generate_swarm_application_less(base_dir, config, slog, slog_spec, exp_spec):
     function_definitions = load_json_file(os.path.join(base_dir, 'functions.json'))
-    if slog.to_lower() == 'indilog':
+    if slog.lower() == 'indilog':
         for key, _ in exp_spec['functions'].items():
             config["services"][function_definitions['functions'][key]['service_name']] = {
                     "placement_label": "engine_node",
                     "replicas": slog_spec['slog_engine_replicas_init']
             }
-    elif slog.to_lower() == 'boki':
+    elif slog.lower() == 'boki':
         for key, _ in exp_spec['functions'].items():
                 config["services"][function_definitions['functions'][key]['service_name']] = {
                         "placement_label": "engine_node",
@@ -137,7 +137,7 @@ def generate_swarm_application_less(base_dir, config, slog, slog_spec, exp_spec)
                 }
 
 def generate_swarm_config_engines(config, slog, slog_spec):
-    if slog.to_lower() == 'indilog':
+    if slog.lower() == 'indilog':
         config["services"]["slog-engine"] = { 
             "placement_label": "engine_node", 
             "replicas": slog_spec['slog_engine_replicas_init'] 
@@ -147,7 +147,7 @@ def generate_swarm_config_engines(config, slog, slog_spec):
                 "placement_label": "index_engine_node", 
                 "replicas": slog_spec['slog_index_engine_replicas']
             }
-    elif slog.to_lower() == 'boki':
+    elif slog.lower() == 'boki':
         config["services"]["slog-engine"] = { 
             "placement_label": "engine_node", 
             "replicas": slog_spec['slog_engine_replicas'] 
