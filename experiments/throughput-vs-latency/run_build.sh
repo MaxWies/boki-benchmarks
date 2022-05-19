@@ -9,9 +9,9 @@ EXP_SPEC_FILE=$3
 HELPER_SCRIPT=$ROOT_DIR/scripts/exp_helper
 CONFIG_MAKER_SCRIPT=$ROOT_DIR/scripts/config_maker
 
-SLOG_SPEC_FILE=$(basename $SLOG_SPEC_FILE .json)
+SLOG_SPEC_FILE_NAME=$(basename $SLOG_SPEC_FILE .json)
 EXP_SPEC_FILE_NAME=$(basename $EXP_SPEC_FILE .json)
-EXP_DIR=$BASE_DIR/results/$SLOG_SPEC_FILE/$EXP_SPEC_FILE_NAME
+EXP_DIR=$BASE_DIR/results/$SLOG_SPEC_FILE_NAME/$EXP_SPEC_FILE_NAME
 
 $CONFIG_MAKER_SCRIPT generate-runtime-config --base-dir=$BASE_DIR --slog=$SLOG --slog-spec-file=$SLOG_SPEC_FILE --exp-spec-file=$EXP_SPEC_FILE
 
