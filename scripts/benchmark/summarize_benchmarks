@@ -224,7 +224,7 @@ def add_throughput_latency_row(directory, slog_config, exp_duration, result_file
     with open(result_file, 'w', encoding='UTF8', newline='') as f:
         writer = csv.writer(f)
         if write_header:
-            writer.writerow('slog_config', 'throughput(kOp/s)', 'latency-append-50(ms)','latency-append-99(ms)', 'latency-read-50(ms)','latency-read-99(ms)')
+            writer.writerow(['slog_config', 'throughput(kOp/s)', 'latency-append-50(ms)','latency-append-99(ms)', 'latency-read-50(ms)','latency-read-99(ms)'])
         data = [
             slog_config,
             round(count_csv_entries(directory, '') / exp_duration / 1000, 2),
