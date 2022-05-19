@@ -22,12 +22,12 @@ mkdir -p $COLLECTION_DIR
 # Indilog
 cp $BASE_DIR/machines_eng1-st1-seq3-ix1.json $BASE_DIR/machines.json
 $HELPER_SCRIPT start-machines --base-dir=$BASE_DIR
-./run_build.sh indilog $CONTROLLER_SPEC_DIR/eng1-st1-seq3-ix1-is1-ir1-ur1-mr3-ssmx4.json $BASE_DIR/specs/exp-cf1.json 
+./run_build.sh indilog $CONTROLLER_SPEC_DIR/indilog/eng1-st1-seq3-ix1-is1-ir1-ur1-mr3-ssmx4.json $BASE_DIR/specs/exp-cf1.json 
 
 # Boki
 #cp $BASE_DIR/machines_eng1-st1-seq3.json $BASE_DIR/machines.json
 #$HELPER_SCRIPT start-machines --base-dir=$BASE_DIR
-#./run_build.sh boki $CONTROLLER_SPEC_DIR/eng1-st1-seq3-ir1-ur1-mr3.json $BASE_DIR/specs/exp-cf1.json
+#./run_build.sh boki $CONTROLLER_SPEC_DIR/boki/eng1-st1-seq3-ir1-ur1-mr3.json $BASE_DIR/specs/exp-cf1.json
 
 # Benchmark collected csv file
 $BENCHMARK_SCRIPT throughput-vs-latency --file=$COLLECTION_DIR/throughput-vs-latency.csv --result-directory=$END_RESULT_DIR
