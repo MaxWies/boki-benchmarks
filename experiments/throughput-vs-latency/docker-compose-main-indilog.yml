@@ -59,7 +59,7 @@ services:
       - --zookeeper_host=zookeeper:2181
       - --listen_iface=eth0
       - --http_port=8080
-      - --func_config_file=/tmp/indilog/func_config.json
+      - --func_config_file=/tmp/slog/func_config.json
       - --async_call_result_path=/tmp/store/async_results
       - --num_io_workers=2
       - --io_uring_entries=2048

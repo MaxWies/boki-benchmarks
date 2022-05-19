@@ -7,7 +7,7 @@
     "slog_controller": {
         "image": "maxwie/indilog:latest",
         "entrypoint" : [
-            "/log/controller", 
+            "/slog/controller", 
             "--zookeeper_host=zookeeper:2181", 
             "--metalog_replicas=3", 
             "--userlog_replicas=1", 
