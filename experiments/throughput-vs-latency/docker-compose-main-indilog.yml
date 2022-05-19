@@ -70,7 +70,7 @@ services:
     depends_on:
       - zookeeper-setup
     volumes:
-      - /tmp/nightcore_config.json:/tmp/indilog/func_config.json
+      - /tmp/nightcore_config.json:/tmp/slog/func_config.json
       - /mnt/inmem/store:/tmp/store
     restart: always
     environment:
