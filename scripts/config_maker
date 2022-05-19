@@ -48,8 +48,8 @@ def generate_docker_compose_application_less(base_dir, compose_file):
         service_desc["entrypoint"].append(str(func_id))
         compose_file['services'][function_value['service_name']] = service_desc
 
-def generate_docker_compose_file(base_dir, slog_spec, exp_spec):
-    with open(os.path.join(base_dir, 'docker-compose-main.yml')) as f:
+def generate_docker_compose_file(base_dir, slog, slog_spec, exp_spec):
+    with open(os.path.join(base_dir, 'docker-compose-main-{}.yml'.format(slog))) as f:
         compose_file = yaml.safe_load(f)
     compose_file['services']['slog-controller'] = slog_spec['slog_controller']
     if 'applications' in exp_spec.keys():
@@ -207,7 +207,7 @@ def generate_runtime_config(base_dir, slog, slog_file, exp_file):
     exp_spec = load_json_file(exp_file)
     generate_swarm_config(base_dir, slog, slog_spec, exp_spec)
     generate_nightcore_config(base_dir, exp_spec)
-    generate_docker_compose_file(base_dir, slog_spec, exp_spec)
+    generate_docker_compose_file(base_dir, slog, slog_spec, exp_spec)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()

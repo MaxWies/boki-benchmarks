@@ -1,6 +1,6 @@
 #!/bin/bash
 BASE_DIR=`realpath $(dirname $0)`
-ROOT_DIR=`realpath $BASE_DIR/../../..`
+ROOT_DIR=`realpath $BASE_DIR/../..`
 
 SLOG=$1
 EXP_SPEC_FILE=$2

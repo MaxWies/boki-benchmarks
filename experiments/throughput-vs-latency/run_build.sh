@@ -1,6 +1,6 @@
 #!/bin/bash
 BASE_DIR=`realpath $(dirname $0)`
-ROOT_DIR=`realpath $BASE_DIR/../../..`
+ROOT_DIR=`realpath $BASE_DIR/../..`
 
 SLOG=$1
 SLOG_SPEC_FILE=$2
@@ -13,7 +13,7 @@ SLOG_SPEC_FILE=$(basename $SLOG_SPEC_FILE .json)
 EXP_SPEC_FILE_NAME=$(basename $EXP_SPEC_FILE .json)
 EXP_DIR=$BASE_DIR/results/$SLOG_SPEC_FILE/$EXP_SPEC_FILE_NAME
 
-$CONFIG_MAKER_SCRIPT generate-runtime-config --base-dir=$BASE_DIR --slog-spec-file=$SLOG_SPEC_FILE --exp-spec-file=$EXP_SPEC_FILE
+$CONFIG_MAKER_SCRIPT generate-runtime-config --base-dir=$BASE_DIR --slog=$SLOG --slog-spec-file=$SLOG_SPEC_FILE --exp-spec-file=$EXP_SPEC_FILE
 
 MANAGER_HOST=`$HELPER_SCRIPT get-docker-manager-host --base-dir=$BASE_DIR`
 CLIENT_HOST=`$HELPER_SCRIPT get-client-host --base-dir=$BASE_DIR`
