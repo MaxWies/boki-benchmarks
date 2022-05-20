@@ -204,7 +204,7 @@ def generate_engine_stats(directory):
 def merge_csv_files(directory, filter, result_file):
     csv_files = [file for file in os.listdir(directory) if file.endswith('.csv') and filter in file]
     print("Merge {}".format(', '.join(csv_files)))
-    combined_csv = pd.concat([pd.read_csv(file) for file in csv_files])
+    combined_csv = pd.concat([pd.read_csv(os.path.join(directory, file)) for file in csv_files])
     combined_csv.to_csv(result_file, index=False)
 
 def count_csv_entries(directory, filter):
@@ -233,7 +233,7 @@ def add_throughput_latency_row(directory, slog_config, exp_duration, result_file
             compute_csv_percentile(os.path.join(directory, "latencies-append-{}.csv".format(slog_config)), 0.5),
             compute_csv_percentile(os.path.join(directory, "latencies-append-{}.csv".format(slog_config)), 0.99),
             compute_csv_percentile(os.path.join(directory, "latencies-read-{}.csv".format(slog_config)), 0.5),
-            compute_csv_percentile(os.path.join(directory, "latencies-reead-{}.csv".format(slog_config)), 0.99)
+            compute_csv_percentile(os.path.join(directory, "latencies-read-{}.csv".format(slog_config)), 0.99)
         ]
         writer.writerow(data)
 
