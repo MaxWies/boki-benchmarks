@@ -1,6 +1,6 @@
 #!/bin/bash
 
-/slog/launcher \
+/boki/launcher \
     --fprocess_mode=go \
     --root_path_for_ipc=/tmp/slog/ipc \
     --fprocess_output_dir=/tmp/slog/output \

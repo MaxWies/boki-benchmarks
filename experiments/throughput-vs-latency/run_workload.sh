@@ -16,8 +16,11 @@ END_RESULT_DIR=$BASE_DIR/results/workload-$WORKLOAD
 mkdir -p $END_RESULT_DIR
 
 COLLECTION_DIR=$BASE_DIR/results/collection
-rm -rf $COLLECTION_DIR
-mkdir -p $COLLECTION_DIR
+
+rm -rf $COLLECTION_DIR/indilog
+mkdir -p $COLLECTION_DIR/indilog
+rm -rf $COLLECTION_DIR/boki
+mkdir -p $COLLECTION_DIR/boki
 
 # Indilog
 cp $BASE_DIR/machines_eng1-st1-seq3-ix1.json $BASE_DIR/machines.json
