@@ -203,11 +203,13 @@ def generate_engine_stats(directory):
 
 def merge_csv_files(directory, filter, result_file):
     csv_files = [file for file in os.listdir(directory) if file.endswith('.csv') and filter in file]
+    print("Merge {}".format(', '.join(csv_files)))
     combined_csv = pd.concat([pd.read_csv(file) for file in csv_files])
     combined_csv.to_csv(result_file, index=False)
 
 def count_csv_entries(directory, filter):
     csv_files = [file for file in os.listdir(directory) if file.endswith('.csv') and filter in file]
+    print("Count entries of {}".format(', '.join(csv_files)))
     return pd.concat([pd.read_csv(file) for file in csv_files]).shape[0]
 
 def compute_csv_percentile(csv_file, percentile):
@@ -224,7 +226,7 @@ def add_throughput_latency_row(directory, slog_config, exp_duration, result_file
     with open(result_file, 'w', encoding='UTF8', newline='') as f:
         writer = csv.writer(f)
         if write_header:
-            writer.writerow(['slog_config', 'throughput(kOp/s)', 'latency-append-50(ms)','latency-append-99(ms)', 'latency-read-50(ms)','latency-read-99(ms)'])
+            writer.writerow(['SlogConfig', 'Throughput(kOp/s)', 'LatencyAppend-50(ms)','LatencyAppend-99(ms)', 'LatencyRead-50(ms)','LatencyRead-99(ms)'])
         data = [
             slog_config,
             round(count_csv_entries(directory, '') / exp_duration / 1000, 2),
@@ -239,9 +241,14 @@ def add_throughput_latency_row(directory, slog_config, exp_duration, result_file
 def compute_throughput_from_csv_files(directory, filter, result_file):
     pass
 
-def throughput_vs_latency(directory, result_directory):
+def generate_throughput_vs_latency_plot(csv_file, result_file):
     #systems = [name for name in os.listdir(directory) if os.path.isdir(name) and name != "."]
     print("Until here")
+    th_vs_lat_data = pd.read_csv(csv_file)
+    th_vs_lat_data.plot(1, [2,3,4,5], subplots=True)
+    plt.savefig(result_file)
+    plt.close
+
 
 
 if __name__ == '__main__':
@@ -264,8 +271,8 @@ if __name__ == '__main__':
             merge_csv_files(args.directory, args.filter, args.result_file)
         elif args.cmd == 'add-throughput-latency-row':
             add_throughput_latency_row(args.directory, args.slog_config, args.exp_duration, args.result_file)
-        elif args.cmd == 'throughput-vs-latency':
-            throughput_vs_latency(args.file, args.result_directory)
+        elif args.cmd == 'throughput-vs-latency-plot':
+            generate_throughput_vs_latency_plot(args.file, args.result_file)
         else:
             raise Exception('Unknown command: ' + args.cmd)
     except Exception as e:

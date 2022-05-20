@@ -33,4 +33,4 @@ $HELPER_SCRIPT start-machines --base-dir=$BASE_DIR
 #./run_build.sh boki $CONTROLLER_SPEC_DIR/boki/eng1-st1-seq3-ir1-ur1-mr3.json $BASE_DIR/specs/exp-cf1.json
 
 # Benchmark collected csv file
-$BENCHMARK_SCRIPT throughput-vs-latency --file=$COLLECTION_DIR/throughput-vs-latency.csv --result-directory=$END_RESULT_DIR
+$BENCHMARK_SCRIPT throughput-vs-latency-plot --file=$COLLECTION_DIR/throughput-vs-latency.csv --result-file=$END_RESULT_DIR/throughput-vs-latency.png
