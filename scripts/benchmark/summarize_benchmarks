@@ -212,28 +212,22 @@ def count_csv_entries(directory, filter):
     print("Count entries of {}".format(', '.join(csv_files)))
     return pd.concat([pd.read_csv(os.path.join(directory, file)) for file in csv_files]).shape[0]
 
-def compute_csv_percentile(csv_file, percentile):
-    df = pd.read_csv(csv_file)
-    return df.quantile(
-        q=percentile,
-        axis=0,
-        numeric_only=True,
-        interpolation='linear'
-    )
+def compute_csv_percentile(csv_file, column_ix, percentile):
+    return pd.read_csv(csv_file).iloc[:, column_ix].quantile(q=percentile)
 
 def add_throughput_latency_row(directory, slog_config, exp_duration, result_file):
     write_header = not os.path.exists(result_file)
-    with open(result_file, 'w', encoding='UTF8', newline='') as f:
+    with open(result_file, 'a', encoding='UTF8', newline='') as f:
         writer = csv.writer(f)
         if write_header:
             writer.writerow(['SlogConfig', 'Throughput(kOp/s)', 'LatencyAppend-50(ms)','LatencyAppend-99(ms)', 'LatencyRead-50(ms)','LatencyRead-99(ms)'])
         data = [
             slog_config,
             round(count_csv_entries(directory, '') / exp_duration / 1000, 2),
-            compute_csv_percentile(os.path.join(directory, "latencies-append-{}.csv".format(slog_config)), 0.5),
-            compute_csv_percentile(os.path.join(directory, "latencies-append-{}.csv".format(slog_config)), 0.99),
-            compute_csv_percentile(os.path.join(directory, "latencies-read-{}.csv".format(slog_config)), 0.5),
-            compute_csv_percentile(os.path.join(directory, "latencies-read-{}.csv".format(slog_config)), 0.99)
+            int(compute_csv_percentile(os.path.join(directory, "latencies-append-{}.csv".format(slog_config)), 0, 0.5)),
+            int(compute_csv_percentile(os.path.join(directory, "latencies-append-{}.csv".format(slog_config)), 0, 0.99)),
+            int(compute_csv_percentile(os.path.join(directory, "latencies-read-{}.csv".format(slog_config)), 0, 0.5)),
+            int(compute_csv_percentile(os.path.join(directory, "latencies-read-{}.csv".format(slog_config)), 0, 0.99))
         ]
         writer.writerow(data)
 
