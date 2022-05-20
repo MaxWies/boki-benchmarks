@@ -210,7 +210,7 @@ def merge_csv_files(directory, filter, result_file):
 def count_csv_entries(directory, filter):
     csv_files = [file for file in os.listdir(directory) if file.endswith('.csv') and filter in file]
     print("Count entries of {}".format(', '.join(csv_files)))
-    return pd.concat([pd.read_csv(file) for file in csv_files]).shape[0]
+    return pd.concat([pd.read_csv(os.path.join(directory, file)) for file in csv_files]).shape[0]
 
 def compute_csv_percentile(csv_file, percentile):
     df = pd.read_csv(csv_file)
@@ -248,8 +248,6 @@ def generate_throughput_vs_latency_plot(csv_file, result_file):
     th_vs_lat_data.plot(1, [2,3,4,5], subplots=True)
     plt.savefig(result_file)
     plt.close
-
-
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
