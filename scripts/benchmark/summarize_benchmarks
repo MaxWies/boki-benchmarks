@@ -239,7 +239,7 @@ def generate_throughput_vs_latency_plot(csv_file, result_file):
     #systems = [name for name in os.listdir(directory) if os.path.isdir(name) and name != "."]
     print("Until here")
     th_vs_lat_data = pd.read_csv(csv_file)
-    th_vs_lat_data.plot(1, [2,3,4,5], subplots=True)
+    th_vs_lat_data.plot(1, [2,3,4,5], subplots=False)
     plt.savefig(result_file)
     plt.close
 
