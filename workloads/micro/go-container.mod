@@ -9,5 +9,5 @@ require (
 )
 
 // for container
-replace cs.utexas.edu/zjia/faas => /src/boki/worker/golang
-replace cs.utexas.edu/zjia/faas/slib => /src/boki/slib
+replace cs.utexas.edu/zjia/faas => /src/slog/worker/golang
+replace cs.utexas.edu/zjia/faas/slib => /src/slog/slib

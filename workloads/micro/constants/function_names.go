@@ -10,4 +10,5 @@ const (
 	FunctionRandomAppendAndReadLoopAsync string = "RandomAppendAndReadLoopAsync"
 	FunctionMergeResults                 string = "MergeResults"
 	FunctionTestSystem                   string = "TestSystem"
+	FunctionWarmup                       string = "Warmup"
 )

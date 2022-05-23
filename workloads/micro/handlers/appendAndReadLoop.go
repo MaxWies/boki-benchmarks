@@ -107,7 +107,7 @@ func (h *appendReadLoopHandler) Call(ctx context.Context, input []byte) ([]byte,
 	log.Printf("[INFO] %d calls successful from %d total calls", int(success), calls)
 
 	if h.isAsync {
-		fileDirectory := path.Join(constants.BASE_PATH_ENGINE_BOKI_BENCHMARK, parsedInput.BenchmarkType)
+		fileDirectory := path.Join(constants.BASE_PATH_SLOG_ENGINE_BENCHMARK, parsedInput.BenchmarkType)
 		fileName := constants.FunctionAppendAndReadLoopAsync + "_" + benchmark.Id.String()
 		err = benchmark.WriteToFile(fileDirectory, fileName)
 		if err != nil {

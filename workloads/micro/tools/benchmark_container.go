@@ -12,8 +12,8 @@ import (
 )
 
 func mergeSync(mergeFunction string, functionName string) {
-	clientDirectory := path.Join(constants.BASE_PATH_CLIENT_BOKI_BENCHMARK, FLAGS_benchmark_type)
-	engineDirectory := path.Join(constants.BASE_PATH_ENGINE_BOKI_BENCHMARK, FLAGS_benchmark_type) // created by engine(s)
+	clientDirectory := path.Join(constants.BASE_PATH_SLOG_CLIENT_BENCHMARK, FLAGS_benchmark_type)
+	engineDirectory := path.Join(constants.BASE_PATH_SLOG_ENGINE_BENCHMARK, FLAGS_benchmark_type) // created by engine(s)
 	utils.CreateOutputDirectory(clientDirectory)
 
 	mergeClient := client.NewSimpleClient(FLAGS_faas_gateway, &client.CallSync{})
@@ -73,7 +73,7 @@ func mergeSync(mergeFunction string, functionName string) {
 	}
 }
 
-func workerLoopBenchmark(functionName string, requestInputBuilder func() utils.JSONValue) {
+func containerLoop(functionName string, requestInputBuilder func() utils.JSONValue) {
 	log.Printf("[INFO] Run loop function %s. Concurrency: %d. Duration: %d", functionName, FLAGS_concurrency_worker, FLAGS_duration)
 	appendClient := client.NewSimpleClient(FLAGS_faas_gateway, &client.CallAsync{})
 	c := 0
@@ -88,8 +88,9 @@ func workerLoopBenchmark(functionName string, requestInputBuilder func() utils.J
 		}
 	}
 	log.Printf("[INFO] %d successful results from %d total results.", success, len(appendClient.HttpResults))
-	time.Sleep((time.Duration(FLAGS_duration) + 5) * time.Second)
+}
 
+func mergeContainerResults(functionName string) {
 	mergeFunction := fmt.Sprintf("%s%s", FLAGS_fn_merge_prefix, constants.FunctionMergeResults)
 	mergeSync(mergeFunction, functionName)
 }

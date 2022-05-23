@@ -17,6 +17,7 @@ import (
 
 type OperationInput struct {
 	Record                       []byte `json:"record"`
+	AppendTimes                  int    `json:"append_times"`
 	ReadTimes                    int    `json:"read_times"`
 	ReadDirection                int    `json:"read_direction"`
 	UseTags                      bool   `json:"use_tags"`
@@ -110,7 +111,6 @@ type OperationHandler struct {
 }
 
 func newOperationHandler(env types.Environment, input *OperationInput, operationBenchmarkMatrix *[]*[]*OperationBenchmark) *OperationHandler {
-
 	op := &OperationHandler{
 		env:                           env,
 		operationBenchmarkMatrix:      operationBenchmarkMatrix,
@@ -260,7 +260,7 @@ func (o *OperationHandler) AppendAndReadCall(ctx context.Context, startTime time
 	o.operationCalls <- struct{}{}
 }
 
-func (o *OperationHandler) appendRecord(ctx context.Context, startTime time.Time, record []byte, tag uint64) uint64 {
+func (o *OperationHandler) appendRecord(ctx context.Context, startTime time.Time, record []byte, tag uint64, appendTime int) uint64 {
 	tags := make([]uint64, 0)
 	if tag != constants.TagEmpty {
 		tags = append(tags, tag)
@@ -270,9 +270,9 @@ func (o *OperationHandler) appendRecord(ctx context.Context, startTime time.Time
 			return Append(ctx, o.env, &AppendInput{Record: record, Tags: tags})
 		}, startTime)
 	if !opItem.Success {
-		(*(*o.operationBenchmarkMatrix)[o.snapshot])[0].AddFailure()
+		(*(*o.operationBenchmarkMatrix)[o.snapshot])[appendTime].AddFailure()
 	} else {
-		(*(*o.operationBenchmarkMatrix)[o.snapshot])[0].AddSuccess(opItem)
+		(*(*o.operationBenchmarkMatrix)[o.snapshot])[appendTime].AddSuccess(opItem)
 	}
 	return logEntry.SeqNum
 }
@@ -291,65 +291,83 @@ func (o *OperationHandler) readRecord(ctx context.Context, startTime time.Time, 
 	(*(*o.operationBenchmarkMatrix)[o.snapshot])[readTime].AddSuccess(opItem)
 }
 
-func (o *OperationHandler) RandomAppendAndReadCall(ctx context.Context, startTime time.Time, record []byte, readTimes int) {
-	semanticType := rand.Intn(100)
-	if semanticType < o.operationSemanticsPercentages[0] {
-		// append without tags
-		seqnum := o.appendRecord(ctx, startTime, record, constants.TagEmpty)
-		o.suffixSeqnums.Append(constants.TagEmpty, seqnum)
-		o.popularSeqnums.Append(seqnum) // will be filled until full
-		// read
-		for i := 1; i <= readTimes; i++ {
-			readOp := rand.Intn(100)
-			if readOp < o.seqnumReadPercentages[0] {
-				// read own seqnum
-				o.readRecord(ctx, startTime, seqnum, constants.TagEmpty, rand.Intn(2), i)
-			} else if readOp < o.seqnumReadPercentages[1] {
-				// read popular seqnum
-				o.readRecord(ctx, startTime, o.popularSeqnums.PickRandomSeqnum(), constants.TagEmpty, rand.Intn(2), i)
-			} else if readOp < o.seqnumReadPercentages[2] {
-				// read suffix seqnum
-				o.readRecord(ctx, startTime, o.suffixSeqnums.PickRandomSeqnum(), constants.TagEmpty, rand.Intn(2), i)
-			} else if readOp < o.seqnumReadPercentages[3] {
-				// read from 0
-				o.readRecord(ctx, startTime, 0, constants.TagEmpty, constants.ReadNext, i)
-			} else {
-				// read from tail
-				o.readRecord(ctx, startTime, constants.MaxSeqnum, constants.TagEmpty, constants.ReadPrev, i)
+func (o *OperationHandler) RandomAppendAndReadCall(ctx context.Context, startTime time.Time, record []byte, appendTimes int, readTimes int) {
+	remaining_appends := appendTimes
+	remaining_reads := readTimes
+	opCounter := -1
+	var seqnum uint64
+	var tag uint64
+	var tag_seqnum uint64
+	for 0 < remaining_appends+remaining_reads {
+		semanticType := rand.Intn(100)
+		if semanticType < o.operationSemanticsPercentages[0] {
+			// ops without tags
+			if 0 < remaining_appends {
+				opCounter++
+				seqnum = o.appendRecord(ctx, startTime, record, constants.TagEmpty, opCounter)
+				o.suffixSeqnums.Append(constants.TagEmpty, seqnum)
+				o.popularSeqnums.Append(seqnum) // will be filled until full
 			}
-		}
-	} else {
-		// append with tags
-		appendOp := rand.Intn(100)
-		var tag uint64
-		var seqnum uint64
-		if appendOp < o.tagAppendPercentages[0] {
-			tag = o.env.GenerateUniqueID()
-			seqnum = o.appendRecord(ctx, startTime, record, tag)
-		} else if appendOp < o.tagAppendPercentages[1] {
-			// append to own tag
-			tag = o.ownTags.PickRandomTag()
-			seqnum = o.appendRecord(ctx, startTime, record, tag)
-			o.ownTags.Update(tag, seqnum)
+			if 0 < remaining_reads {
+				opCounter++
+				readOp := rand.Intn(100)
+				if readOp < o.seqnumReadPercentages[0] {
+					// read own seqnum
+					o.readRecord(ctx, startTime, seqnum, constants.TagEmpty, rand.Intn(2), opCounter)
+				} else if readOp < o.seqnumReadPercentages[1] {
+					// read popular seqnum
+					o.readRecord(ctx, startTime, o.popularSeqnums.PickRandomSeqnum(), constants.TagEmpty, rand.Intn(2), opCounter)
+				} else if readOp < o.seqnumReadPercentages[2] {
+					// read suffix seqnum
+					o.readRecord(ctx, startTime, o.suffixSeqnums.PickRandomSeqnum(), constants.TagEmpty, rand.Intn(2), opCounter)
+				} else if readOp < o.seqnumReadPercentages[3] {
+					// read from 0
+					o.readRecord(ctx, startTime, 0, constants.TagEmpty, constants.ReadNext, opCounter)
+				} else {
+					// read from tail
+					o.readRecord(ctx, startTime, constants.MaxSeqnum, constants.TagEmpty, constants.ReadPrev, opCounter)
+				}
+			}
 		} else {
-			// append to shared tag
-			tag = o.sharedTags.PickRandomTag()
-			seqnum = o.appendRecord(ctx, startTime, record, tag)
-			o.sharedTags.Update(tag, seqnum)
-		}
-		// read
-		for i := 1; i <= readTimes; i++ {
-			readOp := rand.Intn(100)
-			if readOp < o.tagReadPercentages[0] {
-				// read tag directly
-				o.readRecord(ctx, startTime, seqnum, tag, constants.ReadNext, i)
-			} else if readOp < o.tagReadPercentages[1] {
-				// read tag from 0
-				o.readRecord(ctx, startTime, 0, tag, constants.ReadNext, i)
-			} else {
-				// read tag from tail
-				o.readRecord(ctx, startTime, constants.MaxSeqnum, tag, constants.ReadPrev, i)
+			// ops with tags
+			if 0 < remaining_appends {
+				opCounter++
+				appendOp := rand.Intn(100)
+				if appendOp < o.tagAppendPercentages[0] {
+					tag = o.env.GenerateUniqueID()
+					tag_seqnum = o.appendRecord(ctx, startTime, record, tag, opCounter)
+				} else if appendOp < o.tagAppendPercentages[1] {
+					// append to own tag
+					tag = o.ownTags.PickRandomTag()
+					tag_seqnum = o.appendRecord(ctx, startTime, record, tag, opCounter)
+					o.ownTags.Update(tag, seqnum)
+				} else {
+					// append to shared tag
+					tag = o.sharedTags.PickRandomTag()
+					tag_seqnum = o.appendRecord(ctx, startTime, record, tag, opCounter)
+					o.sharedTags.Update(tag, seqnum)
+				}
 			}
+			if 0 < remaining_reads {
+				opCounter++
+				readOp := rand.Intn(100)
+				if readOp < o.tagReadPercentages[0] {
+					// read tag directly
+					o.readRecord(ctx, startTime, tag_seqnum, tag, rand.Intn(2), opCounter)
+				} else if readOp < o.tagReadPercentages[1] {
+					// read tag from 0
+					o.readRecord(ctx, startTime, 0, tag, constants.ReadNext, opCounter)
+				} else {
+					// read tag from tail
+					o.readRecord(ctx, startTime, constants.MaxSeqnum, tag, constants.ReadPrev, opCounter)
+				}
+			}
+		}
+		if 0 < remaining_appends {
+			remaining_appends--
+		}
+		if 0 < readTimes {
+			remaining_reads--
 		}
 	}
 	o.operationCalls <- struct{}{}

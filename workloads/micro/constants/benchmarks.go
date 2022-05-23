@@ -8,4 +8,6 @@ const (
 	BenchmarkRandomAppendAndReadThroughput string = "random-append-and-read-throughput"
 	BenchmarkLogbookVirtualization         string = "logbook-virtualization"
 	BenchmarkTestSystem                    string = "test-system"
+	BenchmarkThroughputVsLatency           string = "throughput-vs-latency"
+	BenchmarkWarmup                        string = "warmup"
 )

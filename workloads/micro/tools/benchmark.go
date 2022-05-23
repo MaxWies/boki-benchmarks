@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"math/rand"
+	"time"
 
 	"faas-micro/constants"
 	"faas-micro/utils"
@@ -31,6 +32,7 @@ var FLAGS_latency_tail_size int
 
 var FLAGS_snapshot_interval int
 
+var FLAGS_append_times int
 var FLAGS_read_times int
 var FLAGS_read_direction int
 var FLAGS_use_tags bool
@@ -74,6 +76,7 @@ func init() {
 	flag.IntVar(&FLAGS_latency_bucket_granularity, "latency_bucket_granularity", 10, "") //microsec
 	flag.IntVar(&FLAGS_latency_head_size, "latency_head_size", 20, "")
 	flag.IntVar(&FLAGS_latency_tail_size, "latency_tail_size", 20, "")
+	flag.IntVar(&FLAGS_append_times, "append_times", 1, "")
 	flag.IntVar(&FLAGS_read_times, "read_times", 1, "")
 	flag.IntVar(&FLAGS_read_direction, "read_direction", 1, "")
 	flag.BoolVar(&FLAGS_use_tags, "use_tags", true, "")
@@ -111,6 +114,7 @@ func buildMicrobenchmarkRequest() utils.JSONValue {
 	record := utils.CreateRecord(FLAGS_record_length)
 	return utils.JSONValue{
 		"record":                          record,
+		"append_times":                    FLAGS_append_times,
 		"read_times":                      FLAGS_read_times,
 		"read_direction":                  FLAGS_read_direction,
 		"use_tags":                        FLAGS_use_tags,
@@ -134,10 +138,18 @@ func buildMicrobenchmarkRequest() utils.JSONValue {
 	}
 }
 
-func buildSystemTestingRequest() utils.JSONValue {
+func buildTestSystemRequest() utils.JSONValue {
 	return utils.JSONValue{
 		"record":     utils.CreateRandomRecord(FLAGS_record_length),
 		"read_times": FLAGS_read_times,
+		"tag":        utils.CreateEmptyTagOrRandomTag(),
+	}
+}
+
+func buildWarmupRequest() utils.JSONValue {
+	return utils.JSONValue{
+		"record":     utils.CreateRecord(1024),
+		"read_times": 1,
 		"tag":        utils.CreateEmptyTagOrRandomTag(),
 	}
 }
@@ -148,38 +160,99 @@ func buildReadRequest() utils.JSONValue {
 	}
 }
 
-func main() {
-	flag.Parse()
-	log.Printf("Clients: %d", FLAGS_concurrency_client)
-	log.Printf("Workers: %d", FLAGS_concurrency_worker)
-	log.Printf("Engines: %d", FLAGS_engine_nodes)
-	log.Printf("Storages: %d", FLAGS_storage_nodes)
-	log.Printf("Sequencers: %d", FLAGS_sequencer_nodes)
-	log.Printf("Sequencers: %d", FLAGS_index_nodes)
-	log.Printf("Faas gateway: %s", FLAGS_faas_gateway)
+func runClientLevelBenchmark() {
+	log.Printf("[INFO] Run client level benchmark")
 	switch FLAGS_benchmark_type {
 	case constants.BenchmarkAppend:
 		builder := buildAppendRequest
-		clientBenchmark(constants.FunctionAppend, builder)
+		clientLoop(constants.FunctionAppend, builder)
+		break
 	case constants.BenchmarkRead:
 		builder := buildReadRequest
-		clientBenchmark(constants.FunctionRead, builder)
-	case constants.BenchmarkAppendThroughput:
-		builder := buildMicrobenchmarkRequest
-		workerLoopBenchmark(constants.FunctionAppendLoopAsync, builder)
-	case constants.BenchmarkAppendAndReadThroughput:
-		builder := buildMicrobenchmarkRequest
-		workerLoopBenchmark(constants.FunctionAppendAndReadLoopAsync, builder)
-	case constants.BenchmarkRandomAppendAndReadThroughput:
-		builder := buildMicrobenchmarkRequest
-		workerLoopBenchmark(constants.FunctionRandomAppendAndReadLoopAsync, builder)
-	case constants.BenchmarkLogbookVirtualization:
-		builder := buildMicrobenchmarkRequest
-		logbookVirtualizationBenchmark(constants.FunctionAppendLoopAsync, builder)
+		clientLoop(constants.FunctionRead, builder)
+		break
 	case constants.BenchmarkTestSystem:
-		builder := buildSystemTestingRequest
-		clientBenchmark(constants.FunctionTestSystem, builder)
+		builder := buildTestSystemRequest
+		clientLoop(constants.FunctionTestSystem, builder)
+		break
+	case constants.BenchmarkWarmup:
+		builder := buildWarmupRequest
+		clientWarmup(constants.FunctionTestSystem, builder)
+		break
 	default:
+		fmt.Printf("Unknown argument %s", FLAGS_benchmark_type)
+		break
+	}
+}
+
+func runContainerLevelBenchmark() {
+	log.Printf("[INFO] Run container level benchmark")
+	builder := buildMicrobenchmarkRequest
+	var function string
+	switch FLAGS_benchmark_type {
+	case constants.BenchmarkAppendThroughput:
+		function = constants.FunctionAppendLoopAsync
+		break
+	case constants.BenchmarkAppendAndReadThroughput:
+		function = constants.FunctionAppendAndReadLoopAsync
+		break
+	case constants.BenchmarkRandomAppendAndReadThroughput:
+		function = constants.FunctionRandomAppendAndReadLoopAsync
+		break
+	case constants.BenchmarkLogbookVirtualization:
+		function = constants.FunctionAppendLoopAsync
+		logbookVirtualizationBenchmark(constants.FunctionAppendLoopAsync, builder)
+		return
+	default:
+		fmt.Printf("Unknown argument %s", FLAGS_benchmark_type)
+		break
+	}
+	containerLoop(function, builder)
+	time.Sleep((time.Duration(FLAGS_duration) + 5) * time.Second)
+	mergeContainerResults(function)
+}
+
+func runLogEngineLevelBenchmark() {
+	log.Printf("[INFO] Run log engine level benchmark")
+	builder := buildMicrobenchmarkRequest
+	var function string
+	switch FLAGS_benchmark_type {
+	case constants.BenchmarkThroughputVsLatency:
+		function = constants.FunctionRandomAppendAndReadLoopAsync
+		break
+	default:
+		fmt.Printf("Unknown argument %s", FLAGS_benchmark_type)
+		break
+	}
+	containerLoop(function, builder)
+	time.Sleep((time.Duration(FLAGS_duration) + 5) * time.Second)
+	log.Printf("[INFO] Loop finished")
+}
+
+func main() {
+	flag.Parse()
+	log.Printf("[INFO] Faas gateway: %s", FLAGS_faas_gateway)
+	log.Printf("[INFO] Benchmark type: %s", FLAGS_benchmark_type)
+	switch FLAGS_benchmark_type {
+	case
+		constants.BenchmarkAppend,
+		constants.BenchmarkRead,
+		constants.BenchmarkTestSystem,
+		constants.BenchmarkWarmup:
+		runClientLevelBenchmark()
+		break
+	case
+		constants.BenchmarkAppendThroughput,
+		constants.BenchmarkAppendAndReadThroughput,
+		constants.BenchmarkRandomAppendAndReadThroughput,
+		constants.BenchmarkLogbookVirtualization:
+		runContainerLevelBenchmark()
+		break
+	case constants.BenchmarkThroughputVsLatency:
+		runLogEngineLevelBenchmark()
+		break
+	default:
+		log.Printf("[INFO] Unknown argument %s", FLAGS_benchmark_type)
 		fmt.Printf("Unknown argument %s", FLAGS_benchmark_type)
 		break
 	}

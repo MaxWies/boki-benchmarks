@@ -1,11 +1,8 @@
 package main
 
 import (
-	"faas-micro/client"
-	"faas-micro/operations"
 	"faas-micro/utils"
 	"fmt"
-	"log"
 	"time"
 
 	"github.com/montanaflynn/stats"
@@ -44,7 +41,7 @@ func printFnResult(fnName string, duration time.Duration, results []*utils.FaasC
 	}
 }
 
-func clientBenchmark(functionName string, functionBuilder func() utils.JSONValue) {
+func clientLoop(functionName string, functionBuilder func() utils.JSONValue) {
 	client := utils.NewFaasClient(FLAGS_faas_gateway, FLAGS_concurrency_client)
 	startTime := time.Now()
 	for {
@@ -59,22 +56,14 @@ func clientBenchmark(functionName string, functionBuilder func() utils.JSONValue
 	printFnResult(functionName, elapsed, results)
 }
 
-func clientLoopBenchmark(functionName string, requestInputBuilder func() utils.JSONValue) {
-	log.Printf("[INFO] Run loop functions. Function mode: %s. Concurrency: %d. Duration: %d", FLAGS_benchmark_type, FLAGS_concurrency_client, FLAGS_duration)
-	c := 0
-	client := client.NewFaasClient(FLAGS_faas_gateway, FLAGS_concurrency_client, &client.CallSync{})
-	for c < FLAGS_concurrency_client {
-		client.AddJsonFnCall(FLAGS_fn_prefix+functionName, requestInputBuilder())
-		c++
-	}
-	faasCalls := client.WaitForHttpResults()
-	for _, faasCall := range faasCalls {
-		if faasCall.HttpResult.Success {
-			appendLoopOutput := faasCall.HttpResult.Result.(operations.Benchmark)
-			fmt.Printf("Calls Total: %d", appendLoopOutput.Calls)
-			fmt.Printf("Calls Success: %d", appendLoopOutput.Success)
-			fmt.Printf("Calls Failure: %d", appendLoopOutput.Calls-appendLoopOutput.Success)
-			fmt.Printf("Throughput: %.2f [Op/s] using %d bytes records", appendLoopOutput.Throughput, FLAGS_record_length)
+func clientWarmup(functionName string, functionBuilder func() utils.JSONValue) {
+	client := utils.NewFaasClient(FLAGS_faas_gateway, 4)
+	startTime := time.Now()
+	for {
+		if time.Since(startTime) > time.Duration(5)*time.Second {
+			break
 		}
+		client.AddJsonFnCall(FLAGS_fn_prefix+functionName, functionBuilder())
 	}
+	client.WaitForResults()
 }

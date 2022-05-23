@@ -15,7 +15,7 @@ import (
 
 const (
 	testBenchmarkType string = "someTestBenchmark"
-	outputDirectory   string = constants.BASE_PATH_ENGINE_BOKI_BENCHMARK + "/" + testBenchmarkType
+	outputDirectory   string = constants.BASE_PATH_SLOG_ENGINE_BENCHMARK + "/" + testBenchmarkType
 )
 
 func OperationCall(handler types.FuncHandler, request []byte) (*operations.Benchmark, error) {
