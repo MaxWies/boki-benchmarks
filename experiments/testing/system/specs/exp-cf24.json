@@ -7,7 +7,8 @@
     "exp_variables": {
         "BENCHMARK_TYPE": "test-system",
         "CONCURRENCY_CLIENT": "24",
-        "DURATION": "30",
+        "DURATION": "120",
+        "APPEND_TIMES": "1",
         "READ_TIMES": "4"
     }
 }

@@ -166,8 +166,14 @@ def generate_swarm_config(base_dir, slog, slog_spec, exp_spec):
         "slog-gateway": { "placement": "slogexp-gateway" },
         "slog-storage": { "placement_label": "storage_node", "replicas": slog_spec['slog_storage_replicas'] },
         "slog-sequencer": { "placement_label": "sequencer_node", "replicas": slog_spec['slog_sequencers_replicas'] },
-        "slog-index": { "placement_label": "index_node", "replicas": slog_spec['slog_index_shards'] * slog_spec['slog_index_replicas'] }
     }
+    if slog.lower() == 'indilog':
+        config["services"]["slog-index"] = { "placement_label": "index_node", "replicas": slog_spec['slog_index_shards'] * slog_spec['slog_index_replicas'] }
+    elif slog.lower() == 'boki':
+        if 'slog_index_engine_replicas' in config.keys() and 0 < slog_spec['slog_index_engine_replicas']:
+            config["services"]["slog-index-engine"] = { "placement_label": "index_engine_node", "replicas": slog_spec['slog_index_engine_replicas'] }
+    else:
+        raise Exception("Unknown shared log")
     generate_swarm_config_engines(config, slog, slog_spec)
     if 'applications' in exp_spec.keys():
         generate_swarm_with_applications()

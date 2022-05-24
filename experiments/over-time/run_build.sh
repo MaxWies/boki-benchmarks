@@ -1,11 +1,10 @@
 #!/bin/bash
 BASE_DIR=`realpath $(dirname $0)`
-ROOT_DIR=`realpath $BASE_DIR/../../..`
+ROOT_DIR=`realpath $BASE_DIR/../..`
 
 SLOG=$1
 SLOG_SPEC_FILE=$2
 EXP_SPEC_FILE=$3
-EXP_DIR=$4
 
 HELPER_SCRIPT=$ROOT_DIR/scripts/exp_helper
 CONFIG_MAKER_SCRIPT=$ROOT_DIR/scripts/config_maker
@@ -38,7 +37,7 @@ done
 ALL_ENGINE_HOSTS=`$HELPER_SCRIPT get-machine-with-label --base-dir=$BASE_DIR --machine-label=engine_node`
 for HOST in $ALL_ENGINE_HOSTS; do
     scp -q $BASE_DIR/run_launcher $HOST:/tmp/run_launcher
-    ssh -q $HOST -- sudo rm -rf /mnt/inmem/slog
+    ssh -q $HOST -- sudo rm -rf /mnt/inmem/
     ssh -q $HOST -- sudo mkdir -p /mnt/inmem/slog
     ssh -q $HOST -- sudo mkdir -p /mnt/inmem/slog/output /mnt/inmem/slog/ipc /mnt/inmem/slog/stats
     ssh -q $HOST -- sudo cp /tmp/run_launcher /mnt/inmem/slog/run_launcher
@@ -61,4 +60,4 @@ done
 
 sleep 10
 
-$BASE_DIR/run_client.sh $EXP_SPEC_FILE $EXP_DIR
+$BASE_DIR/run_client.sh $SLOG $EXP_SPEC_FILE $EXP_DIR

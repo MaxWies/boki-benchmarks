@@ -1,0 +1,14 @@
+{
+    "functions": {
+        "RandomAppendAndReadLoopAsync" : {
+            "concurrency": 1
+        },
+        "TestSystem" : {
+            "concurrency": 1
+        }
+    },
+    "exp_variables": {
+        "CONCURRENCY_WORKER": "1",
+        "ENGINE_STAT_THREAD_INTERVAL": "30"
+    }
+}

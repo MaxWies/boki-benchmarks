@@ -5,7 +5,7 @@
     "slog_index_shards": 2,
     "slog_index_replicas": 1,
     "slog_controller": {
-        "image": "maxwie/boki:latest",
+        "image": "maxwie/indilog:latest",
         "entrypoint" : [
             "/slog/controller", 
             "--zookeeper_host=zookeeper:2181", 
@@ -20,6 +20,6 @@
         ]
     },
     "exp_variables": {
-        "SLOG_SETTING": "ei3-st3-seq3-ix2-ssmx4"
+        "SLOG_SETTING": "eng3-st3-seq3-ix2-ssmx4"
     }
 }

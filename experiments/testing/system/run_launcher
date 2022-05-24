@@ -1,8 +1,8 @@
 #!/bin/bash
 
-/boki/launcher \
+/slog/launcher \
     --fprocess_mode=go \
-    --root_path_for_ipc=/tmp/boki/ipc \
-    --fprocess_output_dir=/tmp/boki/output \
+    --root_path_for_ipc=/tmp/slog/ipc \
+    --fprocess_output_dir=/tmp/slog/output \
     --fprocess="$1" \
     --func_id=$2

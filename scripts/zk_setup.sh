@@ -14,6 +14,7 @@ create /faas/cmd
 create /faas/scale
 create /faas/storage_shard_req
 create /faas/storage_shard_resp
+create /faas/stat
 quit
 EOF
 if [[ $? != 0 ]]; then

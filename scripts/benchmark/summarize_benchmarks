@@ -207,7 +207,10 @@ def merge_csv_files(directory, filter, result_file):
     combined_csv = pd.concat([pd.read_csv(os.path.join(directory, file)) for file in csv_files])
     combined_csv.to_csv(result_file, index=False)
 
-def count_csv_entries(directory, filter):
+def count_csv_entries(csv_files):
+    return pd.concat([pd.read_csv(file) for file in csv_files]).shape[0]
+
+def count_csv_entries_in_directory(directory, filter):
     csv_files = [file for file in os.listdir(directory) if file.endswith('.csv') and filter in file]
     print("Count entries of {}".format(', '.join(csv_files)))
     return pd.concat([pd.read_csv(os.path.join(directory, file)) for file in csv_files]).shape[0]
@@ -215,15 +218,17 @@ def count_csv_entries(directory, filter):
 def compute_csv_percentile(csv_file, column_ix, percentile):
     return pd.read_csv(csv_file).iloc[:, column_ix].quantile(q=percentile)
 
-def add_throughput_latency_row(directory, slog_config, exp_duration, result_file):
+def add_throughput_latency_row(directory, slog, slog_config, append_times, read_times, exp_duration, result_file):
     write_header = not os.path.exists(result_file)
     with open(result_file, 'a', encoding='UTF8', newline='') as f:
         writer = csv.writer(f)
         if write_header:
-            writer.writerow(['SlogConfig', 'Throughput(kOp/s)', 'LatencyAppend-50(ms)','LatencyAppend-99(ms)', 'LatencyRead-50(ms)','LatencyRead-99(ms)'])
+            writer.writerow(['slog', 'slog_config', 'append_ratio', 'throughput', 'latency_append_50','latency_append_99', 'latency_read_50','latency_read_99'])
         data = [
+            slog,
             slog_config,
-            round(count_csv_entries(directory, '') / exp_duration / 1000, 2),
+            round(append_times / (append_times + read_times), 2),
+            round(count_csv_entries_in_directory(directory, slog_config) / exp_duration / 1000, 2),
             int(compute_csv_percentile(os.path.join(directory, "latencies-append-{}.csv".format(slog_config)), 0, 0.5)),
             int(compute_csv_percentile(os.path.join(directory, "latencies-append-{}.csv".format(slog_config)), 0, 0.99)),
             int(compute_csv_percentile(os.path.join(directory, "latencies-read-{}.csv".format(slog_config)), 0, 0.5)),
@@ -236,21 +241,186 @@ def compute_throughput_from_csv_files(directory, filter, result_file):
     pass
 
 def generate_throughput_vs_latency_plot(csv_file, result_file):
-    #systems = [name for name in os.listdir(directory) if os.path.isdir(name) and name != "."]
-    print("Until here")
-    th_vs_lat_data = pd.read_csv(csv_file)
-    th_vs_lat_data.plot(1, [2,3,4,5], subplots=False)
+    df = pd.read_csv(csv_file)
+    df_boki = df.loc[df['slog'] == 'boki']
+    df_indilog = df.loc[df['slog'] == 'indilog']
+    fig = plt.figure()
+    ax = plt.subplot(111)
+    df_boki.plot.line(x=3, y=4, label='Boki Append 0,5', color='darkorange', style='o-', ax=ax)
+    df_boki.plot.line(x=3, y=5, label='Boki Append 0.99', color='sienna', style='o-', ax=ax)
+    df_boki.plot.line(x=3, y=6, label='Boki Read 0.5', color='darkorange', style='o--', ax=ax)
+    df_boki.plot.line(x=3, y=7, label='Boki Read 0.99', color='sienna', style='o--', ax=ax)
+    df_indilog.plot.line(x=3, y=4, label='Indilog-Append', color='steelblue', style='o-', ax=ax)
+    df_indilog.plot.line(x=3, y=6, label='Indilog-Read', color='steelblue', style='o--', ax=ax)
+    df_indilog.plot.line(x=3, y=5, label='Indilog-Append', color='darkblue', style='o-', ax=ax)
+    df_indilog.plot.line(x=3, y=7, label='Indilog-Read', color='darkblue', style='o--', ax=ax)
+    
+    plt.xlabel('Throughput (kOp/s)')
+    plt.ylabel('Latency (\u03BCs)')
+
+    # Shrink current axis by 25%
+    box = ax.get_position()
+    ax.set_position([box.x0, box.y0, box.width * 0.75, box.height])
+
+    # Put a legend to the right of the current axis
+    ax.legend(loc='center left', bbox_to_anchor=(1, 0.23))
     plt.savefig(result_file)
     plt.close
+
+def add_time_latency_index_memory_row(directory, latency_append_file, slog, slog_config, interval, result_file):
+    # Get the corrsponding csv files for reads and index memory
+    assert 'append' in latency_append_file
+    latency_append_file_name = os.path.basename(latency_append_file)
+    name_chunks = latency_append_file_name.split('.')[0].split('-') # latencies-append-NODE_ID-TS.csv
+    latency_read_file = os.path.join(directory, "latencies-read-{}-{}.csv".format(name_chunks[2], name_chunks[3]))
+    index_memory_file = os.path.join(directory, "index-memory-{}-{}.csv".format(name_chunks[2], name_chunks[3]))
+    if not os.path.isfile(latency_read_file):
+        raise Exception("csv file {} not exists".format(latency_read_file))
+    if not os.path.isfile(index_memory_file):
+        raise Exception("csv file {} not exists".format(index_memory_file))
+    absolute_ts = int(name_chunks[3])
+    index_memory = 0
+    with open(index_memory_file, newline='') as f:
+        index_memory = int(next(csv.reader(f))[0]) 
+    # Write to result file
+    write_header = not os.path.exists(result_file)
+    print("Add row for slog_config={}, ts={}".format(slog_config, absolute_ts))
+    with open(result_file, 'a', encoding='UTF8', newline='') as f:
+        writer = csv.writer(f)
+        if write_header:
+            writer.writerow(['slog', 'slog_config', 'ts_absolute', 'throughput', 'latency_append_50','latency_append_99', 'latency_read_50','latency_read_99','index_memory'])
+        data = [
+            slog,
+            slog_config,
+            absolute_ts,
+            round(count_csv_entries([latency_append_file, latency_read_file]) / interval / 1000, 2),
+            int(compute_csv_percentile(latency_append_file, 0, 0.5)),
+            int(compute_csv_percentile(latency_append_file, 0, 0.99)),
+            int(compute_csv_percentile(latency_read_file, 0, 0.5)),
+            int(compute_csv_percentile(latency_read_file, 0, 0.99)),
+            index_memory
+        ]
+        writer.writerow(data)
+    print("Row added")
+
+def add_column(csv_file, loc, column_name, value):
+    print('Add column {}'.format(column_name))
+    df = pd.read_csv(csv_file)
+    df.insert(loc, column_name, value)
+    df.to_csv(csv_file, mode='w', sep=',', index=False, header=True)
+
+def update_column_by_division(csv_file, column, divisor, round_decimals):
+    df = pd.read_csv(csv_file)
+    for i in df.index:
+        df.at[i, column] = round(df.iloc[i][column] / divisor, round_decimals)
+    #df[column] = round(df[column] / divisor, round_decimals)
+    df.to_csv(csv_file, mode='w', sep=',', index=False, header=True)
+
+def make_time_relative(csv_file, reference_ts, result_directory):
+    print('Make time relative {}'.format(csv_file))
+    df = pd.read_csv(csv_file)
+    df.drop(df[df.ts_absolute < reference_ts].index, inplace=True)
+    print('Dropped lower stuff')
+    relative_timestamps = []
+    for i in range(len(df)):
+        relative_timestamps.append(df.iloc[i]['ts_absolute'] - reference_ts)
+    df.insert(2, 'ts_relative', relative_timestamps)
+    result_file = os.path.join(result_directory, os.path.basename(csv_file))
+    write_header = not os.path.isfile(result_file)
+    df.to_csv(os.path.join(result_directory, os.path.basename(csv_file)), mode='a', sep=',', index=False, header=write_header)
+
+def make_time_relative_all(directory, reference_ts, result_directory):
+    csv_files = [file for file in os.listdir(directory) if file.endswith('.csv')]
+    for csv_file in csv_files:
+        make_time_relative(os.path.join(directory, csv_file), reference_ts, result_directory)
+
+def generate_time_vs_all_plot(directory, result_file):
+
+    latency_index_memory_csv_file = os.path.join(directory, 'time-latency-index-memory.csv')
+    cpu_memory_csv_file = os.path.join(directory, 'time-cpu-memory.csv')
+
+    df_lim = pd.read_csv(latency_index_memory_csv_file)
+    df_lim_boki = df_lim.loc[df_lim['slog'] == 'boki']
+    df_lim_indilog = df_lim.loc[df_lim['slog'] == 'indilog']
+
+    df_cm = pd.read_csv(cpu_memory_csv_file)
+    df_cm_boki = df_cm.loc[df_cm['slog'] == 'boki']
+    df_cm_indilog = df_cm.loc[df_cm['slog'] == 'indilog']
+
+    fig, ax = plt.subplots()
+    fig.subplots_adjust(right=0.7)
+
+    twin1_tp = ax.twinx()
+    twin2_im = ax.twinx()
+    twin3_cpu = ax.twinx()
+    twin2_im.spines.right.set_position(('axes', 1.2))
+    twin3_cpu.spines.right.set_position(('axes', 1.35))
+
+    #df_lim_boki.plot.line(x=2, y=5, label='Boki Append 0,5', color='darkorange', style='o-', ax=ax)
+    #df_lim_boki.plot.line(x=2, y=9, label='Index Memory', color='sienna', style='o-', ax=twin1)
+    #df_cm_boki.plot.line(x=2, y=6, label='CPU', color='blue', style='o-', ax=twin2)
+
+    p1, = ax.plot(df_lim_boki['ts_relative'], df_lim_boki['latency_append_50'], '--', marker='x', color='darkred', label='Boki Append 0,5')
+    p2, = ax.plot(df_lim_boki['ts_relative'], df_lim_boki['latency_read_50'], '--', color='darkred', label='Boki Read 0,5')
+    p3, = twin1_tp.plot(df_lim_boki['ts_relative'], df_lim_boki['throughput'], '--', color='darkgreen', label='Boki Throughput')
+    p4, = twin2_im.plot(df_lim_boki['ts_relative'], df_lim_boki['index_memory'], '--', color='royalblue', label='Boki Index Memory')
+    p5, = twin3_cpu.plot(df_cm_boki['ts_relative'], df_cm_boki['cpu_avg'], '--', color='black', label='Boki CPU average')
+
+    p6, = ax.plot(df_lim_indilog['ts_relative'], df_lim_indilog['latency_append_50'], '-', marker='x', color='darkred', label='Indilog Append 0,5')
+    p7, = ax.plot(df_lim_indilog['ts_relative'], df_lim_indilog['latency_read_50'], '-', color='darkred', label='Indilog Read 0,5')
+    p8, = twin1_tp.plot(df_lim_indilog['ts_relative'], df_lim_indilog['throughput'], '-', color='darkgreen', label='Indilog Throughput')
+    p9, = twin2_im.plot(df_lim_indilog['ts_relative'], df_lim_indilog['index_memory'], '-', color='royalblue', label='Indilog Index Memory')
+    p10, = twin3_cpu.plot(df_cm_indilog['ts_relative'], df_cm_indilog['cpu_avg'], '-', color='black', label='Indilog CPU average')
+
+
+    twin1_tp.set_ylim(0, 100)
+    twin3_cpu.set_ylim(0, 400)
+    #twin2.set_ylim(0, 1)
+
+    ax.set_xlabel('Time (s)')
+    ax.set_ylabel('Latency (\u03BCs)')
+    twin1_tp.set_ylabel('Throughput (kOp/s)')
+    twin2_im.set_ylabel('Memory (MiB)')
+    twin3_cpu.set_ylabel('CPU (%)')
+
+    ax.yaxis.label.set_color(p1.get_color())
+    twin1_tp.yaxis.label.set_color(p3.get_color())
+    twin2_im.yaxis.label.set_color(p4.get_color())
+    twin3_cpu.yaxis.label.set_color(p5.get_color())
+
+    # Shrink current axis by 25%
+    #box = ax.get_position()
+    #ax.set_position([box.x0, box.y0, box.width * 0.75, box.height])
+
+    # Put a legend to the right of the current axis
+    ax.legend(loc='upper center', bbox_to_anchor=(0.65, 1.12),
+          ncol=6, fancybox=True, shadow=True, handles=[p1, p2, p3, p4, p5, p6, p7, p8, p9, p10],
+          prop={'size':5})
+    plt.savefig(result_file)
+    plt.close
+
+def generate_time_vs_index_memory_cpu_plot(directory, result_file):
+    pass
+
+def index_tier_only__generate_throughput_vs_latency_plot(csv_file, result_file):
+    print("Print plot")
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('cmd', type=str)
     parser.add_argument('--directory', type=str)
     parser.add_argument('--file', type=str)
+    parser.add_argument('--slog', type=str)
     parser.add_argument('--slog-config', type=str)
     parser.add_argument('--exp-duration', type=int)
+    parser.add_argument('--append-times', type=int)
+    parser.add_argument('--read-times', type=int)
+    parser.add_argument('--interval', type=int)
+    parser.add_argument('--reference-ts', type=int)
     parser.add_argument('--filter', type=str)
+    parser.add_argument('--column', type=str)
+    parser.add_argument('--divisor', type=int)
+    parser.add_argument('--round-decimals', type=int)
     parser.add_argument('--result-file', type=str)
     parser.add_argument('--result-directory', type=str)
     args = parser.parse_args()
@@ -262,9 +432,22 @@ if __name__ == '__main__':
         elif args.cmd == 'merge-csv':
             merge_csv_files(args.directory, args.filter, args.result_file)
         elif args.cmd == 'add-throughput-latency-row':
-            add_throughput_latency_row(args.directory, args.slog_config, args.exp_duration, args.result_file)
+            add_throughput_latency_row(args.directory, args.slog, args.slog_config, args.append_times, args.read_times, args.exp_duration, args.result_file)
+        elif args.cmd == 'add-time-latency-index-memory-row':
+            add_time_latency_index_memory_row(args.directory, args.file, args.slog, args.slog_config, args.interval, args.result_file)
+        elif args.cmd == 'add-slog-info':
+            add_column(args.file, 0, 'slog_config', args.slog_config)
+            add_column(args.file, 0, 'slog', args.slog)
+        elif args.cmd == 'update-column-by-division':
+            update_column_by_division(args.file, args.column, args.divisor, args.round_decimals)
+        elif args.cmd == 'make-time-relative':
+            make_time_relative_all(args.directory, args.reference_ts, args.result_directory)
         elif args.cmd == 'throughput-vs-latency-plot':
             generate_throughput_vs_latency_plot(args.file, args.result_file)
+        elif args.cmd == 'time-vs-all-plot':
+            generate_time_vs_all_plot(args.directory, args.result_file)
+        elif args.cmd == 'index-tier-only__throughput-vs-latency-pot':
+            index_tier_only__generate_throughput_vs_latency_plot(args.directory, args.result_file)
         else:
             raise Exception('Unknown command: ' + args.cmd)
     except Exception as e:

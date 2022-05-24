@@ -181,6 +181,12 @@ def get_docker_manager_host_main(base_dir):
         if machine_info['role'] == 'manager':
             print(machine_info['ip'] + '-' + USER_NAME)
             break
+
+def get_docker_manager_ip_main(base_dir):
+    for machine_info in load_machines_file(base_dir)['machines'].values():
+        if machine_info['role'] == 'manager':
+            print(machine_info['ip'])
+            break
     
 def get_client_host_main(base_dir):
     for machine_info in load_machines_file(base_dir)['machines'].values():
@@ -199,6 +205,14 @@ def get_machine_with_label_main(base_dir, label):
             labels = machine_info['labels']
             if label in labels or label+'=true' in labels:
                 print(machine_info['ip'] + '-' + USER_NAME)
+
+def get_single_machine_with_label_main(base_dir, label):
+    for machine_info in load_machines_file(base_dir)['machines'].values():
+        if 'labels' in machine_info:
+            labels = machine_info['labels']
+            if label in labels or label+'=true' in labels:
+                print(machine_info['ip'] + '-' + USER_NAME)
+                return
 
 def get_client_with_merged_results(base_dir):
     label = 'merged_results=true'
@@ -302,12 +316,16 @@ if __name__ == '__main__':
             get_service_host_main(args.base_dir, args.service)
         elif args.cmd == 'get-docker-manager-host':
             get_docker_manager_host_main(args.base_dir)
+        elif args.cmd == 'get-docker-manager-ip':
+            get_docker_manager_ip_main(args.base_dir)
         elif args.cmd == 'get-client-host':
             get_client_host_main(args.base_dir)
         elif args.cmd == 'get-all-server-hosts':
             get_all_server_hosts_main(args.base_dir)
         elif args.cmd == 'get-machine-with-label':
             get_machine_with_label_main(args.base_dir, args.machine_label)
+        elif args.cmd == 'get-single-machine-with-label':
+            get_single_machine_with_label_main(args.base_dir, args.machine_label)
         elif args.cmd == 'get-client-with-merged-results':
             get_client_with_merged_results(args.base_dir)
         elif args.cmd == 'get-client-ip':

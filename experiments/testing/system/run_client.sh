@@ -2,8 +2,9 @@
 BASE_DIR=`realpath $(dirname $0)`
 ROOT_DIR=`realpath $BASE_DIR/../../..`
 
-EXP_SPEC_FILE=$1
-EXP_DIR=$2
+SLOG=$1
+EXP_SPEC_FILE=$2
+EXP_DIR=$3
 
 HELPER_SCRIPT=$ROOT_DIR/scripts/exp_helper
 BENCHMARK_SCRIPT=$ROOT_DIR/scripts/benchmark/summarize_benchmarks
@@ -24,14 +25,14 @@ mkdir -p $EXP_DIR
 
 MANAGER_HOST=`$HELPER_SCRIPT get-docker-manager-host --base-dir=$BASE_DIR`
 CLIENT_HOST=`$HELPER_SCRIPT get-client-host --base-dir=$BASE_DIR`
-ENTRY_HOST=`$HELPER_SCRIPT get-service-host --base-dir=$BASE_DIR --service=boki-gateway`
+ENTRY_HOST=`$HELPER_SCRIPT get-service-host --base-dir=$BASE_DIR --service=slog-gateway`
 
 ALL_ENGINE_HOSTS=`$HELPER_SCRIPT get-machine-with-label --base-dir=$BASE_DIR --machine-label=engine_node`
 ALL_STORAGE_HOSTS=`$HELPER_SCRIPT get-machine-with-label --base-dir=$BASE_DIR --machine-label=storage_node`
 ALL_SEQUENCER_HOSTS=`$HELPER_SCRIPT get-machine-with-label --base-dir=$BASE_DIR --machine-label=sequencer_node`
 ALL_INDEX_HOSTS=`$HELPER_SCRIPT get-machine-with-label --base-dir=$BASE_DIR --machine-label=index_node`
 
-ENGINE_NODES=`$HELPER_SCRIPT get-num-active-service-replicas --base-dir=$BASE_DIR --service=boki-engine`
+ENGINE_NODES=$(wc -w <<< $ALL_ENGINE_HOSTS)
 STORAGE_NODES=$(wc -w <<< $ALL_STORAGE_HOSTS)
 SEQUENCER_NODES=$(wc -w <<< $ALL_SEQUENCER_HOSTS)
 INDEX_NODES=$(wc -w <<< $ALL_INDEX_HOSTS)
@@ -42,7 +43,7 @@ ssh -q $MANAGER_HOST -- uname -a >>$EXP_DIR/kernel_version
 ssh -q $CLIENT_HOST -- docker run \
     --pull always \
     -v /tmp:/tmp \
-    maxwie/boki-microbench:latest \
+    maxwie/indilog-microbench:latest \
     cp /microbench-bin/benchmark /tmp/benchmark
 
 ssh -q $CLIENT_HOST -- /tmp/benchmark \
@@ -50,6 +51,7 @@ ssh -q $CLIENT_HOST -- /tmp/benchmark \
     --benchmark_description=$BENCHMARK_DESCRIPTION \
     --benchmark_type=$BENCHMARK_TYPE \
     --duration=$DURATION \
+    --append_times=$APPEND_TIMES \
     --read_times=$READ_TIMES \
     --engine_nodes=$ENGINE_NODES \
     --storage_nodes=$STORAGE_NODES \

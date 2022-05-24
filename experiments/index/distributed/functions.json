@@ -3,21 +3,21 @@
         "RandomAppendAndReadLoopAsync": {
             "service_name": "random-append-read-service",
             "docker": {
-                "image": "maxwie/boki-microbench:latest",
-                "entrypoint" : ["/tmp/boki/run_launcher", "/microbench-bin/main"],
-                "volumes": ["/mnt/inmem/boki:/tmp/boki"],
+                "image": "maxwie/indilog-microbench:latest",
+                "entrypoint" : ["/tmp/slog/run_launcher", "/microbench-bin/main"],
+                "volumes": ["/mnt/inmem/slog:/tmp/slog"],
                 "environment": ["FAAS_GO_MAX_PROC_FACTOR=8", "GOGC=1000"],
-                "depends_on": ["boki-engine"]
+                "depends_on": ["slog-engine"]
             }
         },
         "MergeResults" : {
             "service_name": "merge-service",
             "docker": {
-                "image": "maxwie/boki-microbench:latest",
-                "entrypoint" : ["/tmp/boki/run_launcher", "/microbench-bin/main"],
-                "volumes": ["/mnt/inmem/boki:/tmp/boki"],
+                "image": "maxwie/indilog-microbench:latest",
+                "entrypoint" : ["/tmp/slog/run_launcher", "/microbench-bin/main"],
+                "volumes": ["/mnt/inmem/slog:/tmp/slog"],
                 "environment": ["FAAS_GO_MAX_PROC_FACTOR=8", "GOGC=1000"],
-                "depends_on": ["boki-engine"]
+                "depends_on": ["slog-engine"]
             }
         }
     }

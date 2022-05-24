@@ -11,6 +11,7 @@ BENCHMARK_SCRIPT=$ROOT_DIR/scripts/benchmark/summarize_benchmarks
 export COLLECT_CONTAINER_LOGS=false
 export RECORD_LENGTH=1024
 export READ_TIMES=1
+export APPEND_TIMES=1
 export USE_TAGS=true
 export DURATION=20
 export LATENCY_BUCKET_GRANULARITY=20
@@ -37,21 +38,21 @@ mkdir -p $EXP_DIR
 
 MANAGER_HOST=`$HELPER_SCRIPT get-docker-manager-host --base-dir=$BASE_DIR`
 CLIENT_HOST=`$HELPER_SCRIPT get-client-host --base-dir=$BASE_DIR`
-ENTRY_HOST=`$HELPER_SCRIPT get-service-host --base-dir=$BASE_DIR --service=boki-gateway`
+ENTRY_HOST=`$HELPER_SCRIPT get-service-host --base-dir=$BASE_DIR --service=slog-gateway`
 
 ALL_ENGINE_HOSTS=`$HELPER_SCRIPT get-machine-with-label --base-dir=$BASE_DIR --machine-label=engine_node`
 ALL_STORAGE_HOSTS=`$HELPER_SCRIPT get-machine-with-label --base-dir=$BASE_DIR --machine-label=storage_node`
 ALL_SEQUENCER_HOSTS=`$HELPER_SCRIPT get-machine-with-label --base-dir=$BASE_DIR --machine-label=sequencer_node`
 ALL_INDEX_HOSTS=`$HELPER_SCRIPT get-machine-with-label --base-dir=$BASE_DIR --machine-label=index_node`
 
-ENGINE_NODES=`$HELPER_SCRIPT get-num-active-service-replicas --base-dir=$BASE_DIR --service=boki-engine`
+ENGINE_NODES=$(wc -w <<< $ALL_ENGINE_HOSTS)
 STORAGE_NODES=$(wc -w <<< $ALL_STORAGE_HOSTS)
 SEQUENCER_NODES=$(wc -w <<< $ALL_SEQUENCER_HOSTS)
 INDEX_NODES=$(wc -w <<< $ALL_INDEX_HOSTS)
 
 for HOST in $ALL_ENGINE_HOSTS; do
-    ssh -q $HOST -- sudo rm -rf /mnt/inmem/boki/output/benchmark/$BENCHMARK_TYPE
-    ssh -q $HOST -- sudo mkdir -p /mnt/inmem/boki/output/benchmark/$BENCHMARK_TYPE
+    ssh -q $HOST -- sudo rm -rf /mnt/inmem/slog/output/benchmark/$BENCHMARK_TYPE
+    ssh -q $HOST -- sudo mkdir -p /mnt/inmem/slog/output/benchmark/$BENCHMARK_TYPE
 done
 
 ssh -q $MANAGER_HOST -- cat /proc/cmdline >>$EXP_DIR/kernel_cmdline
@@ -60,7 +61,7 @@ ssh -q $MANAGER_HOST -- uname -a >>$EXP_DIR/kernel_version
 ssh -q $CLIENT_HOST -- docker run \
     --pull always \
     -v /tmp:/tmp \
-    maxwie/boki-microbench:latest \
+    maxwie/indilog-microbench:latest \
     cp /microbench-bin/benchmark /tmp/benchmark
 
 ssh -q $CLIENT_HOST -- /tmp/benchmark \
@@ -69,6 +70,7 @@ ssh -q $CLIENT_HOST -- /tmp/benchmark \
     --benchmark_type=$BENCHMARK_TYPE \
     --duration=$DURATION \
     --record_length=$RECORD_LENGTH \
+    --append_times=$APPEND_TIMES \
     --read_times=$READ_TIMES \
     --use_tags=$USE_TAGS \
     --latency_bucket_lower=$LATENCY_BUCKET_LOWER \
@@ -96,10 +98,7 @@ if [ $COLLECT_CONTAINER_LOGS == 'true' ]; then
 fi
 
 mkdir -p $EXP_DIR/benchmark $EXP_DIR/stats/engine
-scp -r -q $CLIENT_HOST:/tmp/boki/output/benchmark/$BENCHMARK_TYPE $EXP_DIR/benchmark
-for HOST in $ALL_ENGINE_HOSTS; do
-    scp -r -q $HOST:/mnt/inmem/boki/stats/* $EXP_DIR/stats/engine
-done
+scp -r -q $CLIENT_HOST:/tmp/slog/output/benchmark/$BENCHMARK_TYPE $EXP_DIR/benchmark
+
 $BENCHMARK_SCRIPT benchmark-log-loop --directory=$EXP_DIR/benchmark/$BENCHMARK_TYPE
-$BENCHMARK_SCRIPT benchmark-engine-stats --directory=$EXP_DIR/stats/engine
 echo "Results published at $EXP_DIR"
