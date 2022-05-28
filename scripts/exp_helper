@@ -31,6 +31,7 @@ def run_remote_command(ssh_ip, cmd):
 def setup_hostname_for_machines(machine_configs):
     for name, machine_config in machine_configs.items():
         if machine_config['role'] != 'dirigent':
+            # run_remote_command(machine_config['ip'], ['sudo', 'docker system prune --all -f'])
             run_remote_command(machine_config['ip'], ['sudo', 'hostnamectl', 'set-hostname', name])
             #TODO: hot fix
             run_remote_command(machine_config['ip'], ['sudo', '/home/mrc/setup/hostname-fix.sh'])
@@ -251,6 +252,23 @@ def get_num_active_service_replicas(base_dir, service_name):
         raise Exception("The replicas info cannot be parsed. Message is {}".format(replicas_info))
     print(int(replicas_info[0])) # a bit dirty
 
+def get_machine_with_label_main(base_dir, label):
+    for machine_info in load_machines_file(base_dir)['machines'].values():
+        if 'labels' in machine_info:
+            labels = machine_info['labels']
+            if label in labels or label+'=true' in labels:
+                print(machine_info['ip'] + '-' + USER_NAME)
+
+def get_dynamic_machines(base_dir, label):
+    dynamic_machines = []
+    for machine_info in load_machines_file(base_dir)['machines'].values():
+        if 'labels' in machine_info:
+            labels = machine_info['labels']
+            if label in labels or label+'=true' in labels:
+                if 'init' in machine_config.keys() and not machine_config['init']: 
+                    dynamic_machines.append(machine_info['ip'])
+    print(','.join(dynamic_machines))
+
 def get_client_ip(base_dir):
     for machine_info in load_machines_file(base_dir)['machines'].values():
         if machine_info['role'] == 'client':
@@ -328,6 +346,8 @@ if __name__ == '__main__':
             get_single_machine_with_label_main(args.base_dir, args.machine_label)
         elif args.cmd == 'get-client-with-merged-results':
             get_client_with_merged_results(args.base_dir)
+        elif args.cmd == 'get-dynamic-machines':
+            get_dynamic_machines(args.base_dir, args.machine_label)
         elif args.cmd == 'get-client-ip':
             get_client_ip(args.base_dir)
         elif args.cmd == 'get-container-id':

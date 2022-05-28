@@ -20,6 +20,9 @@
         },
         "RetwisPostList" : {
             "concurrency": 24
+        },
+        "TestSystem" : {
+            "concurrency": 1
         }
     },
     "exp_variables": {}

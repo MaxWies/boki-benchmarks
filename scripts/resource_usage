@@ -45,8 +45,8 @@ def sample_resource_usage(script, pid, sample_rate, samples, log_path, log_file_
         reader = csv.reader(csv_file, delimiter=',')
         for row in reader:
             time_log_c = datetime.strptime('{},{}'.format(row[0],row[1]), '%Y-%m-%d,%H:%M:%S')                
-            cpu = float(row[4])
-            mem = float(row[5])
+            cpu = float(row[3])
+            mem = float(row[4])
             cpu_min = min(cpu_min, cpu)
             cpu_max = max(cpu_max, cpu)
             cpu_agg += cpu
@@ -88,7 +88,7 @@ if __name__ == '__main__':
     parser.add_argument('cmd', type=str)
     parser.add_argument('--process-id', type=str, default='')
     parser.add_argument('--process-name', type=str, default='')
-    parser.add_argument('--resource-usage-script', type=str, default='{}/resource_usage.sh'.format(os.getcwd()))
+    parser.add_argument('--resource-usage-script', type=str, default='/tmp/resource_usage.sh')
     parser.add_argument('--batches', type=int, default=10)
     parser.add_argument('--sample-rate', type=int, default=2)
     parser.add_argument('--samples', type=int, default=100)

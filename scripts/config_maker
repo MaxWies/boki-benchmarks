@@ -142,16 +142,16 @@ def generate_swarm_config_engines(config, slog, slog_spec):
             "placement_label": "engine_node", 
             "replicas": slog_spec['slog_engine_replicas_init'] 
         }
-        if "slog_index_engine_replicas" in slog_spec.keys():
-            config["services"]["slog-index-engine"] = { 
-                "placement_label": "index_engine_node", 
-                "replicas": slog_spec['slog_index_engine_replicas']
-            }
     elif slog.lower() == 'boki':
         config["services"]["slog-engine"] = { 
             "placement_label": "engine_node", 
             "replicas": slog_spec['slog_engine_replicas'] 
         }
+        if "slog_index_engine_replicas" in slog_spec.keys():
+            config["services"]["slog-index-engine"] = { 
+                "placement_label": "index_engine_node", 
+                "replicas": slog_spec['slog_index_engine_replicas']
+            }
     else:
         raise Exception("Unknown shared log")
 

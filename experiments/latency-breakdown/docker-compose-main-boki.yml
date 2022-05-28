@@ -17,7 +17,7 @@ services:
     restart: always
 
   slog-engine:
-    image: maxwie/indilog:latest
+    image: maxwie/boki:latest
     hostname: faas-engine-{{.Task.Slot}}
     entrypoint:
       - /slog/engine
@@ -33,12 +33,8 @@ services:
       - --slog_engine_enable_cache
       - --slog_engine_cache_cap_mb=1024
       - --slog_engine_propagate_auxdata
-      - --slog_engine_distributed_indexing
-      - --slog_engine_seqnum_suffix_cap=1000
-      - --slog_engine_tag_cache_cap=5000
-      - --slog_engine_per_tag_seqnums_limit=100
-        #- --slog_engine_index_tier_only
-      - --v=1
+      - --engine_node_type=engine
+      # - --v=1
     depends_on:
       - zookeeper-setup
     volumes:
@@ -53,8 +49,41 @@ services:
                 soft: 67108864
                 hard: 67108864
 
+  slog-index-engine:
+    image: maxwie/boki:latest
+    hostname: faas-engine-{{.Task.Slot}}
+    entrypoint:
+      - /slog/engine
+      - --zookeeper_host=zookeeper:2181
+      - --listen_iface=eth0
+      - --root_path_for_ipc=/tmp/slog/ipc
+      - --func_config_file=/tmp/slog/func_config_empty.json
+      - --num_io_workers=4
+      - --instant_rps_p_norm=0.8
+      - --io_uring_entries=2048
+      - --io_uring_fd_slots=4096
+      - --enable_shared_log
+      - --slog_engine_enable_cache
+      - --slog_engine_cache_cap_mb=1024
+      - --slog_engine_propagate_auxdata
+      - --engine_node_type=index_engine
+      # - --v=1
+    depends_on:
+      - zookeeper-setup
+    volumes:
+      - /mnt/inmem/slog:/tmp/slog
+      - /sys/fs/cgroup:/tmp/root_cgroupfs
+    environment:
+      - FAAS_NODE_ID=100{{.Task.Slot}}
+      - FAAS_CGROUP_FS_ROOT=/tmp/root_cgroupfs
+    restart: always
+    ulimits:
+        memlock:
+                soft: 67108864
+                hard: 67108864
+
   slog-gateway:
-    image: maxwie/indilog:latest
+    image: maxwie/boki:latest
     hostname: faas-gateway
     ports:
       - 8080:8080
@@ -70,22 +99,20 @@ services:
       - --io_uring_fd_slots=4096
       - --lb_per_fn_round_robin
       - --max_running_requests=0
-      - --v=1
+      # - --v=1
     depends_on:
       - zookeeper-setup
     volumes:
       - /tmp/nightcore_config.json:/tmp/slog/func_config.json
       - /mnt/inmem/store:/tmp/store
     restart: always
-    environment:
-      - FAAS_NODE_ID={{.Task.Slot}}
     ulimits:
         memlock:
                 soft: 67108864
                 hard: 67108864
 
   slog-storage:
-    image: maxwie/indilog:latest
+    image: maxwie/boki:latest
     hostname: faas-storage-{{.Task.Slot}}
     entrypoint:
       - /slog/storage
@@ -99,7 +126,7 @@ services:
       - --slog_storage_bgthread_interval_ms=1
       - --slog_storage_backend=rocksdb
       - --slog_storage_cache_cap_mb=4096
-      - --v=1
+      # - --v=1
     depends_on:
       - zookeeper-setup
     volumes:
@@ -113,7 +140,7 @@ services:
                 hard: 67108864
 
   slog-sequencer:
-    image: maxwie/indilog:latest
+    image: maxwie/boki:latest
     hostname: faas-sequencer-{{.Task.Slot}}
     entrypoint:
       - /slog/sequencer
@@ -123,28 +150,7 @@ services:
       - --io_uring_entries=2048
       - --io_uring_fd_slots=4096
       - --slog_global_cut_interval_us=300
-      - --v=1
-    depends_on:
-      - zookeeper-setup
-    environment:
-      - FAAS_NODE_ID={{.Task.Slot}}
-    restart: always
-    ulimits:
-        memlock:
-                soft: 67108864
-                hard: 67108864
-
-  slog-index:
-    image: maxwie/indilog:latest
-    hostname: faas-index-{{.Task.Slot}}
-    entrypoint:
-      - /slog/index
-      - --zookeeper_host=zookeeper:2181
-      - --listen_iface=eth0
-      - --num_io_workers=2
-      - --io_uring_entries=2048
-      - --io_uring_fd_slots=4096
-      - --v=1
+      # - --v=1
     depends_on:
       - zookeeper-setup
     environment:

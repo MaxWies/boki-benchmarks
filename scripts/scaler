@@ -119,7 +119,7 @@ def get_placement_label_from_service(swarm_config, service):
     raise Exception('Service {} has no placement label'.format(service))
 
 def get_engine_grace_period(compose_config):
-    for value in compose_config['services']['boki-engine']['entrypoint']:
+    for value in compose_config['services']['slog-engine']['entrypoint']:
         if '--scale_in_grace_period' in value:
             key_value = value.split('=')
             return key_value[1].strip()
@@ -209,7 +209,7 @@ def service_scale_script(base_dir, main_service, replicas, service_has_dependenc
     service_id = docker_swarm_get_service_id_by_name(manager_ip, service_full_name)
     docker_swarm_scale_service(manager_ip, service_id, replicas)
     print('Manager has scaled main service {} to {} replicas'.format(main_service, replicas))
-    time.sleep(3)
+    #time.sleep(10)
     dependent_services_ids = set()
     for service in dependent_services:
         service_full_name = 'boki-experiment_' + service
@@ -238,11 +238,11 @@ def service_scale_in_script(base_dir, leaving_nodes_hostnames, service, replicas
     service_scale_script(base_dir, service, replicas, service_has_dependencies)
 
 def boki_engine_scale_out_script(base_dir, engine_hostnames, engine_service, replicas, service_has_dependencies = True):
-    print('Service {} of boki engines will be scaled out to {} replicas'.format(engine_service, replicas))
+    print('Service {} of slog engines will be scaled out to {} replicas'.format(engine_service, replicas))
     service_scale_out_script(base_dir, engine_hostnames, engine_service, replicas, service_has_dependencies)
 
 def boki_engine_scale_in_script(base_dir, engine_hostname, engine_service, zk_client, zk_server_host, zk_server_port):
-    print('Service {} of boki engines will be scaled in by removing 1 replica'.format(engine_service))
+    print('Service {} of slog engines will be scaled in by removing 1 replica'.format(engine_service))
     compose_config = load_compose_config(base_dir)
     service_full_name = 'boki-experiment_' + engine_service
     grace_period = int(get_engine_grace_period(compose_config))
@@ -256,7 +256,7 @@ def boki_engine_scale_in_script(base_dir, engine_hostname, engine_service, zk_cl
     current_replicas = docker_swarm_get_service_current_replicas(get_manager_ip(base_dir), service_full_name)
     service_scale_in_script(base_dir, [engine_hostname], engine_service, current_replicas - 1, True)
     
-def boki_engine_continously_scale_out_script(base_dir, engine_hostnames : List[str], engine_service, duration, interval):
+def engine_continously_scale_out_script(base_dir, engine_hostnames : List[str], engine_service, duration, interval):
     service_full_name = 'boki-experiment_' + engine_service
     t_start = time.time()
     t_end = time.time()
@@ -267,13 +267,13 @@ def boki_engine_continously_scale_out_script(base_dir, engine_hostnames : List[s
             break
         time.sleep(interval)
         current_replicas = docker_swarm_get_service_current_replicas(get_manager_ip(base_dir), service_full_name)
-        boki_engine_scale_out_script(base_dir, [engine_hostnames.pop()], engine_service, current_replicas+1, True)
+        engine_scale_out_script(base_dir, [engine_hostnames.pop()], engine_service, current_replicas+1, True)
         t_end = time.time()
         t_elapsed = t_end - t_start
         c += 1
     print('Scaling finished. Scaled out {} replicas in total'.format(c))
 
-def boki_engine_continously_scale_in_script(base_dir, engine_hostnames : List[str], engine_service, zk_client, zk_server_host, zk_server_port, duration, interval):
+def engine_continously_scale_in_script(base_dir, engine_hostnames : List[str], engine_service, zk_client, zk_server_host, zk_server_port, duration, interval):
     t_start = time.time()
     t_end = time.time()
     t_elapsed = t_end - t_start
@@ -282,7 +282,7 @@ def boki_engine_continously_scale_in_script(base_dir, engine_hostnames : List[st
         if len(engine_hostnames) < 1:
             break
         time.sleep(interval)
-        boki_engine_scale_in_script(base_dir, engine_hostnames.pop(), engine_service, zk_client, zk_server_host, zk_server_port)
+        engine_scale_in_script(base_dir, engine_hostnames.pop(), engine_service, zk_client, zk_server_host, zk_server_port)
         t_end = time.time()
         t_elapsed = t_end - t_start
         c += 1
@@ -311,17 +311,17 @@ if __name__ == '__main__':
             node_leave_script(args.base_dir, args.hostname)
         elif args.cmd == 'scale-service-and-dependencies':
             service_scale_script(args.base_dir, args.service, args.replicas, True)
-        elif args.cmd == 'boki-engine-scale-out':
+        elif args.cmd == 'engine-scale-out':
             hostnames = args.hostnames.split(',')
-            boki_engine_scale_out_script(args.base_dir, hostnames, args.service, args.replicas)
-        elif args.cmd == 'boki-engine-scale-in':
-            boki_engine_scale_in_script(args.base_dir, args.hostname, args.service, args.zk_client, args.zk_server_host, args.zk_server_port)
-        elif args.cmd == 'boki-engine-scale-out-continously':
+            engine_scale_out_script(args.base_dir, hostnames, args.service, args.replicas)
+        elif args.cmd == 'engine-scale-in':
+            engine_scale_in_script(args.base_dir, args.hostname, args.service, args.zk_client, args.zk_server_host, args.zk_server_port)
+        elif args.cmd == 'engine-scale-out-continously':
             hostnames = args.hostnames.split(',')
-            boki_engine_continously_scale_out_script(args.base_dir, hostnames, args.service, args.duration, args.interval)
-        elif args.cmd == 'boki-engine-scale-in-continously':
+            engine_continously_scale_out_script(args.base_dir, hostnames, args.service, args.duration, args.interval)
+        elif args.cmd == 'engine-scale-in-continously':
             hostnames = args.hostnames.split(',')
-            boki_engine_continously_scale_in_script(args.base_dir, hostnames, args.service, args.zk_client, args.zk_server_host, args.zk_server_port, args.duration, args.interval)
+            engine_continously_scale_in_script(args.base_dir, hostnames, args.service, args.zk_client, args.zk_server_host, args.zk_server_port, args.duration, args.interval)
         else:
             raise Exception('Unknown command: ' + args.cmd)
     except Exception as e:

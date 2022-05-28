@@ -9,22 +9,22 @@ services:
 
   zookeeper-setup:
     image: zookeeper:3.6.2
-    command: /tmp/boki/zk_setup.sh
+    command: /tmp/slog/zk_setup.sh
     depends_on:
        - zookeeper
     volumes:
-      - /tmp/zk_setup.sh:/tmp/boki/zk_setup.sh
+      - /tmp/zk_setup.sh:/tmp/slog/zk_setup.sh
     restart: always
 
-  boki-engine:
-    image: maxwie/boki:latest
+  slog-engine:
+    image: maxwie/indilog:latest
     hostname: faas-engine-{{.Task.Slot}}
     entrypoint:
-      - /boki/engine
+      - /slog/engine
       - --zookeeper_host=zookeeper:2181
       - --listen_iface=eth0
-      - --root_path_for_ipc=/tmp/boki/ipc
-      - --func_config_file=/tmp/boki/func_config.json
+      - --root_path_for_ipc=/tmp/slog/ipc
+      - --func_config_file=/tmp/slog/func_config.json
       - --num_io_workers=4
       - --instant_rps_p_norm=0.8
       - --io_uring_entries=2048
@@ -34,11 +34,15 @@ services:
       - --slog_engine_cache_cap_mb=1024
       - --slog_engine_propagate_auxdata
       - --slog_engine_distributed_indexing
+      - --slog_engine_stat_thread_interval=60
+      - --slog_engine_seqnum_suffix_cap=100000
+      - --slog_engine_tag_cache_cap=1000000
+      - --slog_engine_per_tag_seqnums_limit=10000
       # - --v=1
     depends_on:
       - zookeeper-setup
     volumes:
-      - /mnt/inmem/boki:/tmp/boki
+      - /mnt/inmem/slog:/tmp/slog
       - /sys/fs/cgroup:/tmp/root_cgroupfs
     environment:
       - FAAS_NODE_ID={{.Task.Slot}}
@@ -49,17 +53,18 @@ services:
                 soft: 67108864
                 hard: 67108864
 
-  boki-gateway:
-    image: maxwie/boki:latest
+  slog-gateway:
+    image: maxwie/indilog:latest
     hostname: faas-gateway
     ports:
       - 8080:8080
     entrypoint:
-      - /boki/gateway
+      - /slog/gateway
       - --zookeeper_host=zookeeper:2181
       - --listen_iface=eth0
       - --http_port=8080
-      - --func_config_file=/tmp/boki/func_config.json
+      - --func_config_file=/tmp/slog/func_config.json
+      - --async_call_result_path=/tmp/store/async_results
       - --num_io_workers=2
       - --io_uring_entries=2048
       - --io_uring_fd_slots=4096
@@ -69,7 +74,7 @@ services:
     depends_on:
       - zookeeper-setup
     volumes:
-      - /tmp/nightcore_config.json:/tmp/boki/func_config.json
+      - /tmp/nightcore_config.json:/tmp/slog/func_config.json
       - /mnt/inmem/store:/tmp/store
     restart: always
     environment:
@@ -79,11 +84,11 @@ services:
                 soft: 67108864
                 hard: 67108864
 
-  boki-storage:
-    image: maxwie/boki:latest
+  slog-storage:
+    image: maxwie/indilog:latest
     hostname: faas-storage-{{.Task.Slot}}
     entrypoint:
-      - /boki/storage
+      - /slog/storage
       - --zookeeper_host=zookeeper:2181
       - --listen_iface=eth0
       - --db_path=/tmp/storage/logdata
@@ -94,7 +99,7 @@ services:
       - --slog_storage_bgthread_interval_ms=1
       - --slog_storage_backend=rocksdb
       - --slog_storage_cache_cap_mb=4096
-      # - --v=1
+      #- --v=1
     depends_on:
       - zookeeper-setup
     volumes:
@@ -107,18 +112,18 @@ services:
                 soft: 67108864
                 hard: 67108864
 
-  boki-sequencer:
-    image: maxwie/boki:latest
+  slog-sequencer:
+    image: maxwie/indilog:latest
     hostname: faas-sequencer-{{.Task.Slot}}
     entrypoint:
-      - /boki/sequencer
+      - /slog/sequencer
       - --zookeeper_host=zookeeper:2181
       - --listen_iface=eth0
       - --num_io_workers=2
       - --io_uring_entries=2048
       - --io_uring_fd_slots=4096
       - --slog_global_cut_interval_us=300
-      # - --v=1
+      #- --v=1
     depends_on:
       - zookeeper-setup
     environment:
@@ -129,17 +134,17 @@ services:
                 soft: 67108864
                 hard: 67108864
 
-  boki-index:
-    image: maxwie/boki:latest
+  slog-index:
+    image: maxwie/indilog:latest
     hostname: faas-index-{{.Task.Slot}}
     entrypoint:
-      - /boki/index
+      - /slog/index
       - --zookeeper_host=zookeeper:2181
       - --listen_iface=eth0
       - --num_io_workers=2
       - --io_uring_entries=2048
       - --io_uring_fd_slots=4096
-      # - --v=1
+      #- --v=1
     depends_on:
       - zookeeper-setup
     environment:

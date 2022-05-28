@@ -1,0 +1,23 @@
+{
+    "functions": {
+        "RandomAppendAndReadLoopAsync" : {
+            "concurrency": 24
+        },
+        "TestSystem" : {
+            "concurrency": 1
+        }
+    },
+    "exp_variables": {
+        "BENCHMARK_TYPE": "throughput-vs-latency",
+        "CONCURRENCY_WORKER": "4",
+        "OPERATION_SEMANTICS_PERCENTAGES": "0,100",
+        "SEQNUM_READ_PERCENTAGES":"0,34,33,0,33",
+        "TAG_APPEND_PERCENTAGES": "0,0,100",
+        "TAG_READ_PERCENTAGES": "20,0,20,20,20,20",
+        "APPEND_TIMES": "1",
+        "READ_TIMES": "19",
+        "RECORD_LENGTH": "1024",
+        "DURATION": "300",
+        "ENGINE_STAT_THREAD_INTERVAL": "30"
+    }
+}

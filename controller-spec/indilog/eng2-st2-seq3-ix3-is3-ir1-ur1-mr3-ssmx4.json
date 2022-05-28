@@ -2,7 +2,7 @@
     "slog_engine_replicas_init": 2,
     "slog_storage_replicas": 2,
     "slog_sequencers_replicas": 3,
-    "slog_index_shards": 1,
+    "slog_index_shards": 3,
     "slog_index_replicas": 1,
     "slog_controller": {
         "image": "maxwie/indilog:latest",
@@ -11,7 +11,7 @@
             "--zookeeper_host=zookeeper:2181", 
             "--metalog_replicas=3", 
             "--userlog_replicas=1", 
-            "--index_shards=1",
+            "--index_shards=3",
             "--index_replicas=1",
             "--max_num_storage_shards=4"
         ],
@@ -20,6 +20,6 @@
         ]
     },
     "exp_variables": {
-        "SLOG_SETTING": "eng2-st2-seq3-ix1-ssmx4"
+        "SLOG_SETTING": "eng2-st2-seq3-ix3-ssmx4"
     }
 }

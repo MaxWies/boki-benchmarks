@@ -1,19 +1,19 @@
 #!/bin/bash
 BASE_DIR=`realpath $(dirname $0)`
-ROOT_DIR=`realpath $BASE_DIR/../../..`
+ROOT_DIR=`realpath $BASE_DIR/../..`
 
-BOKI_SPEC_FILE=$1
-EXP_SPEC_FILE=$2
-EXP_DIR=$3
+SLOG=$1
+SLOG_SPEC_FILE=$2
+EXP_SPEC_FILE=$3
 
 HELPER_SCRIPT=$ROOT_DIR/scripts/exp_helper
 CONFIG_MAKER_SCRIPT=$ROOT_DIR/scripts/config_maker
 
-BOKI_SPEC_FILE_NAME=$(basename $BOKI_SPEC_FILE .json)
+SLOG_SPEC_FILE_NAME=$(basename $SLOG_SPEC_FILE .json)
 EXP_SPEC_FILE_NAME=$(basename $EXP_SPEC_FILE .json)
-EXP_DIR=$BASE_DIR/results/$BOKI_SPEC_FILE_NAME/$EXP_SPEC_FILE_NAME
+EXP_DIR=$BASE_DIR/results/$SLOG_SPEC_FILE_NAME/$EXP_SPEC_FILE_NAME
 
-$CONFIG_MAKER_SCRIPT generate-runtime-config --base-dir=$BASE_DIR --boki-spec-file=$BOKI_SPEC_FILE --exp-spec-file=$EXP_SPEC_FILE
+$CONFIG_MAKER_SCRIPT generate-runtime-config --base-dir=$BASE_DIR --slog=$SLOG --slog-spec-file=$SLOG_SPEC_FILE --exp-spec-file=$EXP_SPEC_FILE
 
 MANAGER_HOST=`$HELPER_SCRIPT get-docker-manager-host --base-dir=$BASE_DIR`
 CLIENT_HOST=`$HELPER_SCRIPT get-client-host --base-dir=$BASE_DIR`
@@ -37,11 +37,11 @@ done
 ALL_ENGINE_HOSTS=`$HELPER_SCRIPT get-machine-with-label --base-dir=$BASE_DIR --machine-label=engine_node`
 for HOST in $ALL_ENGINE_HOSTS; do
     scp -q $BASE_DIR/run_launcher $HOST:/tmp/run_launcher
-    ssh -q $HOST -- sudo rm -rf /mnt/inmem/boki
-    ssh -q $HOST -- sudo mkdir -p /mnt/inmem/boki
-    ssh -q $HOST -- sudo mkdir -p /mnt/inmem/boki/output /mnt/inmem/boki/ipc /mnt/inmem/boki/stats
-    ssh -q $HOST -- sudo cp /tmp/run_launcher /mnt/inmem/boki/run_launcher
-    ssh -q $HOST -- sudo cp /tmp/nightcore_config.json /mnt/inmem/boki/func_config.json
+    ssh -q $HOST -- sudo rm -rf /mnt/inmem/
+    ssh -q $HOST -- sudo mkdir -p /mnt/inmem/slog
+    ssh -q $HOST -- sudo mkdir -p /mnt/inmem/slog/output /mnt/inmem/slog/ipc /mnt/inmem/slog/stats
+    ssh -q $HOST -- sudo cp /tmp/run_launcher /mnt/inmem/slog/run_launcher
+    ssh -q $HOST -- sudo cp /tmp/nightcore_config.json /mnt/inmem/slog/func_config.json
 done
 
 ALL_STORAGE_HOSTS=`$HELPER_SCRIPT get-machine-with-label --base-dir=$BASE_DIR --machine-label=storage_node`
@@ -60,4 +60,4 @@ done
 
 sleep 10
 
-$BASE_DIR/run_client.sh $EXP_SPEC_FILE $EXP_DIR
+$BASE_DIR/run_client.sh $SLOG $EXP_SPEC_FILE $EXP_DIR
