@@ -4,5 +4,11 @@
     "funcId": 1,
     "minWorkers": 8,
     "maxWorkers": 8
+  },
+  {
+    "funcName": "TestSystem",
+    "funcId": 2,
+    "minWorkers": 1,
+    "maxWorkers": 1
   }
 ]

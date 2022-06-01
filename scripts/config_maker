@@ -48,10 +48,10 @@ def generate_docker_compose_application_less(base_dir, compose_file):
         service_desc["entrypoint"].append(str(func_id))
         compose_file['services'][function_value['service_name']] = service_desc
 
-def generate_docker_compose_file(base_dir, slog, slog_spec, exp_spec):
-    with open(os.path.join(base_dir, 'docker-compose-main-{}.yml'.format(slog))) as f:
+def generate_docker_compose_file(base_dir, slog, controller_spec, exp_spec):
+    with open(os.path.join(base_dir, 'compose/docker-compose-main-{}.yml'.format(slog))) as f:
         compose_file = yaml.safe_load(f)
-    compose_file['services']['slog-controller'] = slog_spec['slog_controller']
+    compose_file['services']['slog-controller'] = controller_spec['slog_controller']
     if 'applications' in exp_spec.keys():
         generate_docker_compose_with_applications()
     else:
@@ -121,42 +121,45 @@ def generate_nightcore_config(base_dir, exp_spec):
 def generate_swarm_with_applications():
     pass
 
-def generate_swarm_application_less(base_dir, config, slog, slog_spec, exp_spec):
+def generate_swarm_application_less(base_dir, config, slog, controller_spec, exp_spec):
     function_definitions = load_json_file(os.path.join(base_dir, 'functions.json'))
-    if slog.lower() == 'indilog':
+    if slog.lower().startswith('indilog'):
+        replicas = controller_spec['slog_engine_replicas_init']
+        if 'slog_service_replicas' in controller_spec:
+            replicas = controller_spec['slog_service_replicas']
         for key, _ in exp_spec['functions'].items():
             config["services"][function_definitions['functions'][key]['service_name']] = {
                     "placement_label": "engine_node",
-                    "replicas": slog_spec['slog_engine_replicas_init']
+                    "replicas": replicas
             }
-    elif slog.lower() == 'boki':
+    elif slog.lower().startswith('boki'):
         for key, _ in exp_spec['functions'].items():
                 config["services"][function_definitions['functions'][key]['service_name']] = {
                         "placement_label": "engine_node",
-                        "replicas": slog_spec['slog_engine_replicas']
+                        "replicas": controller_spec['slog_engine_replicas']
                 }
 
-def generate_swarm_config_engines(config, slog, slog_spec):
-    if slog.lower() == 'indilog':
+def generate_swarm_config_engines(config, slog, controller_spec):
+    if slog.lower().startswith('indilog'):
         config["services"]["slog-engine"] = { 
             "placement_label": "engine_node", 
-            "replicas": slog_spec['slog_engine_replicas_init'] 
+            "replicas": controller_spec['slog_engine_replicas_init'] 
         }
-    elif slog.lower() == 'boki':
+    elif slog.lower().startswith('boki'):
         config["services"]["slog-engine"] = { 
             "placement_label": "engine_node", 
-            "replicas": slog_spec['slog_engine_replicas'] 
+            "replicas": controller_spec['slog_engine_replicas'] 
         }
-        if "slog_index_engine_replicas" in slog_spec.keys():
+        if "slog_index_engine_replicas" in controller_spec.keys():
             config["services"]["slog-index-engine"] = { 
                 "placement_label": "index_engine_node", 
-                "replicas": slog_spec['slog_index_engine_replicas']
+                "replicas": controller_spec['slog_index_engine_replicas']
             }
     else:
         raise Exception("Unknown shared log")
 
 
-def generate_swarm_config(base_dir, slog, slog_spec, exp_spec):
+def generate_swarm_config(base_dir, slog, controller_spec, exp_spec):
     config = {}
     #config["services"] = spec["services"]
     config["services"] = {
@@ -164,21 +167,21 @@ def generate_swarm_config(base_dir, slog, slog_spec, exp_spec):
         "zookeeper-setup": { "placement": "slogexp-gateway" },
         "slog-controller": { "placement": "slogexp-gateway" },
         "slog-gateway": { "placement": "slogexp-gateway" },
-        "slog-storage": { "placement_label": "storage_node", "replicas": slog_spec['slog_storage_replicas'] },
-        "slog-sequencer": { "placement_label": "sequencer_node", "replicas": slog_spec['slog_sequencers_replicas'] },
+        "slog-storage": { "placement_label": "storage_node", "replicas": controller_spec['slog_storage_replicas'] },
+        "slog-sequencer": { "placement_label": "sequencer_node", "replicas": controller_spec['slog_sequencers_replicas'] },
     }
-    if slog.lower() == 'indilog':
-        config["services"]["slog-index"] = { "placement_label": "index_node", "replicas": slog_spec['slog_index_shards'] * slog_spec['slog_index_replicas'] }
-    elif slog.lower() == 'boki':
-        if 'slog_index_engine_replicas' in config.keys() and 0 < slog_spec['slog_index_engine_replicas']:
-            config["services"]["slog-index-engine"] = { "placement_label": "index_engine_node", "replicas": slog_spec['slog_index_engine_replicas'] }
+    if slog.lower().startswith('indilog'):
+        config["services"]["slog-index"] = { "placement_label": "index_node", "replicas": controller_spec['slog_index_shards'] * controller_spec['slog_index_replicas'] }
+    elif slog.lower().startswith('boki'):
+        if 'slog_index_engine_replicas' in config.keys() and 0 < controller_spec['slog_index_engine_replicas']:
+            config["services"]["slog-index-engine"] = { "placement_label": "index_engine_node", "replicas": controller_spec['slog_index_engine_replicas'] }
     else:
         raise Exception("Unknown shared log")
-    generate_swarm_config_engines(config, slog, slog_spec)
+    generate_swarm_config_engines(config, slog, controller_spec)
     if 'applications' in exp_spec.keys():
         generate_swarm_with_applications()
     else:
-        generate_swarm_application_less(base_dir, config, slog, slog_spec, exp_spec)
+        generate_swarm_application_less(base_dir, config, slog, controller_spec, exp_spec)
 
     # for application in exp_file['applications']:
     #     id_counter = 0
@@ -208,24 +211,24 @@ def generate_swarm_config(base_dir, slog, slog_spec, exp_spec):
     with open(os.path.join(base_dir, "config.json"), 'w') as f:
         f.write(config)
 
-def generate_runtime_config(base_dir, slog, slog_file, exp_file):
-    slog_spec = load_json_file(slog_file)
+def generate_runtime_config(base_dir, slog, controller_spec_file, exp_file):
+    controller_spec = load_json_file(controller_spec_file)
     exp_spec = load_json_file(exp_file)
-    generate_swarm_config(base_dir, slog, slog_spec, exp_spec)
+    generate_swarm_config(base_dir, slog, controller_spec, exp_spec)
     generate_nightcore_config(base_dir, exp_spec)
-    generate_docker_compose_file(base_dir, slog, slog_spec, exp_spec)
+    generate_docker_compose_file(base_dir, slog, controller_spec, exp_spec)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('cmd', type=str)
     parser.add_argument('--base-dir', type=str, default='.')
     parser.add_argument('--slog', type=str, default='indilog')
-    parser.add_argument('--slog-spec-file', type=str, default=None)
+    parser.add_argument('--controller-spec-file', type=str, default=None)
     parser.add_argument('--exp-spec-file', type=str, default=None)
     args = parser.parse_args()
     try:
         if args.cmd == 'generate-runtime-config':
-            generate_runtime_config(args.base_dir, args.slog, args.slog_spec_file, args.exp_spec_file)
+            generate_runtime_config(args.base_dir, args.slog, args.controller_spec_file, args.exp_spec_file)
         else:
             raise Exception('Unknown command: ' + args.cmd)
     except Exception as e:

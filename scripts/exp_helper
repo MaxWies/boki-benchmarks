@@ -31,7 +31,7 @@ def run_remote_command(ssh_ip, cmd):
 def setup_hostname_for_machines(machine_configs):
     for name, machine_config in machine_configs.items():
         if machine_config['role'] != 'dirigent':
-            # run_remote_command(machine_config['ip'], ['sudo', 'docker system prune --all -f'])
+            #run_remote_command(machine_config['ip'], ['sudo', 'docker system prune --all -f'])
             run_remote_command(machine_config['ip'], ['sudo', 'hostnamectl', 'set-hostname', name])
             #TODO: hot fix
             run_remote_command(machine_config['ip'], ['sudo', '/home/mrc/setup/hostname-fix.sh'])
@@ -245,7 +245,7 @@ def get_manager_ip(base_dir):
     return manager_prop['ip']
 
 def get_num_active_service_replicas(base_dir, service_name):
-    service_full_name = "slog-experiment_" + service_name
+    service_full_name = "boki-experiment_" + service_name
     replicas_info, _ = run_remote_command(get_manager_ip(base_dir), ['docker', 'service', 'ls', '-f', 'name={}'.format(service_full_name), '--format', '"{{.Replicas}}"'])
     replicas_info = replicas_info.strip()
     if len(replicas_info) < 3:
@@ -259,15 +259,38 @@ def get_machine_with_label_main(base_dir, label):
             if label in labels or label+'=true' in labels:
                 print(machine_info['ip'] + '-' + USER_NAME)
 
-def get_dynamic_machines(base_dir, label):
-    dynamic_machines = []
+def get_machine_ip_with_label_main(base_dir, label):
     for machine_info in load_machines_file(base_dir)['machines'].values():
         if 'labels' in machine_info:
             labels = machine_info['labels']
             if label in labels or label+'=true' in labels:
-                if 'init' in machine_config.keys() and not machine_config['init']: 
-                    dynamic_machines.append(machine_info['ip'])
-    print(','.join(dynamic_machines))
+                print(machine_info['ip'])
+
+def get_machine_with_label_main(base_dir, label):
+    for machine_info in load_machines_file(base_dir)['machines'].values():
+        if 'labels' in machine_info:
+            labels = machine_info['labels']
+            if label in labels or label+'=true' in labels:
+                print(machine_info['ip'] + '-' + USER_NAME)
+
+def get_dynamic_hostnames(base_dir, label):
+    hostnames = []
+    for hostname, machine_info in load_machines_file(base_dir)['machines'].items():
+        if 'labels' in machine_info.keys():
+            labels = machine_info['labels']
+            if label in labels or label+'=true' in labels:
+                if 'init' in machine_info.keys() and not machine_info['init']: 
+                    print(hostname)
+
+def get_dynamic_hostnames_as_list(base_dir, label):
+    hostnames = []
+    for hostname, machine_info in load_machines_file(base_dir)['machines'].items():
+        if 'labels' in machine_info.keys():
+            labels = machine_info['labels']
+            if label in labels or label+'=true' in labels:
+                if 'init' in machine_info.keys() and not machine_info['init']: 
+                    hostnames.append(hostname)
+    print(','.join(hostnames))
 
 def get_client_ip(base_dir):
     for machine_info in load_machines_file(base_dir)['machines'].values():
@@ -342,12 +365,16 @@ if __name__ == '__main__':
             get_all_server_hosts_main(args.base_dir)
         elif args.cmd == 'get-machine-with-label':
             get_machine_with_label_main(args.base_dir, args.machine_label)
+        elif args.cmd == 'get-machine-ip-with-label':
+            get_machine_ip_with_label_main(args.base_dir, args.machine_label)
         elif args.cmd == 'get-single-machine-with-label':
             get_single_machine_with_label_main(args.base_dir, args.machine_label)
         elif args.cmd == 'get-client-with-merged-results':
             get_client_with_merged_results(args.base_dir)
-        elif args.cmd == 'get-dynamic-machines':
-            get_dynamic_machines(args.base_dir, args.machine_label)
+        elif args.cmd == 'get-dynamic-hostnames':
+            get_dynamic_hostnames(args.base_dir, args.machine_label)
+        elif args.cmd == 'get-dynamic-hostnames-as-list':
+            get_dynamic_hostnames_as_list(args.base_dir, args.machine_label)
         elif args.cmd == 'get-client-ip':
             get_client_ip(args.base_dir)
         elif args.cmd == 'get-container-id':

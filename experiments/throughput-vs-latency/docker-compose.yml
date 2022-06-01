@@ -31,7 +31,7 @@ services:
     - --slog_engine_enable_cache
     - --slog_engine_cache_cap_mb=1024
     - --slog_engine_propagate_auxdata
-    - --slog_engine_distributed_indexing
+    - --slog_engine_index_tier_only
     depends_on:
     - zookeeper-setup
     volumes:
@@ -127,7 +127,7 @@ services:
     - /slog/index
     - --zookeeper_host=zookeeper:2181
     - --listen_iface=eth0
-    - --num_io_workers=2
+    - --num_io_workers=4
     - --io_uring_entries=2048
     - --io_uring_fd_slots=4096
     depends_on:
@@ -146,7 +146,7 @@ services:
     - --zookeeper_host=zookeeper:2181
     - --metalog_replicas=3
     - --userlog_replicas=1
-    - --index_shards=1
+    - --index_shards=2
     - --index_replicas=1
     - --max_num_storage_shards=4
     depends_on:
@@ -157,6 +157,19 @@ services:
     - /tmp/slog/run_launcher
     - /microbench-bin/main
     - '1'
+    volumes:
+    - /mnt/inmem/slog:/tmp/slog
+    environment:
+    - FAAS_GO_MAX_PROC_FACTOR=8
+    - GOGC=1000
+    depends_on:
+    - slog-engine
+  test-system-service:
+    image: maxwie/indilog-microbench:latest
+    entrypoint:
+    - /tmp/slog/run_launcher
+    - /microbench-bin/main
+    - '2'
     volumes:
     - /mnt/inmem/slog:/tmp/slog
     environment:

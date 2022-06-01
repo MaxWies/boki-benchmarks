@@ -193,7 +193,7 @@ def node_rejoin_script(base_dir, hostname):
     time.sleep(5)
     node_join_script(base_dir, hostname)
 
-def service_scale_script(base_dir, main_service, replicas, service_has_dependencies = True):
+def service_scale_script(base_dir, main_service, replicas, service_has_dependencies = True, dependencies_filter = ''):
     machine_config = load_machine_config(base_dir)
     manager_prop = get_docker_swarm_manager_properties(machine_config)
     manager_ip = manager_prop['ip']
@@ -203,6 +203,8 @@ def service_scale_script(base_dir, main_service, replicas, service_has_dependenc
         placement_label = get_placement_label_from_service(swarm_config, main_service)
         dependent_services.update(get_services_by_placement_label(swarm_config, placement_label))
         dependent_services.remove(main_service)
+    #dependencies_filter = 'random-append-read-service'
+    dependent_services = [service for service in dependent_services if dependencies_filter.lower() in service.lower()] 
     service_full_name = 'boki-experiment_' + main_service
     if service_full_name not in docker_swarm_get_services_names(manager_ip):
         raise Exception("Service {} does not exist".format(service_full_name))
@@ -218,30 +220,30 @@ def service_scale_script(base_dir, main_service, replicas, service_has_dependenc
     docker_swarm_scale_service_set(manager_ip, dependent_services_ids, replicas)
     print('Manager has scaled dependent services {} to {} replicas'.format(' '.join(dependent_services), replicas))
 
-def service_scale_out_script(base_dir, joining_nodes_hostnames, service, replicas, service_has_dependencies = True):
+def service_scale_out_script(base_dir, joining_nodes_hostnames, service, replicas, service_has_dependencies = True, dependencies_filter = ""):
     full_service_name = 'boki-experiment_' + service
-    current_replicas = docker_swarm_get_service_current_replicas(get_manager_ip(base_dir), full_service_name)
-    if replicas <= current_replicas:
-        raise Exception('Cannot scale out because desired replicas {} not higher than current replicas {}'.format(replicas, current_replicas))
+    # current_replicas = docker_swarm_get_service_current_replicas(get_manager_ip(base_dir), full_service_name)
+    # if replicas <= current_replicas:
+    #     raise Exception('Cannot scale out because desired replicas {} not higher than current replicas {}'.format(replicas, current_replicas))
     for hostname in joining_nodes_hostnames:
         node_join_script(base_dir, hostname)
         time.sleep(5)
-    service_scale_script(base_dir, service, replicas, service_has_dependencies)
+    service_scale_script(base_dir, service, replicas, service_has_dependencies, dependencies_filter)
 
-def service_scale_in_script(base_dir, leaving_nodes_hostnames, service, replicas, service_has_dependencies = True):
+def service_scale_in_script(base_dir, leaving_nodes_hostnames, service, replicas, service_has_dependencies = True, dependencies_filter = ""):
     service_full_name = 'boki-experiment_' + service
     current_replicas = docker_swarm_get_service_current_replicas(get_manager_ip(base_dir), service_full_name)
     if (current_replicas - replicas) is not len(leaving_nodes_hostnames):
         raise Exception('Cannot scale in because leaving nodes not same as removing replicas')
     for hostname in leaving_nodes_hostnames:
         node_leave_script(base_dir, hostname)
-    service_scale_script(base_dir, service, replicas, service_has_dependencies)
+    service_scale_script(base_dir, service, replicas, service_has_dependencies, dependencies_filter)
 
-def boki_engine_scale_out_script(base_dir, engine_hostnames, engine_service, replicas, service_has_dependencies = True):
+def engine_scale_out_script(base_dir, engine_hostnames, engine_service, replicas, service_has_dependencies = True, dependencies_filter = ""):
     print('Service {} of slog engines will be scaled out to {} replicas'.format(engine_service, replicas))
-    service_scale_out_script(base_dir, engine_hostnames, engine_service, replicas, service_has_dependencies)
+    service_scale_out_script(base_dir, engine_hostnames, engine_service, replicas, service_has_dependencies, dependencies_filter)
 
-def boki_engine_scale_in_script(base_dir, engine_hostname, engine_service, zk_client, zk_server_host, zk_server_port):
+def engine_scale_in_script(base_dir, engine_hostname, engine_service, zk_client, zk_server_host, zk_server_port):
     print('Service {} of slog engines will be scaled in by removing 1 replica'.format(engine_service))
     compose_config = load_compose_config(base_dir)
     service_full_name = 'boki-experiment_' + engine_service
@@ -267,7 +269,7 @@ def engine_continously_scale_out_script(base_dir, engine_hostnames : List[str], 
             break
         time.sleep(interval)
         current_replicas = docker_swarm_get_service_current_replicas(get_manager_ip(base_dir), service_full_name)
-        engine_scale_out_script(base_dir, [engine_hostnames.pop()], engine_service, current_replicas+1, True)
+        engine_scale_out_script(base_dir, [engine_hostnames.pop()], engine_service, current_replicas+1, True, "")
         t_end = time.time()
         t_elapsed = t_end - t_start
         c += 1
@@ -296,6 +298,7 @@ if __name__ == '__main__':
     parser.add_argument('--hostnames', type=str, default='')
     parser.add_argument('--service', type=str, default='')
     parser.add_argument('--replicas', type=int, default=1)
+    parser.add_argument('--dependencies-filter', type=str, default='')
     parser.add_argument('--duration', type=int, default=60)
     parser.add_argument('--interval', type=int, default=15)
     parser.add_argument('--zk_client', type=str, default='')
@@ -312,8 +315,10 @@ if __name__ == '__main__':
         elif args.cmd == 'scale-service-and-dependencies':
             service_scale_script(args.base_dir, args.service, args.replicas, True)
         elif args.cmd == 'engine-scale-out':
-            hostnames = args.hostnames.split(',')
-            engine_scale_out_script(args.base_dir, hostnames, args.service, args.replicas)
+            hostnames = []
+            if args.hostnames != '':
+                hostnames = args.hostnames.split(',')
+            engine_scale_out_script(args.base_dir, hostnames, args.service, args.replicas, True, args.dependencies_filter)
         elif args.cmd == 'engine-scale-in':
             engine_scale_in_script(args.base_dir, args.hostname, args.service, args.zk_client, args.zk_server_host, args.zk_server_port)
         elif args.cmd == 'engine-scale-out-continously':

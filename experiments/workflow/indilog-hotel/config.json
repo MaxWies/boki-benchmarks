@@ -1,0 +1,76 @@
+{
+  "services": {
+    "zookeeper": {
+      "placement": "slogexp-gateway"
+    },
+    "zookeeper-setup": {
+      "placement": "slogexp-gateway"
+    },
+    "slog-controller": {
+      "placement": "slogexp-gateway"
+    },
+    "slog-gateway": {
+      "placement": "slogexp-gateway"
+    },
+    "slog-storage": {
+      "placement_label": "storage_node",
+      "replicas": 2
+    },
+    "slog-sequencer": {
+      "placement_label": "sequencer_node",
+      "replicas": 3
+    },
+    "slog-index": {
+      "placement_label": "index_node",
+      "replicas": 1
+    },
+    "slog-engine": {
+      "placement_label": "engine_node",
+      "replicas": 2
+    },
+    "geo-service": {
+      "placement_label": "engine_node",
+      "replicas": 2
+    },
+    "profile-service": {
+      "placement_label": "engine_node",
+      "replicas": 2
+    },
+    "rate-service": {
+      "placement_label": "engine_node",
+      "replicas": 2
+    },
+    "recommendation-service": {
+      "placement_label": "engine_node",
+      "replicas": 2
+    },
+    "user-service": {
+      "placement_label": "engine_node",
+      "replicas": 2
+    },
+    "hotel-service": {
+      "placement_label": "engine_node",
+      "replicas": 2
+    },
+    "search-service": {
+      "placement_label": "engine_node",
+      "replicas": 2
+    },
+    "flight-service": {
+      "placement_label": "engine_node",
+      "replicas": 2
+    },
+    "order-service": {
+      "placement_label": "engine_node",
+      "replicas": 2
+    },
+    "frontend-service": {
+      "placement_label": "engine_node",
+      "replicas": 2
+    },
+    "gateway-service": {
+      "placement_label": "engine_node",
+      "replicas": 2
+    }
+  }
+}

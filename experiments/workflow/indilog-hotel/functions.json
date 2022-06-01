@@ -4,110 +4,120 @@
             "service_name": "geo-service",
             "docker": {
                 "image": "maxwie/boki-beldibench:latest",
-                "entrypoint" : ["/tmp/boki/run_launcher", "/bokiflow-bin/hotel/geo", "1"],
-                "volumes": ["/mnt/inmem/boki:/tmp/boki"],
-                "environment": ["FAAS_GO_MAX_PROC_FACTOR=8", "GOGC=1000", "TABLE_PREFIX=${TABLE_PREFIX:?}"],
-                "depends_on": ["boki-engine"]
+                "entrypoint" : ["/tmp/slog/run_launcher", "/bokiflow-bin/hotel/geo", "1"],
+                "volumes": ["/mnt/inmem/slog:/tmp/slog"],
+                "environment": ["FAAS_GO_MAX_PROC_FACTOR=8", "GOGC=1000", "TABLE_PREFIX=${TABLE_PREFIX:?}", "DYNAMODB_ENDPOINT=${DYNAMODB_ENDPOINT}"],
+                "depends_on": ["slog-engine"]
             }
         },
         "profile": {
             "service_name": "profile-service",
             "docker": {
                 "image": "maxwie/boki-beldibench:latest",
-                "entrypoint" : ["/tmp/boki/run_launcher", "/bokiflow-bin/hotel/profile", "2"],
-                "volumes": ["/mnt/inmem/boki:/tmp/boki"],
-                "environment": ["FAAS_GO_MAX_PROC_FACTOR=8", "GOGC=1000", "TABLE_PREFIX=${TABLE_PREFIX:?}"],
-                "depends_on": ["boki-engine"]
+                "entrypoint" : ["/tmp/slog/run_launcher", "/bokiflow-bin/hotel/profile", "2"],
+                "volumes": ["/mnt/inmem/slog:/tmp/slog"],
+                "environment": ["FAAS_GO_MAX_PROC_FACTOR=8", "GOGC=1000", "TABLE_PREFIX=${TABLE_PREFIX:?}", "DYNAMODB_ENDPOINT=${DYNAMODB_ENDPOINT}"],
+                "depends_on": ["slog-engine"]
             }
         },
         "rate": {
             "service_name": "rate-service",
             "docker": {
                 "image": "maxwie/boki-beldibench:latest",
-                "entrypoint" : ["/tmp/boki/run_launcher", "/bokiflow-bin/hotel/rate", "3"],
-                "volumes": ["/mnt/inmem/boki:/tmp/boki"],
-                "environment": ["FAAS_GO_MAX_PROC_FACTOR=8", "GOGC=1000", "TABLE_PREFIX=${TABLE_PREFIX:?}"],
-                "depends_on": ["boki-engine"]
+                "entrypoint" : ["/tmp/slog/run_launcher", "/bokiflow-bin/hotel/rate", "3"],
+                "volumes": ["/mnt/inmem/slog:/tmp/slog"],
+                "environment": ["FAAS_GO_MAX_PROC_FACTOR=8", "GOGC=1000", "TABLE_PREFIX=${TABLE_PREFIX:?}", "DYNAMODB_ENDPOINT=${DYNAMODB_ENDPOINT}"],
+                "depends_on": ["slog-engine"]
             }
         },
         "recommendation": {
             "service_name": "recommendation-service",
             "docker": {
                 "image": "maxwie/boki-beldibench:latest",
-                "entrypoint" : ["/tmp/boki/run_launcher", "/bokiflow-bin/hotel/geo", "4"],
-                "volumes": ["/mnt/inmem/boki:/tmp/boki"],
-                "environment": ["FAAS_GO_MAX_PROC_FACTOR=8", "GOGC=1000", "TABLE_PREFIX=${TABLE_PREFIX:?}"],
-                "depends_on": ["boki-engine"]
+                "entrypoint" : ["/tmp/slog/run_launcher", "/bokiflow-bin/hotel/geo", "4"],
+                "volumes": ["/mnt/inmem/slog:/tmp/slog"],
+                "environment": ["FAAS_GO_MAX_PROC_FACTOR=8", "GOGC=1000", "TABLE_PREFIX=${TABLE_PREFIX:?}", "DYNAMODB_ENDPOINT=${DYNAMODB_ENDPOINT}"],
+                "depends_on": ["slog-engine"]
             }
         },
         "user": {
             "service_name": "user-service",
             "docker": {
                 "image": "maxwie/boki-beldibench:latest",
-                "entrypoint" : ["/tmp/boki/run_launcher", "/bokiflow-bin/hotel/user", "5"],
-                "volumes": ["/mnt/inmem/boki:/tmp/boki"],
-                "environment": ["FAAS_GO_MAX_PROC_FACTOR=8", "GOGC=1000", "TABLE_PREFIX=${TABLE_PREFIX:?}"],
-                "depends_on": ["boki-engine"]
+                "entrypoint" : ["/tmp/slog/run_launcher", "/bokiflow-bin/hotel/user", "5"],
+                "volumes": ["/mnt/inmem/slog:/tmp/slog"],
+                "environment": ["FAAS_GO_MAX_PROC_FACTOR=8", "GOGC=1000", "TABLE_PREFIX=${TABLE_PREFIX:?}", "DYNAMODB_ENDPOINT=${DYNAMODB_ENDPOINT}"],
+                "depends_on": ["slog-engine"]
             }
         },
         "hotel": {
             "service_name": "hotel-service",
             "docker": {
                 "image": "maxwie/boki-beldibench:latest",
-                "entrypoint" : ["/tmp/boki/run_launcher", "/bokiflow-bin/hotel/hotel", "6"],
-                "volumes": ["/mnt/inmem/boki:/tmp/boki"],
-                "environment": ["FAAS_GO_MAX_PROC_FACTOR=8", "GOGC=1000", "TABLE_PREFIX=${TABLE_PREFIX:?}"],
-                "depends_on": ["boki-engine"]
+                "entrypoint" : ["/tmp/slog/run_launcher", "/bokiflow-bin/hotel/hotel", "6"],
+                "volumes": ["/mnt/inmem/slog:/tmp/slog"],
+                "environment": ["FAAS_GO_MAX_PROC_FACTOR=8", "GOGC=1000", "TABLE_PREFIX=${TABLE_PREFIX:?}", "DYNAMODB_ENDPOINT=${DYNAMODB_ENDPOINT}"],
+                "depends_on": ["slog-engine"]
             }
         },
         "search": {
             "service_name": "search-service",
             "docker": {
                 "image": "maxwie/boki-beldibench:latest",
-                "entrypoint" : ["/tmp/boki/run_launcher", "/bokiflow-bin/hotel/search", "7"],
-                "volumes": ["/mnt/inmem/boki:/tmp/boki"],
-                "environment": ["FAAS_GO_MAX_PROC_FACTOR=8", "GOGC=1000", "TABLE_PREFIX=${TABLE_PREFIX:?}"],
-                "depends_on": ["boki-engine"]
+                "entrypoint" : ["/tmp/slog/run_launcher", "/bokiflow-bin/hotel/search", "7"],
+                "volumes": ["/mnt/inmem/slog:/tmp/slog"],
+                "environment": ["FAAS_GO_MAX_PROC_FACTOR=8", "GOGC=1000", "TABLE_PREFIX=${TABLE_PREFIX:?}", "DYNAMODB_ENDPOINT=${DYNAMODB_ENDPOINT}"],
+                "depends_on": ["slog-engine"]
             }
         },
         "flight": {
             "service_name": "flight-service",
             "docker": {
                 "image": "maxwie/boki-beldibench:latest",
-                "entrypoint" : ["/tmp/boki/run_launcher", "/bokiflow-bin/hotel/flight", "8"],
-                "volumes": ["/mnt/inmem/boki:/tmp/boki"],
-                "environment": ["FAAS_GO_MAX_PROC_FACTOR=8", "GOGC=1000", "TABLE_PREFIX=${TABLE_PREFIX:?}"],
-                "depends_on": ["boki-engine"]
+                "entrypoint" : ["/tmp/slog/run_launcher", "/bokiflow-bin/hotel/flight", "8"],
+                "volumes": ["/mnt/inmem/slog:/tmp/slog"],
+                "environment": ["FAAS_GO_MAX_PROC_FACTOR=8", "GOGC=1000", "TABLE_PREFIX=${TABLE_PREFIX:?}", "DYNAMODB_ENDPOINT=${DYNAMODB_ENDPOINT}"],
+                "depends_on": ["slog-engine"]
             }
         },
         "order": {
             "service_name": "order-service",
             "docker": {
                 "image": "maxwie/boki-beldibench:latest",
-                "entrypoint" : ["/tmp/boki/run_launcher", "/bokiflow-bin/hotel/order", "9"],
-                "volumes": ["/mnt/inmem/boki:/tmp/boki"],
-                "environment": ["FAAS_GO_MAX_PROC_FACTOR=8", "GOGC=1000", "TABLE_PREFIX=${TABLE_PREFIX:?}"],
-                "depends_on": ["boki-engine"]
+                "entrypoint" : ["/tmp/slog/run_launcher", "/bokiflow-bin/hotel/order", "9"],
+                "volumes": ["/mnt/inmem/slog:/tmp/slog"],
+                "environment": ["FAAS_GO_MAX_PROC_FACTOR=8", "GOGC=1000", "TABLE_PREFIX=${TABLE_PREFIX:?}", "DYNAMODB_ENDPOINT=${DYNAMODB_ENDPOINT}"],
+                "depends_on": ["slog-engine"]
             }
         },
         "frontend": {
             "service_name": "frontend-service",
             "docker": {
                 "image": "maxwie/boki-beldibench:latest",
-                "entrypoint" : ["/tmp/boki/run_launcher", "/bokiflow-bin/hotel/frontend", "10"],
-                "volumes": ["/mnt/inmem/boki:/tmp/boki"],
-                "environment": ["FAAS_GO_MAX_PROC_FACTOR=8", "GOGC=1000", "TABLE_PREFIX=${TABLE_PREFIX:?}"],
-                "depends_on": ["boki-engine"]
+                "entrypoint" : ["/tmp/slog/run_launcher", "/bokiflow-bin/hotel/frontend", "10"],
+                "volumes": ["/mnt/inmem/slog:/tmp/slog"],
+                "environment": ["FAAS_GO_MAX_PROC_FACTOR=8", "GOGC=1000", "TABLE_PREFIX=${TABLE_PREFIX:?}", "DYNAMODB_ENDPOINT=${DYNAMODB_ENDPOINT}"],
+                "depends_on": ["slog-engine"]
             }
         },
         "gateway": {
             "service_name": "gateway-service",
             "docker": {
                 "image": "maxwie/boki-beldibench:latest",
-                "entrypoint" : ["/tmp/boki/run_launcher", "/bokiflow-bin/hotel/gateway", "11"],
-                "volumes": ["/mnt/inmem/boki:/tmp/boki"],
-                "environment": ["FAAS_GO_MAX_PROC_FACTOR=8", "GOGC=1000", "TABLE_PREFIX=${TABLE_PREFIX:?}"],
-                "depends_on": ["boki-engine"]
+                "entrypoint" : ["/tmp/slog/run_launcher", "/bokiflow-bin/hotel/gateway", "11"],
+                "volumes": ["/mnt/inmem/slog:/tmp/slog"],
+                "environment": ["FAAS_GO_MAX_PROC_FACTOR=8", "GOGC=1000", "TABLE_PREFIX=${TABLE_PREFIX:?}", "DYNAMODB_ENDPOINT=${DYNAMODB_ENDPOINT}"],
+                "depends_on": ["slog-engine"]
+            }
+        },
+        "TestSystem": {
+            "service_name": "test-system-service",
+            "docker": {
+                "image": "maxwie/indilog-microbench:latest",
+                "entrypoint" : ["/tmp/slog/run_launcher", "/microbench-bin/main"],
+                "volumes": ["/mnt/inmem/slog:/tmp/slog"],
+                "environment": ["FAAS_GO_MAX_PROC_FACTOR=8", "GOGC=1000"],
+                "depends_on": ["slog-engine"]
             }
         }
     }

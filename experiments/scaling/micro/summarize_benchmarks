@@ -1,0 +1,292 @@
+#!/usr/bin/python3
+from datetime import datetime, time
+from operator import itemgetter
+import os
+import sys
+import json
+import argparse
+import subprocess as sp
+import matplotlib.pyplot as plt
+import matplotlib.offsetbox as offsetbox
+import numpy as np
+import math
+import pandas as pd
+import csv
+
+def merge_engine_stats(output_directory, counter, files):
+    stat_merged = None
+    for i in range(len(files)):
+        stat_next = None
+        with open(files[i]) as f:
+            stat_next = json.load(f)
+        if stat_merged == None:
+            stat_merged = stat_next
+            continue
+        for main_key in stat_merged.keys():
+            for key in stat_merged[main_key]:
+                stat_merged[main_key][key] += stat_next[main_key][key]
+    stat_merged_result = json.dumps(stat_merged, indent=4)
+    with open(os.path.join(output_directory, 'engines-merged-'+str(counter)+'.json'), 'w') as f:
+        f.write(stat_merged_result)
+
+def generate_engine_stats(directory):
+    per_engine_stat_files = {}
+    for file_name in sorted(os.listdir(directory)):
+        engine_id = file_name.split('-')[1]
+        if engine_id not in per_engine_stat_files.keys():
+            per_engine_stat_files[engine_id] = []
+        per_engine_stat_files[engine_id].append(os.path.join(directory, file_name))
+    per_counter_stat_files = {}
+    counter = len(per_engine_stat_files[list(per_engine_stat_files.keys())[0]])
+    for c in range(counter):
+        if c not in per_counter_stat_files.keys():
+            per_counter_stat_files[c] = []
+        for key in per_engine_stat_files.keys():
+            per_counter_stat_files[c].append(list(per_engine_stat_files[key])[c])
+    for c in range(counter):
+        merge_engine_stats(directory, c, per_counter_stat_files[c])    
+
+def count_csv_entries(csv_files):
+    return pd.concat([pd.read_csv(file) for file in csv_files]).shape[0]
+
+def count_csv_entries_in_directory(directory, filter):
+    csv_files = [file for file in os.listdir(directory) if file.endswith('.csv') and filter in file]
+    print("Count entries of {}".format(', '.join(csv_files)))
+    return pd.concat([pd.read_csv(os.path.join(directory, file)) for file in csv_files]).shape[0]
+
+def compute_csv_percentile(csv_file, column_ix, percentile):
+    return pd.read_csv(csv_file).iloc[:, column_ix].quantile(q=percentile)
+
+def add_throughput_latency_row(directory, slog, slog_config, append_times, read_times, exp_duration, result_file):
+    write_header = not os.path.exists(result_file)
+    with open(result_file, 'a', encoding='UTF8', newline='') as f:
+        writer = csv.writer(f)
+        if write_header:
+            writer.writerow(['slog', 'slog_config', 'append_ratio', 'throughput', 'latency_append_50','latency_append_99', 'latency_read_50','latency_read_99'])
+        data = [
+            slog,
+            slog_config,
+            round(append_times / (append_times + read_times), 2),
+            round(count_csv_entries_in_directory(directory, slog_config) / exp_duration / 1000, 2),
+            int(compute_csv_percentile(os.path.join(directory, "latencies-append-{}.csv".format(slog_config)), 0, 0.5)),
+            int(compute_csv_percentile(os.path.join(directory, "latencies-append-{}.csv".format(slog_config)), 0, 0.99)),
+            int(compute_csv_percentile(os.path.join(directory, "latencies-read-{}.csv".format(slog_config)), 0, 0.5)),
+            int(compute_csv_percentile(os.path.join(directory, "latencies-read-{}.csv".format(slog_config)), 0, 0.99))
+        ]
+        writer.writerow(data)
+
+
+def compute_throughput_from_csv_files(directory, filter, result_file):
+    pass
+
+def generate_throughput_vs_latency_plot(csv_file, result_file):
+    df = pd.read_csv(csv_file)
+    df_boki = df.loc[df['slog'] == 'boki']
+    df_indilog = df.loc[df['slog'] == 'indilog']
+    fig = plt.figure()
+    ax = plt.subplot(111)
+    df_boki.plot.line(x=3, y=4, label='Boki Append 0,5', color='darkorange', style='o-', ax=ax)
+    df_boki.plot.line(x=3, y=5, label='Boki Append 0.99', color='sienna', style='o-', ax=ax)
+    df_boki.plot.line(x=3, y=6, label='Boki Read 0.5', color='darkorange', style='o--', ax=ax)
+    df_boki.plot.line(x=3, y=7, label='Boki Read 0.99', color='sienna', style='o--', ax=ax)
+    df_indilog.plot.line(x=3, y=4, label='Indilog-Append', color='steelblue', style='o-', ax=ax)
+    df_indilog.plot.line(x=3, y=6, label='Indilog-Read', color='steelblue', style='o--', ax=ax)
+    df_indilog.plot.line(x=3, y=5, label='Indilog-Append', color='darkblue', style='o-', ax=ax)
+    df_indilog.plot.line(x=3, y=7, label='Indilog-Read', color='darkblue', style='o--', ax=ax)
+    
+    plt.xlabel('Throughput (kOp/s)')
+    plt.ylabel('Latency (\u03BCs)')
+
+    # Shrink current axis by 25%
+    box = ax.get_position()
+    ax.set_position([box.x0, box.y0, box.width * 0.75, box.height])
+
+    # Put a legend to the right of the current axis
+    ax.legend(loc='center left', bbox_to_anchor=(1, 0.23))
+    plt.savefig(result_file)
+    plt.close
+
+def concatenate(directory, csv_file_names, filter, result_file):
+    csv_files = [os.path.join(directory, file) for file in csv_file_names if filter in file]
+    with open(result_file, 'w') as f:
+        for csv_file in csv_files:
+            with open(csv_file) as f_in:
+                for line in f_in:
+                    f.write(line)
+
+def add_rows(directory, slog, slog_config, interval, result_file):
+    print('add rows')
+    latency_append_files = sorted([os.path.join(directory, csv_file_name) for csv_file_name in os.listdir(directory) if 'combined-latencies-append' in csv_file_name])
+    for latency_append_file in latency_append_files:
+        print(latency_append_file)
+        latency_append_file_name = os.path.basename(latency_append_file)
+        name_chunks = latency_append_file_name.split('.')[0].split('-') # latencies-append-NODE_ID-TS.csv
+        latency_read_file = os.path.join(directory, "combined-latencies-read-{}.csv".format(name_chunks[3]))
+        if not os.path.isfile(latency_read_file):
+            raise Exception("csv file {} not exists".format(latency_read_file))
+        absolute_ts = int(name_chunks[3])
+        # Write to result file
+        write_header = not os.path.exists(result_file)
+        print("Add row for slog_config={}, ts={}".format(slog_config, absolute_ts))
+        with open(result_file, 'a', encoding='UTF8', newline='') as f:
+            writer = csv.writer(f)
+            if write_header:
+                writer.writerow(['slog', 'slog_config', 'ts_absolute', 'throughput', 'latency_append_50','latency_append_99', 'latency_read_50','latency_read_99'])
+            data = [
+                slog,
+                slog_config,
+                absolute_ts,
+                round(count_csv_entries([latency_append_file, latency_read_file]) / interval / 1000, 2),
+                int(compute_csv_percentile(latency_append_file, 0, 0.5)),
+                int(compute_csv_percentile(latency_append_file, 0, 0.99)),
+                int(compute_csv_percentile(latency_read_file, 0, 0.5)),
+                int(compute_csv_percentile(latency_read_file, 0, 0.99))
+            ]
+            writer.writerow(data)
+
+def combine_csv_files_filtered(directory, csv_file_names, engine_ids):
+    ts_matrix = []
+    num_ts_per_engine = 0
+    for id in engine_ids:
+        engine_id_csv_files = [file for file in csv_file_names if '-{}-'.format(id) in file]
+        ts_of_csv_files = [file.split('.')[0].split('-')[3] for file in engine_id_csv_files]
+        ts_matrix.append((id, sorted(ts_of_csv_files)))
+        if num_ts_per_engine != 0 and num_ts_per_engine != len(ts_of_csv_files):
+            print("Warning: All engines should have the same number of csv files")
+        num_ts_per_engine = max(num_ts_per_engine, len(ts_of_csv_files))
+
+    for i in range(num_ts_per_engine):
+        related_csv_file_names = []
+        for ts_row in ts_matrix:
+            id, ts_list = ts_row
+            if i < len(ts_list):
+                ts = ts_list[i]
+                related_csv_file_names.extend([file for file in csv_file_names if '{}-{}'.format(id, ts) in file])
+
+        id, ts_list = ts_matrix[0]
+        ts = ts_list[i]
+        for op in ["append", "read"]:
+            combined_result_file = os.path.join(directory, "combined-latencies-{}-{}.csv".format(op, ts))
+            # now we concatenate the csv files that belong together
+            concatenate(directory, related_csv_file_names, op, combined_result_file)
+
+
+def combine_csv_files(directory, slog, slog_config, interval, scale_ts, result_file):
+    csv_file_names = sorted([file for file in os.listdir(directory) if file.endswith('.csv')])
+    
+    engine_ids = set()
+    filtered_csv_file_names = []
+    for csv_file_name in csv_file_names:
+        chunks = csv_file_name.split('.')[0].split('-')
+        ts = int(chunks[3])
+        if scale_ts > ts:
+            filtered_csv_file_names.append(csv_file_name)
+            engine_ids.add(int(chunks[2]))
+    engine_ids = sorted(engine_ids)
+    combine_csv_files_filtered(directory, filtered_csv_file_names, engine_ids) # before scale ts
+
+    engine_ids = set()
+    filtered_csv_file_names = []
+    for csv_file_name in csv_file_names:
+        chunks = csv_file_name.split('.')[0].split('-')
+        ts = int(chunks[3])
+        if scale_ts <= ts:
+            filtered_csv_file_names.append(csv_file_name)
+            engine_ids.add(int(chunks[2]))
+    engine_ids = sorted(engine_ids)
+    combine_csv_files_filtered(directory, filtered_csv_file_names, engine_ids) # after scale ts
+
+    add_rows(directory, slog, slog_config, interval, result_file)
+
+
+def make_time_relative(input_file, start_ts, end_ts, csv_result_file):
+    print('Make time relative {}'.format(input_file))
+    df = pd.read_csv(input_file)
+    df.drop(df[df.ts_absolute < start_ts].index, inplace=True)
+    df.drop(df[df.ts_absolute > end_ts].index, inplace=True)
+    relative_timestamps = []
+    for i in range(len(df)):
+        relative_timestamps.append(df.iloc[i]['ts_absolute'] - start_ts)
+    df.insert(2, 'ts_relative', relative_timestamps)
+    write_header = not os.path.isfile(csv_result_file)
+    df.to_csv(csv_result_file, mode='a', sep=',', index=False, header=write_header)
+
+# def make_time_relative_all(directory, reference_ts, result_directory):
+#     csv_files = [file for file in os.listdir(directory) if file.endswith('.csv')]
+#     for csv_file in csv_files:
+#         make_time_relative(os.path.join(directory, csv_file), reference_ts, result_directory)
+
+def generate_plot(csv_file, relative_scale_ts, relative_scaled_ts, result_file):
+
+    df = pd.read_csv(csv_file)
+    df_boki = df.loc[df['slog'] == 'boki']
+    df_indilog = df.loc[df['slog'] == 'indilog']
+
+    fig, ax = plt.subplots()
+
+    twin1_tp = ax.twinx()
+
+    p1, = ax.plot(df_boki['ts_relative'], df_boki['latency_read_50'], '--', color='darkred', label='Boki-Remote Read 0.5')
+    p2, = ax.plot(df_boki['ts_relative'], df_boki['latency_read_99'], '--', marker='x', color='darkred', label='Boki-Remote Read 0.99')
+    p3, = twin1_tp.plot(df_boki['ts_relative'], df_boki['throughput'], '--', color='darkgreen', label='Boki-Remote Throughput')
+
+    #p4, = ax.plot(df_indilog['ts_relative'], df_indilog['latency_append_50'], '-', marker='x', color='darkred', label='Indilog Append 0,5')
+    p4, = ax.plot(df_indilog['ts_relative'], df_indilog['latency_read_50'], '-', color='darkred', label='Indilog Read 0.5')
+    p5, = ax.plot(df_indilog['ts_relative'], df_indilog['latency_read_99'], '-', marker='x', color='darkred', label='Indilog Read 0.99')
+    p6, = twin1_tp.plot(df_indilog['ts_relative'], df_indilog['throughput'], '-', color='darkgreen', label='Indilog Throughput')
+
+    ax.set_ylim(0, 2500)
+    twin1_tp.set_ylim(0, 200)
+
+    ax.set_xlabel('Time (s)')
+    ax.set_ylabel('Latency (\u03BCs)')
+    twin1_tp.set_ylabel('Throughput (kOp/s)')
+
+    ax.yaxis.label.set_color(p1.get_color())
+    twin1_tp.yaxis.label.set_color(p3.get_color())
+
+    p7 = ax.axvline(x=relative_scale_ts, color='grey', linestyle='dotted', label='Scale Start')
+    p8 = ax.axvline(x=relative_scaled_ts, color='grey', linestyle='dashdot', label='Scale End')
+
+    # Put a legend to the right of the current axis
+    ax.legend(loc='upper center', bbox_to_anchor=(0.5, 1.12),
+          ncol=6, fancybox=True, shadow=True, handles=[p1, p2, p3, p4, p5, p6, p7, p8],
+          prop={'size':5})
+    plt.savefig(result_file)
+    plt.close
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('cmd', type=str)
+    parser.add_argument('--directory', type=str)
+    parser.add_argument('--file', type=str)
+    parser.add_argument('--slog', type=str)
+    parser.add_argument('--slog-config', type=str)
+    parser.add_argument('--exp-duration', type=int)
+    parser.add_argument('--append-times', type=int)
+    parser.add_argument('--read-times', type=int)
+    parser.add_argument('--interval', type=int)
+    parser.add_argument('--start-ts', type=int)
+    parser.add_argument('--end-ts', type=int)
+    parser.add_argument('--scale-ts', type=int)
+    parser.add_argument('--relative-scale-ts', type=int)
+    parser.add_argument('--relative-scaled-ts', type=int)
+    parser.add_argument('--filter', type=str)
+    parser.add_argument('--result-file', type=str)
+    parser.add_argument('--result-directory', type=str)
+    args = parser.parse_args()
+    try:
+        if args.cmd == 'combine-csv-files':
+            combine_csv_files(args.directory, args.slog, args.slog_config, args.interval, args.scale_ts, args.result_file)
+        elif args.cmd == 'make-time-relative':
+            make_time_relative(args.file, args.start_ts, args.end_ts, args.result_file)
+        elif args.cmd == 'generate-plot':
+            generate_plot(args.file, args.relative_scale_ts, args.relative_scaled_ts, args.result_file)
+        else:
+            raise Exception('Unknown command: ' + args.cmd)
+    except Exception as e:
+        err_str = str(e)
+        if not err_str.endswith('\n'):
+            err_str += '\n'
+        sys.stderr.write(err_str)
+        sys.exit(1)

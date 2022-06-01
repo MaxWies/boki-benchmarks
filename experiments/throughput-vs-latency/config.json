@@ -14,7 +14,7 @@
     },
     "slog-storage": {
       "placement_label": "storage_node",
-      "replicas": 1
+      "replicas": 2
     },
     "slog-sequencer": {
       "placement_label": "sequencer_node",
@@ -22,15 +22,19 @@
     },
     "slog-index": {
       "placement_label": "index_node",
-      "replicas": 1
+      "replicas": 2
     },
     "slog-engine": {
       "placement_label": "engine_node",
-      "replicas": 1
+      "replicas": 2
     },
     "random-append-read-service": {
       "placement_label": "engine_node",
-      "replicas": 1
+      "replicas": 2
+    },
+    "test-system-service": {
+      "placement_label": "engine_node",
+      "replicas": 2
     }
   }
 }
