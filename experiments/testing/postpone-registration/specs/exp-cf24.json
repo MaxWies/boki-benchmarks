@@ -6,7 +6,7 @@
     },
     "exp_variables": {
         "CONCURRENCY_CLIENT": "24",
-        "DURATION": "60",
+        "DURATION": "30",
         "APPEND_TIMES": "1",
         "READ_TIMES": "4"
     }

@@ -1,0 +1,40 @@
+{
+  "services": {
+    "zookeeper": {
+      "placement": "slogexp-gateway"
+    },
+    "zookeeper-setup": {
+      "placement": "slogexp-gateway"
+    },
+    "slog-controller": {
+      "placement": "slogexp-gateway"
+    },
+    "slog-gateway": {
+      "placement": "slogexp-gateway"
+    },
+    "slog-storage": {
+      "placement_label": "storage_node",
+      "replicas": 3
+    },
+    "slog-sequencer": {
+      "placement_label": "sequencer_node",
+      "replicas": 3
+    },
+    "slog-index": {
+      "placement_label": "index_node",
+      "replicas": 1
+    },
+    "slog-engine": {
+      "placement_label": "engine_node",
+      "replicas": 3
+    },
+    "random-append-read-service": {
+      "placement_label": "engine_node",
+      "replicas": 3
+    },
+    "test-system-service": {
+      "placement_label": "engine_node",
+      "replicas": 3
+    }
+  }
+}

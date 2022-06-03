@@ -12,7 +12,7 @@ BENCHMARK_SCRIPT=$BASE_DIR/summarize_benchmarks
 export BENCHMARK_TYPE=throughput-vs-latency
 export RECORD_LENGTH=1024
 export ENGINE_STAT_THREAD_INTERVAL=5
-export DURATION=60
+export DURATION=600
 export APPEND_TIMES=1
 export READ_TIMES=1
 
@@ -34,9 +34,6 @@ ENTRY_HOST=`$HELPER_SCRIPT get-service-host --base-dir=$BASE_DIR --service=slog-
 ALL_ENGINE_HOSTS=`$HELPER_SCRIPT get-machine-with-label --base-dir=$BASE_DIR --machine-label=engine_node`
 ENGINE_NODES=$(wc -w <<< $ALL_ENGINE_HOSTS)
 EXP_HOST=`$HELPER_SCRIPT get-single-machine-with-label --base-dir=$BASE_DIR --machine-label=engine_node`
-if [[ $SLOG_CONFIG == boki-remote ]]; then
-    EXP_HOST=`$HELPER_SCRIPT get-single-machine-with-label --base-dir=$BASE_DIR --machine-label=index_engine_node`
-fi
 
 for HOST in $ALL_ENGINE_HOSTS; do
     ssh -q $HOST -- sudo rm -rf /mnt/inmem/slog/output/benchmark/$BENCHMARK_TYPE
@@ -82,7 +79,7 @@ ssh -q $CLIENT_HOST -- /tmp/benchmark \
     --faas_gateway=$ENTRY_HOST:8080 \
     --benchmark_description=$BENCHMARK_DESCRIPTION \
     --benchmark_type=$BENCHMARK_TYPE \
-    --duration=$DURATION \
+    --duration=$((DURATION+ENGINE_STAT_THREAD_INTERVAL*2)) \
     --record_length=$RECORD_LENGTH \
     --append_times=$APPEND_TIMES \
     --read_times=$READ_TIMES \
@@ -95,13 +92,16 @@ ssh -q $CLIENT_HOST -- /tmp/benchmark \
     --shared_tags_capacity=$SHARED_TAGS_CAPACITY \
     >$EXP_DIR/results.log
 
-sleep 3
+EXP_ENGINE_END_TS=$((EXP_ENGINE_START_TS+DURATION+ENGINE_STAT_THREAD_INTERVAL))
 
 # get latency and index memory records from engine
 mkdir -p $EXP_DIR/stats
 scp -r -q $EXP_HOST:/mnt/inmem/slog/stats/latencies-*-*.csv $EXP_DIR/stats
 scp -r -q $EXP_HOST:/mnt/inmem/slog/stats/index-memory-*-*.csv $EXP_DIR/stats
-scp -r -q $EXP_HOST:/mnt/inmem/slog/stats/op-stat-*-*.csv $EXP_DIR/stats
+
+$BENCHMARK_SCRIPT discard-csv-files \
+    --directory=$EXP_DIR/stats/latencies \
+    --ts-end=$EXP_ENGINE_END_TS
 
 for file in $EXP_DIR/stats/latencies-append-*-*.csv; do
     $BENCHMARK_SCRIPT add-row \

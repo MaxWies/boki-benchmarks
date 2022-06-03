@@ -1,0 +1,128 @@
+#!/usr/bin/python3
+from datetime import datetime, time
+from operator import itemgetter
+import os
+import sys
+import json
+import argparse
+import subprocess as sp
+import matplotlib.pyplot as plt
+import matplotlib.offsetbox as offsetbox
+import numpy as np
+import math
+import pandas as pd
+import csv
+
+
+def discard_csv_files(directory, ts_end):
+    csv_file_names = [file for file in os.listdir(directory) if file.endswith('.csv')]
+    csv_files_to_discard = []
+    for csv_file_name in csv_file_names:
+        chunks = csv_file_name.split('.')[0].split('-')
+        ts = int(chunks[3])
+        if ts_end < ts:
+            csv_files_to_discard.append(os.path.join(directory, csv_file_name))
+    for csv_file in csv_files_to_discard:
+        os.remove(csv_file)
+
+
+def count_csv_entries(csv_files):
+    return pd.concat([pd.read_csv(file) for file in csv_files]).shape[0]
+
+def count_csv_entries_in_directory(directory, filter):
+    csv_files = [file for file in os.listdir(directory) if file.endswith('.csv') and filter in file]
+    return pd.concat([pd.read_csv(os.path.join(directory, file)) for file in csv_files]).shape[0]
+
+def compute_throughput(directory, filter, exp_duration):
+    print(round(count_csv_entries_in_directory(directory, filter) / exp_duration / 1000, 2))
+
+def concatenate_csv_files(directory, filter, result_file):
+    csv_files = [os.path.join(directory, file) for file in os.listdir(directory) if file.endswith('.csv') and filter in file]
+    with open(result_file, 'w') as f:
+        for csv_file in csv_files:
+            with open(csv_file) as f_in:
+                for line in f_in:
+                    f.write(line)
+
+def compute_csv_percentile(csv_file, column_ix, percentile):
+    return pd.read_csv(csv_file).iloc[:, column_ix].quantile(q=percentile)
+
+def add_concurrency_throughput_latency_row(directory, slog, concurrency, throughput_append, throughput_read, result_file):
+    write_header = not os.path.exists(result_file)
+    with open(result_file, 'a', encoding='UTF8', newline='') as f:
+        writer = csv.writer(f)
+        if write_header:
+            writer.writerow(['slog', 'concurrency', 'throughput', 'throughput_append', 'throughput_read', 'latency_append_50','latency_append_99', 'latency_read_50','latency_read_99'])
+        data = [
+            slog,
+            concurrency,
+            throughput,
+            throughput_append,
+            throughput_read,
+            int(compute_csv_percentile(os.path.join(directory, "all-latencies-append.csv".format(slog)), 0, 0.5)),
+            int(compute_csv_percentile(os.path.join(directory, "all-latencies-append.csv".format(slog)), 0, 0.99)),
+            int(compute_csv_percentile(os.path.join(directory, "all-latencies-read.csv".format(slog)), 0, 0.5)),
+            int(compute_csv_percentile(os.path.join(directory, "all-latencies-read.csv".format(slog)), 0, 0.99))
+        ]
+        writer.writerow(data)
+
+def generate_concurrency_vs_latency_plot(csv_file, slog, result_file):
+    df = pd.read_csv(csv_file)
+    df_boki = df.loc[df['slog'] == slog]
+
+    fig, ax1 = plt.subplots()
+    ax2 = ax1.twinx()
+
+    p1, = ax1.plot(df_boki['concurrency'], df_boki['latency_append_50'], label='Append 0.5', color='blue', linestyle=':', marker='o')
+    p2, = ax1.plot(df_boki['concurrency'], df_boki['latency_append_99'], label='Append 0.99', color='blue', linestyle='--', marker='o')
+    p3, = ax1.plot(df_boki['concurrency'], df_boki['latency_read_50'], label='Read 0.5', color='green', linestyle=':', marker='o')
+    p4, = ax1.plot(df_boki['concurrency'], df_boki['latency_read_99'], label='Read 0.99', color='green', linestyle='--', marker='o')
+
+    p5, = ax2.plot(df_boki['concurrency'], df_boki['throughput_read'], label='Throughput', color='darkorange', linestyle='-', marker='o')
+
+    ax1.set_xlabel('Concurrency (Number of GO Threads)')
+    ax1.set_ylabel('Latency (\u03BCs)')
+    ax2.set_ylabel('Throughput (kOp/s)')
+
+    ax1.legend(loc='upper center', bbox_to_anchor=(0.5, 1.12),
+          ncol=6, fancybox=True, shadow=True, handles=[p1, p2, p3, p4, p5],
+          prop={'size':6})
+
+    plt.savefig(result_file)
+    plt.close
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('cmd', type=str)
+    parser.add_argument('--directory', type=str)
+    parser.add_argument('--file', type=str)
+    parser.add_argument('--slog', type=str)
+    parser.add_argument('--exp-duration', type=int)
+    parser.add_argument('--interval', type=int)
+    parser.add_argument('--filter', type=str)
+    parser.add_argument('--ts-end', type=int)
+    parser.add_argument('--concurrency', type=int)
+    parser.add_argument('--throughput-read', type=float)
+    parser.add_argument('--throughput-append', type=float)
+    parser.add_argument('--result-file', type=str)
+    parser.add_argument('--result-directory', type=str)
+    args = parser.parse_args()
+    try:
+        if args.cmd == 'compute-throughput':
+            compute_throughput(args.directory, args.filter, args.exp_duration)
+        elif args.cmd == 'concatenate-csv':
+            concatenate_csv_files(args.directory, args.filter, args.result_file)
+        elif args.cmd == 'discard-csv-files':
+            discard_csv_files(args.directory, args.ts_end)
+        elif args.cmd == 'add-row':
+            add_concurrency_throughput_latency_row(args.directory, args.slog, args.concurrency, args.throughput_append, args.throughput_read, args.result_file)
+        elif args.cmd == 'generate-plot':
+            generate_concurrency_vs_latency_plot(args.file, args.slog, args.result_file)
+        else:
+            raise Exception('Unknown command: ' + args.cmd)
+    except Exception as e:
+        err_str = str(e)
+        if not err_str.endswith('\n'):
+            err_str += '\n'
+        sys.stderr.write(err_str)
+        sys.exit(1)

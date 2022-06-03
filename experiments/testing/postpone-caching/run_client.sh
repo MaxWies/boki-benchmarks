@@ -19,6 +19,7 @@ BENCHMARK_DESCRIPTION="test-sytem"
 rm -rf $EXP_DIR
 mkdir -p $EXP_DIR
 
+MANAGER_IP=`$HELPER_SCRIPT get-docker-manager-ip --base-dir=$BASE_DIR`
 CLIENT_HOST=`$HELPER_SCRIPT get-client-host --base-dir=$BASE_DIR`
 ENTRY_HOST=`$HELPER_SCRIPT get-service-host --base-dir=$BASE_DIR --service=slog-gateway`
 
@@ -30,6 +31,22 @@ ssh -q $CLIENT_HOST -- docker run \
     -v /tmp:/tmp \
     maxwie/indilog-microbench:latest \
     cp /microbench-bin/benchmark /tmp/benchmark
+
+ssh -q $CLIENT_HOST -- /tmp/benchmark \
+    --faas_gateway=$ENTRY_HOST:8080 \
+    --benchmark_description=$BENCHMARK_DESCRIPTION \
+    --benchmark_type=$BENCHMARK_TYPE \
+    --duration=$DURATION \
+    --append_times=$APPEND_TIMES \
+    --read_times=$READ_TIMES \
+    --engine_nodes=$ENGINE_NODES \
+    --concurrency_client=$CONCURRENCY_CLIENT \
+    >$EXP_DIR/results.log
+
+# activiate postponed engines
+$ROOT_DIR/../zookeeper/bin/zkCli.sh -server $MANAGER_IP:2181 \
+    create /faas/activate/cache \
+    >/dev/null
 
 ssh -q $CLIENT_HOST -- /tmp/benchmark \
     --faas_gateway=$ENTRY_HOST:8080 \

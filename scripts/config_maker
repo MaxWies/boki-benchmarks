@@ -125,7 +125,11 @@ def generate_swarm_application_less(base_dir, config, slog, controller_spec, exp
     function_definitions = load_json_file(os.path.join(base_dir, 'functions.json'))
     if slog.lower().startswith('indilog'):
         replicas = controller_spec['slog_engine_replicas_init']
+        if "slog_postponed_engine_replicas" in controller_spec.keys():
+            # consider postponed engines
+            replicas += controller_spec['slog_postponed_engine_replicas']
         if 'slog_service_replicas' in controller_spec:
+            # overwrite
             replicas = controller_spec['slog_service_replicas']
         for key, _ in exp_spec['functions'].items():
             config["services"][function_definitions['functions'][key]['service_name']] = {
@@ -145,6 +149,11 @@ def generate_swarm_config_engines(config, slog, controller_spec):
             "placement_label": "engine_node", 
             "replicas": controller_spec['slog_engine_replicas_init'] 
         }
+        if "slog_postponed_engine_replicas" in controller_spec.keys():
+            config["services"]["slog-postponed-engine"] = {
+                "placement_label": "engine_node", 
+                "replicas": controller_spec['slog_postponed_engine_replicas']
+            }
     elif slog.lower().startswith('boki'):
         config["services"]["slog-engine"] = { 
             "placement_label": "engine_node", 

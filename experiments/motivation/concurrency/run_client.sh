@@ -1,6 +1,6 @@
 #!/bin/bash
 BASE_DIR=`realpath $(dirname $0)`
-ROOT_DIR=`realpath $BASE_DIR/../..`
+ROOT_DIR=`realpath $BASE_DIR/../../..`
 
 SLOG=$1
 EXP_SPEC_FILE=$2
@@ -8,8 +8,6 @@ EXP_DIR=$3
 
 HELPER_SCRIPT=$ROOT_DIR/scripts/exp_helper
 BENCHMARK_SCRIPT=$BASE_DIR/summarize_benchmarks
-
-WORKLOAD=$APPEND_TIMES-$READ_TIMES
 
 export BENCHMARK_TYPE=throughput-vs-latency
 export RECORD_LENGTH=1024
@@ -32,8 +30,8 @@ for s in $(echo $values | jq -r ".exp_variables | to_entries | map(\"\(.key)=\(.
     export $s
 done
 
-export DURATION=60
-export ENGINE_STAT_THREAD_INTERVAL=10
+export DURATION=30
+export ENGINE_STAT_THREAD_INTERVAL=5
 
 BENCHMARK_DESCRIPTION="Append-${APPEND_TIMES}-and-read-${READ_TIMES}-times"
 
@@ -47,6 +45,11 @@ ENTRY_HOST=`$HELPER_SCRIPT get-service-host --base-dir=$BASE_DIR --service=slog-
 
 ALL_ENGINE_HOSTS=`$HELPER_SCRIPT get-machine-with-label --base-dir=$BASE_DIR --machine-label=engine_node`
 ENGINE_NODES=$(wc -w <<< $ALL_ENGINE_HOSTS)
+
+EXP_HOST=`$HELPER_SCRIPT get-single-machine-with-label --base-dir=$BASE_DIR --machine-label=engine_node`
+if [[ $SLOG_CONFIG == boki-full ]]; then
+    EXP_HOST=`$HELPER_SCRIPT get-single-machine-with-label --base-dir=$BASE_DIR --machine-label=index_engine_node`
+fi
 
 for HOST in $ALL_ENGINE_HOSTS; do
     ssh -q $HOST -- sudo rm -rf /mnt/inmem/slog/output/benchmark/$BENCHMARK_TYPE
@@ -69,16 +72,20 @@ ssh -q $CLIENT_HOST -- /tmp/benchmark \
     --benchmark_type=warmup \
     >$EXP_DIR/results.log
 
+# get timestamp on exp engine
+EXP_ENGINE_START_TS=$(ssh -q $EXP_HOST -- date +%s)
+
 # activiate statistic thread on engine
 $ROOT_DIR/../zookeeper/bin/zkCli.sh -server $MANAGER_IP:2181 \
     create /faas/stat/start $ENGINE_STAT_THREAD_INTERVAL \
     >/dev/null
 
+# run experiment
 ssh -q $CLIENT_HOST -- /tmp/benchmark \
     --faas_gateway=$ENTRY_HOST:8080 \
     --benchmark_description=$BENCHMARK_DESCRIPTION \
     --benchmark_type=$BENCHMARK_TYPE \
-    --duration=$DURATION \
+    --duration=$((DURATION+ENGINE_STAT_THREAD_INTERVAL*2)) \
     --record_length=$RECORD_LENGTH \
     --append_times=$APPEND_TIMES \
     --read_times=$READ_TIMES \
@@ -90,13 +97,14 @@ ssh -q $CLIENT_HOST -- /tmp/benchmark \
     --tag_read_percentages=$TAG_READ_PERCENTAGES \
     >$EXP_DIR/results.log
 
-sleep 3
-
+EXP_ENGINE_END_TS=$((EXP_ENGINE_START_TS+DURATION+ENGINE_STAT_THREAD_INTERVAL))
 
 mkdir -p $EXP_DIR/stats/latencies
-for HOST in $ALL_ENGINE_HOSTS; do
-    scp -r -q $HOST:/mnt/inmem/slog/stats/all-latencies-*.csv $EXP_DIR/stats/latencies
-done
+scp -r -q $EXP_HOST:/mnt/inmem/slog/stats/all-latencies-*.csv $EXP_DIR/stats/latencies
+
+$BENCHMARK_SCRIPT discard-csv-files \
+    --directory=$EXP_DIR/stats/latencies \
+    --ts-end=$EXP_ENGINE_END_TS
 
 THROUGHPUT_APPEND=`$BENCHMARK_SCRIPT compute-throughput \
     --directory=$EXP_DIR/stats/latencies \
@@ -120,6 +128,7 @@ done
 $BENCHMARK_SCRIPT add-row \
     --directory=$EXP_DIR/stats/latencies \
     --slog=$SLOG \
+    --concurrency=$CONCURRENCY_WORKER \
     --throughput-append=$THROUGHPUT_APPEND \
     --throughput-read=$THROUGHPUT_READ \
-    --result-file=$BASE_DIR/results/$WORKLOAD/throughput-vs-latency.csv
+    --result-file=$BASE_DIR/results/concurrency-vs-latency.csv

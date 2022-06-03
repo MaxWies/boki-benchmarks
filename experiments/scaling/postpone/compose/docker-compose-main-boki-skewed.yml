@@ -25,7 +25,7 @@ services:
       - --listen_iface=eth0
       - --root_path_for_ipc=/tmp/slog/ipc
       - --func_config_file=/tmp/slog/func_config.json
-      - --num_io_workers=1
+      - --num_io_workers=4
       - --instant_rps_p_norm=0.8
       - --io_uring_entries=2048
       - --io_uring_fd_slots=4096
@@ -33,6 +33,7 @@ services:
       - --slog_engine_enable_cache
       - --slog_engine_cache_cap_mb=1024
       - --slog_engine_propagate_auxdata
+      - --engine_node_type=engine
       # - --v=1
     depends_on:
       - zookeeper-setup
@@ -60,7 +61,7 @@ services:
       - --http_port=8080
       - --func_config_file=/tmp/slog/func_config.json
       - --async_call_result_path=/tmp/store/async_results
-      - --num_io_workers=1
+      - --num_io_workers=2
       - --io_uring_entries=2048
       - --io_uring_fd_slots=4096
       - --lb_per_fn_round_robin
@@ -85,7 +86,7 @@ services:
       - --zookeeper_host=zookeeper:2181
       - --listen_iface=eth0
       - --db_path=/tmp/storage/logdata
-      - --num_io_workers=1
+      - --num_io_workers=2
       - --io_uring_entries=2048
       - --io_uring_fd_slots=4096
       - --slog_local_cut_interval_us=300
@@ -112,7 +113,7 @@ services:
       - /slog/sequencer
       - --zookeeper_host=zookeeper:2181
       - --listen_iface=eth0
-      - --num_io_workers=1
+      - --num_io_workers=2
       - --io_uring_entries=2048
       - --io_uring_fd_slots=4096
       - --slog_global_cut_interval_us=300

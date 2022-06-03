@@ -1,6 +1,6 @@
 #!/bin/bash
 BASE_DIR=`realpath $(dirname $0)`
-ROOT_DIR=`realpath $BASE_DIR/../..`
+ROOT_DIR=`realpath $BASE_DIR/../../..`
 
 SLOG=$1
 CONTROLLER_SPEC_FILE=$2
@@ -9,13 +9,15 @@ EXP_SPEC_FILE=$3
 HELPER_SCRIPT=$ROOT_DIR/scripts/exp_helper
 CONFIG_MAKER_SCRIPT=$ROOT_DIR/scripts/config_maker
 
-WORKLOAD=$APPEND_TIMES-$READ_TIMES
-
 CONTROLLER_SPEC_FILE_NAME=$(basename $CONTROLLER_SPEC_FILE .json)
 EXP_SPEC_FILE_NAME=$(basename $EXP_SPEC_FILE .json)
-EXP_DIR=$BASE_DIR/results/$WORKLOAD/$SLOG/$CONTROLLER_SPEC_FILE_NAME/$EXP_SPEC_FILE_NAME
+EXP_DIR=$BASE_DIR/results/$SLOG/$CONTROLLER_SPEC_FILE_NAME/$EXP_SPEC_FILE_NAME
 
-$CONFIG_MAKER_SCRIPT generate-runtime-config --base-dir=$BASE_DIR --slog=$SLOG --controller-spec-file=$CONTROLLER_SPEC_FILE --exp-spec-file=$EXP_SPEC_FILE
+$CONFIG_MAKER_SCRIPT generate-runtime-config \
+    --base-dir=$BASE_DIR \
+    --slog=$SLOG \
+    --controller-spec-file=$CONTROLLER_SPEC_FILE \
+    --exp-spec-file=$EXP_SPEC_FILE
 
 MANAGER_HOST=`$HELPER_SCRIPT get-docker-manager-host --base-dir=$BASE_DIR`
 CLIENT_HOST=`$HELPER_SCRIPT get-client-host --base-dir=$BASE_DIR`
