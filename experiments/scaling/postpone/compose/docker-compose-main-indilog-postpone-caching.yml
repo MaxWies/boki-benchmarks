@@ -141,7 +141,7 @@ services:
       - /slog/index
       - --zookeeper_host=zookeeper:2181
       - --listen_iface=eth0
-      - --num_io_workers=2
+      - --num_io_workers=4
       - --io_uring_entries=2048
       - --io_uring_fd_slots=4096
       # - --v=1

@@ -10,12 +10,12 @@ HELPER_SCRIPT=$ROOT_DIR/scripts/exp_helper
 BENCHMARK_SCRIPT=$BASE_DIR/summarize_benchmarks
 
 export BENCHMARK_TYPE=scaling
-export APPEND_TIMES=1
-export READ_TIMES=19
 export RECORD_LENGTH=1024
 export DURATION=180
 export RELATIVE_SCALE_TS=30
-export ENGINE_STAT_THREAD_INTERVAL=5
+export APPEND_TIMES=1
+export READ_TIMES=19
+export ENGINE_STAT_THREAD_INTERVAL=10
 
 # Overwrite environment with spec file
 for s in $(echo $values | jq -r ".exp_variables | to_entries | map(\"\(.key)=\(.value|tostring)\") | .[]" $EXP_SPEC_FILE); do
@@ -34,6 +34,8 @@ ENTRY_HOST=`$HELPER_SCRIPT get-service-host --base-dir=$BASE_DIR --service=slog-
 
 ALL_ENGINE_HOSTS=`$HELPER_SCRIPT get-machine-with-label --base-dir=$BASE_DIR --machine-label=engine_node`
 ENGINE_NODES=$(wc -w <<< $ALL_ENGINE_HOSTS)
+
+EXP_ENGINE_HOST=`$HELPER_SCRIPT get-single-machine-with-label --base-dir=$BASE_DIR --machine-label=engine_node`
 
 for HOST in $ALL_ENGINE_HOSTS; do
     ssh -q $HOST -- sudo rm -rf /mnt/inmem/slog/output/benchmark/$BENCHMARK_TYPE
@@ -56,10 +58,10 @@ ssh -q $CLIENT_HOST -- /tmp/benchmark \
     --benchmark_type=warmup \
     >$EXP_DIR/results.log
 
-# ts
+# get timestamp on exp engine
 START_TS=$(date +%s)
 SCALE_TS=$((START_TS+RELATIVE_SCALE_TS))
-END_TS=$((START_TS+DURATION-2*ENGINE_STAT_THREAD_INTERVAL))
+END_TS=$((START_TS+DURATION))
 
 echo $START_TS
 echo $SCALE_TS
@@ -71,7 +73,7 @@ $ROOT_DIR/../zookeeper/bin/zkCli.sh -server $MANAGER_IP:2181 \
     >/dev/null
 
 # run scaler in background if indilog
-if [[ $SLOG == 'indilog-postpone-caching' ]] || [[ 'indilog-postpone-registering' ]]; 
+if [[ 'indilog' ]]; 
 then
     # run
     ssh -q $CLIENT_HOST -- /tmp/benchmark \
@@ -94,18 +96,11 @@ then
 
     # sleep
     sleep $RELATIVE_SCALE_TS
-    if [[ $SLOG == 'indilog-postpone-caching' ]];
-    then
-        # activiate postponed engines
-        $ROOT_DIR/../zookeeper/bin/zkCli.sh -server $MANAGER_IP:2181 \
-            create /faas/activate/cache \
-            >/dev/null
-    else
-        # activiate postponed engines
-        $ROOT_DIR/../zookeeper/bin/zkCli.sh -server $MANAGER_IP:2181 \
-            create /faas/activate/register \
-            >/dev/null
-    fi
+
+    # activiate postponed engines
+    $ROOT_DIR/../zookeeper/bin/zkCli.sh -server $MANAGER_IP:2181 \
+        create /faas/activate/register \
+        >/dev/null
 
     # sleep remaining time
     sleep $((DURATION-RELATIVE_SCALE_TS))
@@ -136,24 +131,21 @@ fi
 # get latency files from engines
 mkdir -p $EXP_DIR/stats/latencies
 for HOST in $ALL_ENGINE_HOSTS; do
-    scp -r -q $HOST:/mnt/inmem/slog/stats/latencies*.csv $EXP_DIR/stats
+    scp -r -q $HOST:/mnt/inmem/slog/stats/latencies*.csv $EXP_DIR/stats/latencies
 done
+
+$BENCHMARK_SCRIPT discard-csv-files-before \
+    --directory=$EXP_DIR/stats/latencies \
+    --ts=$((SCALE_TS+ENGINE_STAT_THREAD_INTERVAL))
 
 $BENCHMARK_SCRIPT discard-csv-files-after \
     --directory=$EXP_DIR/stats/latencies \
-    --ts=$END_TS
+    --ts=$((END_TS-ENGINE_STAT_THREAD_INTERVAL))
 
-# combine
-$BENCHMARK_SCRIPT combine-csv-files \
-    --directory=$EXP_DIR/stats \
+# combine (overall throughput after adding nodes)
+$BENCHMARK_SCRIPT add-row \
+    --directory=$EXP_DIR/stats/latencies \
     --slog=$SLOG \
+    --nodes=$ENGINE_NODES \
     --interval=$ENGINE_STAT_THREAD_INTERVAL \
-    --scale-ts=$SCALE_TS \
-    --result-file=$BASE_DIR/results/$WORKLOAD/$SLOG/time-vs-throughput-latency.csv
-
-# make time in csv data relative and finally store data in main collection folder
-$BENCHMARK_SCRIPT make-time-relative \
-    --file=$BASE_DIR/results/$SLOG/time-vs-throughput-latency.csv \
-    --start-ts=$START_TS \
-    --end-ts=$END_TS \
-    --result-file=$BASE_DIR/results/$WORKLOAD/time-vs-throughput-latency.csv
+    --result-file=$BASE_DIR/results/$WORKLOAD/nodes-vs-throughput.csv

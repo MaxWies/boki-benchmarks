@@ -11,8 +11,8 @@ BENCHMARK_SCRIPT=$BASE_DIR/summarize_benchmarks
 
 export BENCHMARK_TYPE=throughput-vs-latency
 export RECORD_LENGTH=1024
-export ENGINE_STAT_THREAD_INTERVAL=5
-export DURATION=60
+export ENGINE_STAT_THREAD_INTERVAL=30
+export DURATION=600
 export APPEND_TIMES=1
 export READ_TIMES=1
 
@@ -61,14 +61,15 @@ ssh -q $CLIENT_HOST -- /tmp/benchmark \
 
 # get timestamp on exp engine
 EXP_ENGINE_START_TS=$(ssh -q $EXP_HOST -- date +%s)
+EXP_ENGINE_END_TS=$((EXP_ENGINE_START_TS+DURATION-ENGINE_STAT_THREAD_INTERVAL))
 
 # activiate resource usage script on engine running in background
 ssh -q $EXP_HOST -- sudo rm /tmp/resource_usage.sh /tmp/resource_usage
 scp -q $ROOT_DIR/scripts/resource_usage $ROOT_DIR/scripts/resource_usage.sh $EXP_HOST:/tmp
 ssh -q -f $EXP_HOST -- "nohup /tmp/resource_usage monitor-resource-usage-by-name \
-    --batches=30 \
+    --batches=$((DURATION / ENGINE_STAT_THREAD_INTERVAL)) \
     --sample-rate=1 \
-    --samples=20 \
+    --samples=$ENGINE_STAT_THREAD_INTERVAL \
     --process-name=engine \
     > /dev/null 2>&1"
 
@@ -88,6 +89,7 @@ ssh -q $CLIENT_HOST -- /tmp/benchmark \
     --read_times=$READ_TIMES \
     --engine_nodes=$ENGINE_NODES \
     --concurrency_worker=$CONCURRENCY_WORKER \
+    --concurrency_operation=$CONCURRENCY_OPERATION \
     --operation_semantics_percentages=$OPERATION_SEMANTICS_PERCENTAGES \
     --seqnum_read_percentages=$SEQNUM_READ_PERCENTAGES \
     --tag_append_percentages=$TAG_APPEND_PERCENTAGES \
@@ -95,13 +97,16 @@ ssh -q $CLIENT_HOST -- /tmp/benchmark \
     --shared_tags_capacity=$SHARED_TAGS_CAPACITY \
     >$EXP_DIR/results.log
 
-sleep 3
-
 # get latency and index memory records from engine
 mkdir -p $EXP_DIR/stats
 scp -r -q $EXP_HOST:/mnt/inmem/slog/stats/latencies-*-*.csv $EXP_DIR/stats
 scp -r -q $EXP_HOST:/mnt/inmem/slog/stats/index-memory-*-*.csv $EXP_DIR/stats
 scp -r -q $EXP_HOST:/mnt/inmem/slog/stats/op-stat-*-*.csv $EXP_DIR/stats
+
+# discard
+$BENCHMARK_SCRIPT discard-csv-files-after \
+    --directory=$EXP_DIR/stats \
+    --ts=$EXP_ENGINE_END_TS
 
 for file in $EXP_DIR/stats/latencies-append-*-*.csv; do
     $BENCHMARK_SCRIPT add-row \
@@ -121,6 +126,13 @@ $BENCHMARK_SCRIPT update-column-by-division \
 
 # get resource usage from engine
 scp -q $EXP_HOST:/tmp/resource_usage_engine.csv $BASE_DIR/results/$WORKLOAD/$SLOG/time-cpu-memory.csv
+
+# discard
+$BENCHMARK_SCRIPT discard-csv-entries-after \
+    --file=$BASE_DIR/results/$WORKLOAD/$SLOG/time-cpu-memory.csv \
+    --ts=$EXP_ENGINE_END_TS
+
+# add slog info
 $BENCHMARK_SCRIPT add-slog-info \
     --file=$BASE_DIR/results/$WORKLOAD/$SLOG/time-cpu-memory.csv \
     --slog=$SLOG

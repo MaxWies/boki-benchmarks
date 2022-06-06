@@ -13,6 +13,33 @@ import math
 import pandas as pd
 import csv
 
+def workload_info(workload):
+    if workload.lower() == 'empty-tag':
+        return 'empty tag only'
+    elif workload.lower() == 'one-tag-only':
+        return 'always the same tag'
+    elif workload.lower() == 'new-tags-always':
+        return 'always a new tag'
+
+def discard_csv_files(directory, ts, before = True):
+    csv_file_names = [file for file in os.listdir(directory) if file.endswith('.csv')]
+    csv_files_to_discard = []
+    for csv_file_name in csv_file_names:
+        chunks = csv_file_name.split('.')[0].split('-')
+        ts_file = int(chunks[3])
+        if before:
+            if ts_file < ts:
+                csv_files_to_discard.append(os.path.join(directory, csv_file_name))
+        else:
+            if ts < ts_file:
+                csv_files_to_discard.append(os.path.join(directory, csv_file_name))
+    s = "before"
+    if not before:
+        s = "after"
+    print("Remove {} files because they are {} {}".format(len(csv_files_to_discard), s, str(ts)))
+    for csv_file in csv_files_to_discard:
+        os.remove(csv_file)
+
 def count_csv_entries(csv_files):
     return pd.concat([pd.read_csv(file) for file in csv_files]).shape[0]
 
@@ -129,7 +156,7 @@ def make_time_relative(input_file, start_ts, end_ts, csv_result_file):
     df.to_csv(csv_result_file, mode='a', sep=',', index=False, header=write_header)
 
 
-def generate_plot_boki_vs_indilog(csv_file, relative_scale_ts,  result_file):
+def generate_plot_boki_vs_indilog(csv_file, relative_scale_ts, engines_before, engines_after, workload, result_file):
 
     df = pd.read_csv(csv_file)
     df_boki = df.loc[df['slog'] == 'boki-skewed']
@@ -149,17 +176,22 @@ def generate_plot_boki_vs_indilog(csv_file, relative_scale_ts,  result_file):
 
     p7 = ax1.axvline(x=relative_scale_ts, color='grey', linestyle='dotted', label='Scale')
 
+    ax1.set_ylim(bottom=0)
+    ax2.set_ylim(bottom=0)
+
     ax1.set_xlabel('Time (s)')
     ax1.set_ylabel('Latency (\u03BCs)')
     ax2.set_ylabel('Throughput (kOp/s)')
 
-    ax1.legend(loc='upper center', bbox_to_anchor=(0.5, 1.12),
-          ncol=6, fancybox=True, shadow=True, handles=[p1, p2, p3, p4, p5, p6, p7],
-          prop={'size':5})
+    ax1.legend(handles=[p1, p2, p3, p4, p5, p6, p7])
+    #bbox_to_anchor=(0.5, 1.12),
+    # ax1.legend(loc='lower center', ncol=6, fancybox=True, shadow=True, handles=[p1, p2, p3, p4, p5, p6],
+    #       prop={'size':5})
+    plt.title('Scaling from {} to {} engines (Workload: {})'.format(engines_before, engines_after, workload_info(workload)))
     plt.savefig(result_file)
     plt.close
 
-def generate_plot_indilog_postpone_caching_vs_registration(csv_file, relative_scale_ts,  result_file):
+def generate_plot_indilog_postpone_caching_vs_registration(csv_file, relative_scale_ts, result_file):
 
     df = pd.read_csv(csv_file)
     df_indilog_postpone_caching= df.loc[df['slog'] == 'indilog-postpone-caching']
@@ -169,26 +201,25 @@ def generate_plot_indilog_postpone_caching_vs_registration(csv_file, relative_sc
 
     ax2 = ax1.twinx()
 
-    p1, = ax1.plot(df_indilog_postpone_caching['ts_relative'], df_indilog_postpone_caching['latency_read_50'], linestyle='dotted', color='darkorange', label='Indilog (Postpone Servicing) Read 0.5')
-    p2, = ax1.plot(df_indilog_postpone_caching['ts_relative'], df_indilog_postpone_caching['latency_read_99'], linestyle='dashed', color='darkorange', label='Indilog (Postpone Servicing)  Read 0.99')
-    p3, = ax2.plot(df_indilog_postpone_caching['ts_relative'], df_indilog_postpone_caching['throughput'], linestyle='solid', color='darkorange', label='Indilog (Postpone Servicing) Throughput')
+    p1, = ax1.plot(df_indilog_postpone_caching['ts_relative'], df_indilog_postpone_caching['latency_read_50'], linestyle='dotted', color='darkorange', label='[Postpone Servicing] Read 0.5')
+    p2, = ax1.plot(df_indilog_postpone_caching['ts_relative'], df_indilog_postpone_caching['latency_read_99'], linestyle='dashed', color='darkorange', label='[Postpone Servicing]  Read 0.99')
+    p3, = ax2.plot(df_indilog_postpone_caching['ts_relative'], df_indilog_postpone_caching['throughput'], linestyle='solid', color='darkorange', label='[Postpone Servicing] Throughput')
 
-    p4, = ax1.plot(df_indilog_postpone_registering['ts_relative'], df_indilog_postpone_registering['latency_read_50'], linestyle='dotted', color='darkgreen', label='Indilog (Postpone Registration) Read 0.5')
-    p5, = ax1.plot(df_indilog_postpone_registering['ts_relative'], df_indilog_postpone_registering['latency_read_99'], linestyle='dashed', color='darkgreen', label='Indilog (Postpone Registration)  Read 0.99')
-    p6, = ax2.plot(df_indilog_postpone_registering['ts_relative'], df_indilog_postpone_registering['throughput'], linestyle='solid', color='darkgreen', label='Indilog (Postpone Registration) Throughput')
+    p4, = ax1.plot(df_indilog_postpone_registering['ts_relative'], df_indilog_postpone_registering['latency_read_50'], linestyle='dotted', color='darkgreen', label='[Postpone Servicing+Registration] Read 0.5')
+    p5, = ax1.plot(df_indilog_postpone_registering['ts_relative'], df_indilog_postpone_registering['latency_read_99'], linestyle='dashed', color='darkgreen', label='[Postpone Servicing+Registration]  Read 0.99')
+    p6, = ax2.plot(df_indilog_postpone_registering['ts_relative'], df_indilog_postpone_registering['throughput'], linestyle='solid', color='darkgreen', label='[Postpone Servicing+Registration] Throughput')
 
     p7 = ax1.axvline(x=relative_scale_ts, color='grey', linestyle='dotted', label='Scale')
 
-    #ax1.set_ylim(0, 2500)
-    #ax2.set_ylim(0, 200)
+    ax1.set_ylim(bottom=0)
+    ax2.set_ylim(bottom=0)
 
     ax1.set_xlabel('Time (s)')
     ax1.set_ylabel('Latency (\u03BCs)')
     ax2.set_ylabel('Throughput (kOp/s)')
 
-    ax1.legend(loc='upper center', bbox_to_anchor=(0.5, 1.12),
-          ncol=6, fancybox=True, shadow=True, handles=[p1, p2, p3, p4, p5, p6, p7],
-          prop={'size':5})
+    ax1.legend(handles=[p1, p2, p3, p4, p5, p6, p7], prop={'size':7})
+    plt.title('Indilog: Later Servicing compared with later Servicing+Registration')
     plt.savefig(result_file)
     plt.close
 
@@ -202,21 +233,29 @@ if __name__ == '__main__':
     parser.add_argument('--append-times', type=int)
     parser.add_argument('--read-times', type=int)
     parser.add_argument('--interval', type=int)
+    parser.add_argument('--ts', type=int)
     parser.add_argument('--start-ts', type=int)
     parser.add_argument('--end-ts', type=int)
     parser.add_argument('--scale-ts', type=int)
+    parser.add_argument('--engines-before', type=int)
+    parser.add_argument('--engines-after', type=int)
+    parser.add_argument('--workload', type=str)
     parser.add_argument('--relative-scale-ts', type=int)
     parser.add_argument('--filter', type=str)
     parser.add_argument('--result-file', type=str)
     parser.add_argument('--result-directory', type=str)
     args = parser.parse_args()
     try:
-        if args.cmd == 'combine-csv-files':
+        if args.cmd == 'discard-csv-files-before':
+            discard_csv_files(args.directory, args.ts, before=True)
+        elif args.cmd == 'discard-csv-files-after':
+            discard_csv_files(args.directory, args.ts, before=False) # == after
+        elif args.cmd == 'combine-csv-files':
             combine_csv_files(args.directory, args.slog, args.interval, args.scale_ts, args.result_file)
         elif args.cmd == 'make-time-relative':
             make_time_relative(args.file, args.start_ts, args.end_ts, args.result_file)
         elif args.cmd == 'generate-plot-boki-vs-indilog':
-            generate_plot_boki_vs_indilog(args.file, args.relative_scale_ts, args.result_file)
+            generate_plot_boki_vs_indilog(args.file, args.relative_scale_ts, args.engines_before, args.engines_after, args.workload, args.result_file)
         elif args.cmd == 'generate-plot-postpone-caching-vs-registration':
             generate_plot_indilog_postpone_caching_vs_registration(args.file, args.relative_scale_ts, args.result_file)
         else:

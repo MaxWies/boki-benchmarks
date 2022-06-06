@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 
 import os
+import signal
 import sys
 import argparse
 import subprocess as sp
@@ -16,10 +17,13 @@ def run_command(cmd):
         raise Exception('Failed to run remote command: ' + ' '.join(cmd) + '\n' + ret.stderr)
     return ret.stdout, ret.stderr
 
+def run_command_no_check(cmd):
+    sp.run(cmd, stdout=sp.PIPE, stderr=sp.PIPE, encoding='utf8')
+
 def measure_resource_usage(csv_file, batches, script, pid, sample_rate, samples, log_path, log_file_name):
     with open(csv_file, 'w', encoding='UTF8', newline='') as f:
         writer = csv.writer(f)
-        writer.writerow(['ts_absolute', 'cpu_min', 'cpu_max', 'cpu_avg', 'mem_sta', 'mem_end', 'mem_dif', 'cpu_sns', 'mem_sns'])
+        writer.writerow(['ts_absolute', 'cpu_min', 'cpu_max', 'cpu_avg', 'mem_sta', 'mem_end', 'mem_dif', 'cpu_sns', 'mem_sns', 'mem_tot'])
     for _ in range(batches):
         data = sample_resource_usage(script, pid, sample_rate, samples, log_path, log_file_name)
         with open(csv_file, 'a', encoding='UTF8', newline='') as f:
@@ -68,9 +72,10 @@ def sample_resource_usage(script, pid, sample_rate, samples, log_path, log_file_
     mem_dif = round(mem_end - mem_sta, 2)
     cpu_snapshots_result = ' '.join(str(c) for c in cpu_snapshots)
     mem_snapshots_result = ' '.join(str(m) for m in mem_snapshots)
-    # print("CPU_MIN: {}\nCPU_MAX: {}\nCPU_AVG: {}\nMEM_STA: {}\nMEM_END: {}\nMEM_DIF: {}\nCPU_SNS: {}\nMEM_SNS: {}".format(
-    #     str(cpu_min), str(cpu_max), str(cpu_avg), str(mem_sta), str(mem_end), str(mem_dif), cpu_snapshots_result, mem_snapshots_result
-    # ))
+
+    physical_mem, _ = run_command(['awk', '/MemTotal/ {print $2}', '/proc/meminfo'])
+    physical_mem = float(physical_mem.strip())
+    mem_total = round((physical_mem * 1000 * mem_end / 100) / 1000**2, 2)
     return [
         round(time.time()),
         cpu_min, 
@@ -80,8 +85,28 @@ def sample_resource_usage(script, pid, sample_rate, samples, log_path, log_file_
         mem_end, 
         mem_dif, 
         cpu_snapshots_result, 
-        mem_snapshots_result
+        mem_snapshots_result,
+        mem_total
     ]
+
+def measure_network_bandwidth(script, interface, output_file, duration, nethogs_parser, result_file_csv):
+    if os.path.isfile(output_file):
+        os.remove(output_file)
+    run_command_no_check([script, interface, str(duration), output_file])
+    if os.path.isfile(result_file_csv):
+        os.remove(result_file_csv)
+    output, _ = run_command([nethogs_parser, '-type=csv', output_file])
+    file = open(result_file_csv, 'w')
+    file.write(output)
+    file.close()
+
+def run_iftop(interface, number_of_connections, duration, output_file):
+    if os.path.isfile(output_file):
+            os.remove(output_file)
+    output, _ = run_command(['sudo', 'iftop', '-i', interface, '-t', '-L', str(number_of_connections), '-s', str(duration)])
+    file = open(output_file, 'w')
+    file.write(output)
+    file.close()
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -93,6 +118,16 @@ if __name__ == '__main__':
     parser.add_argument('--sample-rate', type=int, default=2)
     parser.add_argument('--samples', type=int, default=100)
     parser.add_argument('--log-path', type=str, default='/tmp')
+    parser.add_argument('--nethogs-script', type=str, default='/tmp/bandwidth.sh')
+    parser.add_argument('--network-interface', type=str, default='eth0')
+    parser.add_argument('--nethogs-output-file', type=str, default='/tmp/bandwidth')
+    parser.add_argument('--nethogs-trace-duration', type=int)
+    parser.add_argument('--nethogs-parser', type=str, default='/usr/local/bin/hogs')
+    parser.add_argument('--nethogs-csv-file', type=str, default='/tmp/bandwidth.csv')
+    parser.add_argument('--iftop-network-interface', type=str, default='eth0')
+    parser.add_argument('--iftop-connections', type=int, default=20)
+    parser.add_argument('--iftop-duration', type=int)
+    parser.add_argument('--iftop-output-file', type=str, default='/tmp/bandwidth.log')
     args = parser.parse_args()
     try:
         if args.cmd == 'sample-resource-usage-by-name':
@@ -117,6 +152,22 @@ if __name__ == '__main__':
             measure_resource_usage(
                 batch_csv_file, args.batches, args.resource_usage_script, process_id, 
                 args.sample_rate, args.samples, args.log_path, log_file_name
+            )
+        elif args.cmd == 'monitor-network-bandwidth':
+            measure_network_bandwidth(
+                args.nethogs_script,
+                args.network_interface,
+                args.nethogs_output_file,
+                args.nethogs_trace_duration,
+                args.nethogs_parser,
+                args.nethogs_csv_file
+            )
+        elif args.cmd == 'run-iftop':
+            run_iftop(
+                args.iftop_network_interface,
+                args.iftop_connections,
+                args.iftop_duration,
+                args.iftop_output_file
             )
         else:
             raise Exception('Unknown command: ' + args.cmd)

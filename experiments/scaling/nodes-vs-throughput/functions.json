@@ -6,7 +6,7 @@
                 "image": "maxwie/indilog-microbench:latest",
                 "entrypoint" : ["/tmp/slog/run_launcher", "/microbench-bin/main"],
                 "volumes": ["/mnt/inmem/slog:/tmp/slog"],
-                "environment": ["FAAS_GO_MAX_PROC_FACTOR=1", "GOGC=1000"],
+                "environment": ["FAAS_GO_MAX_PROC_FACTOR=8", "GOGC=1000"],
                 "depends_on": ["slog-engine"]
             }
         },
@@ -16,7 +16,7 @@
                 "image": "maxwie/indilog-microbench:latest",
                 "entrypoint" : ["/tmp/slog/run_launcher", "/microbench-bin/main"],
                 "volumes": ["/mnt/inmem/slog:/tmp/slog"],
-                "environment": ["FAAS_GO_MAX_PROC_FACTOR=1", "GOGC=1000"],
+                "environment": ["FAAS_GO_MAX_PROC_FACTOR=8", "GOGC=1000"],
                 "depends_on": ["slog-engine"]
             }
         }

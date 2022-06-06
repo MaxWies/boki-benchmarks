@@ -91,6 +91,7 @@ ssh -q $CLIENT_HOST -- /tmp/benchmark \
     --read_times=$READ_TIMES \
     --engine_nodes=$ENGINE_NODES \
     --concurrency_worker=$CONCURRENCY_WORKER \
+    --concurrency_operation=$CONCURRENCY_OPERATION \
     --operation_semantics_percentages=$OPERATION_SEMANTICS_PERCENTAGES \
     --seqnum_read_percentages=$SEQNUM_READ_PERCENTAGES \
     --tag_append_percentages=$TAG_APPEND_PERCENTAGES \
@@ -102,20 +103,9 @@ EXP_ENGINE_END_TS=$((EXP_ENGINE_START_TS+DURATION+ENGINE_STAT_THREAD_INTERVAL))
 mkdir -p $EXP_DIR/stats/latencies
 scp -r -q $EXP_HOST:/mnt/inmem/slog/stats/all-latencies-*.csv $EXP_DIR/stats/latencies
 
-$BENCHMARK_SCRIPT discard-csv-files \
+THROUGHPUT=`$BENCHMARK_SCRIPT compute-throughput \
     --directory=$EXP_DIR/stats/latencies \
-    --ts-end=$EXP_ENGINE_END_TS
-
-THROUGHPUT_APPEND=`$BENCHMARK_SCRIPT compute-throughput \
-    --directory=$EXP_DIR/stats/latencies \
-    --filter=append \
     --exp-duration=$DURATION`
-
-THROUGHPUT_READ=`$BENCHMARK_SCRIPT compute-throughput \
-    --directory=$EXP_DIR/stats/latencies \
-    --filter=read \
-    --exp-duration=$DURATION`
-
 
 for OP in append read;
 do
@@ -128,7 +118,6 @@ done
 $BENCHMARK_SCRIPT add-row \
     --directory=$EXP_DIR/stats/latencies \
     --slog=$SLOG \
-    --concurrency=$CONCURRENCY_WORKER \
-    --throughput-append=$THROUGHPUT_APPEND \
-    --throughput-read=$THROUGHPUT_READ \
+    --concurrency=$((CONCURRENCY_WORKER*CONCURRENCY_OPERATION)) \
+    --throughput=$THROUGHPUT \
     --result-file=$BASE_DIR/results/concurrency-vs-latency.csv
