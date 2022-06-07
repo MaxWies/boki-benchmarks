@@ -3,18 +3,22 @@ BASE_DIR=`realpath $(dirname $0)`
 ROOT_DIR=`realpath $BASE_DIR/../..`
 
 SLOG=$1
-SLOG_INDEX_CONFIG=$2
-SLOG_SPEC_FILE=$3
+INDEX_TIER_CONFIG=$2
+CONTROLLER_SPEC_FILE=$3
 EXP_SPEC_FILE=$4
 
 HELPER_SCRIPT=$ROOT_DIR/scripts/exp_helper
 CONFIG_MAKER_SCRIPT=$ROOT_DIR/scripts/config_maker
 
-SLOG_SPEC_FILE_NAME=$(basename $SLOG_SPEC_FILE .json)
+CONTROLLER_SPEC_FILE_NAME=$(basename $CONTROLLER_SPEC_FILE .json)
 EXP_SPEC_FILE_NAME=$(basename $EXP_SPEC_FILE .json)
-EXP_DIR=$BASE_DIR/results/$SLOG_SPEC_FILE_NAME/$EXP_SPEC_FILE_NAME
+EXP_DIR=$BASE_DIR/results/$SLOG/$CONTROLLER_SPEC_FILE_NAME/$EXP_SPEC_FILE_NAME
 
-$CONFIG_MAKER_SCRIPT generate-runtime-config --base-dir=$BASE_DIR --slog=$SLOG --slog-spec-file=$SLOG_SPEC_FILE --exp-spec-file=$EXP_SPEC_FILE
+$CONFIG_MAKER_SCRIPT generate-runtime-config \
+    --base-dir=$BASE_DIR \
+    --slog=$SLOG \
+    --controller-spec-file=$CONTROLLER_SPEC_FILE \
+    --exp-spec-file=$EXP_SPEC_FILE
 
 MANAGER_HOST=`$HELPER_SCRIPT get-docker-manager-host --base-dir=$BASE_DIR`
 CLIENT_HOST=`$HELPER_SCRIPT get-client-host --base-dir=$BASE_DIR`
@@ -61,4 +65,4 @@ done
 
 sleep 10
 
-$BASE_DIR/run_client.sh $SLOG $SLOG_INDEX_CONFIG $EXP_SPEC_FILE $EXP_DIR
+$BASE_DIR/run_client.sh $SLOG $INDEX_TIER_CONFIG $EXP_SPEC_FILE $EXP_DIR

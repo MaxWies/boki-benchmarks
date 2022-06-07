@@ -37,12 +37,13 @@ def add_row(slog, component, concurrency, cpu_avg, bandwidth_file, result_file):
 def generate_plot_concurrency_vs_bandwidth(csv_file, component, result_file):
     df = pd.read_csv(csv_file)
     df_component = df.loc[df['component'] == component]
+    df_component_boki_local = df_component.loc[df_component['slog'] == 'boki-local']
 
     fig, ax1 = plt.subplots()
     ax2 = ax1.twinx()
 
-    p1, = ax1.plot(df_component['concurrency'], df_component['mb_per_second_sent'], 'o-', color='blue', label='Bandwidth Sent')
-    p2, = ax2.plot(df_component['concurrency'], df_component['mb_per_second_received'], 'o-', color='darkred', label='Bandwidth Received')
+    p1, = ax1.plot(df_component_boki_local['concurrency'], df_component_boki_local['mb_per_second_sent'], 'o-', color='blue', label='Bandwidth Sent')
+    p2, = ax2.plot(df_component_boki_local['concurrency'], df_component_boki_local['mb_per_second_received'], 'o-', color='darkred', label='Bandwidth Received')
 
     ax1.set_xlabel('Concurrency (# Go Routines)')
     ax1.set_ylabel('Bandwidth (Mb/s)')
@@ -57,7 +58,7 @@ def generate_plot_concurrency_vs_bandwidth(csv_file, component, result_file):
 
     ax1.legend(handles=[p1, p2])
 
-    plt.title('Bandwidth of Boki {} node'.format(component))
+    plt.title('Bandwidth use of local Boki {} node'.format(component))
     plt.savefig(result_file)
     plt.close
 
@@ -65,7 +66,13 @@ def generate_plot_concurrency_vs_cpu(csv_file, component, result_file):
     df = pd.read_csv(csv_file)
     df_component = df.loc[df['component'] == component]
 
-    plt.plot(df_component['concurrency'], df_component['cpu_avg'], 'o-', color='blue', label='Average CPU')
+    df_component_boki_local = df_component.loc[df_component['slog'] == 'boki-local']
+    df_component_boki_remote = df_component.loc[df_component['slog'] == 'boki-remote']
+    df_component_boki_hybrid = df_component.loc[df_component['slog'] == 'boki-hybrid']
+
+    plt.plot(df_component_boki_local['concurrency'], df_component_boki_local['cpu_avg'], 'o-', color='blue', label='Function communication + local index requests')
+    plt.plot(df_component_boki_remote['concurrency'], df_component_boki_remote['cpu_avg'], 'o-', color='green', label='No function communication + remote index requests')
+    plt.plot(df_component_boki_hybrid['concurrency'], df_component_boki_hybrid['cpu_avg'], 'o-', color='orange', label='Function communication + local and remote index requests')
     
     plt.xlabel('Concurrency (# Go Routines)')
     plt.ylabel('CPU (%)')
@@ -73,7 +80,9 @@ def generate_plot_concurrency_vs_cpu(csv_file, component, result_file):
     plt.xlim(left=0)
     plt.ylim(bottom=0)
 
-    plt.title('CPU of Boki {} node'.format(component))
+    plt.legend(prop={'size':7})
+
+    plt.title('CPU use of Boki {} node'.format(component))
     plt.savefig(result_file)
     plt.close
 

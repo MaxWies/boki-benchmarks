@@ -207,6 +207,15 @@ def get_machine_with_label_main(base_dir, label):
             if label in labels or label+'=true' in labels:
                 print(machine_info['ip'] + '-' + USER_NAME)
 
+def get_machine_with_labels_main(base_dir, labels):
+    for machine_info in load_machines_file(base_dir)['machines'].values():
+        if 'labels' in machine_info:
+            labels = machine_info['labels']
+            for label in labels:
+                if label in labels or label+'=true' in labels:
+                    print(machine_info['ip'] + '-' + USER_NAME)
+                    break
+
 def get_single_machine_with_label_main(base_dir, label):
     for machine_info in load_machines_file(base_dir)['machines'].values():
         if 'labels' in machine_info:
@@ -252,26 +261,12 @@ def get_num_active_service_replicas(base_dir, service_name):
         raise Exception("The replicas info cannot be parsed. Message is {}".format(replicas_info))
     print(int(replicas_info[0])) # a bit dirty
 
-def get_machine_with_label_main(base_dir, label):
-    for machine_info in load_machines_file(base_dir)['machines'].values():
-        if 'labels' in machine_info:
-            labels = machine_info['labels']
-            if label in labels or label+'=true' in labels:
-                print(machine_info['ip'] + '-' + USER_NAME)
-
 def get_machine_ip_with_label_main(base_dir, label):
     for machine_info in load_machines_file(base_dir)['machines'].values():
         if 'labels' in machine_info:
             labels = machine_info['labels']
             if label in labels or label+'=true' in labels:
                 print(machine_info['ip'])
-
-def get_machine_with_label_main(base_dir, label):
-    for machine_info in load_machines_file(base_dir)['machines'].values():
-        if 'labels' in machine_info:
-            labels = machine_info['labels']
-            if label in labels or label+'=true' in labels:
-                print(machine_info['ip'] + '-' + USER_NAME)
 
 def get_dynamic_hostnames(base_dir, label):
     hostnames = []
@@ -340,6 +335,7 @@ if __name__ == '__main__':
     parser.add_argument('--base-dir', type=str, default='.')
     parser.add_argument('--machine-name', type=str, default=None)
     parser.add_argument('--machine-label', type=str, default=None)
+    parser.add_argument('--machine-labels', type=str, default=None)
     parser.add_argument('--machine-host', type=str, default=None)
     parser.add_argument('--service', type=str, default=None)
     parser.add_argument('--log-path', type=str, default=None)
@@ -365,6 +361,9 @@ if __name__ == '__main__':
             get_all_server_hosts_main(args.base_dir)
         elif args.cmd == 'get-machine-with-label':
             get_machine_with_label_main(args.base_dir, args.machine_label)
+        elif args.cmd == 'get-machine-with-labels':
+            machine_labels = args.machine_labels.split(',')
+            get_machine_with_labels_main(args.base_dir, machine_labels)
         elif args.cmd == 'get-machine-ip-with-label':
             get_machine_ip_with_label_main(args.base_dir, args.machine_label)
         elif args.cmd == 'get-single-machine-with-label':

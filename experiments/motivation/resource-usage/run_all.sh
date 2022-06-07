@@ -8,18 +8,36 @@ HELPER_SCRIPT=$ROOT_DIR/scripts/exp_helper
 BENCHMARK_SCRIPT=$BASE_DIR/summarize_benchmarks
 
 RESULT_DIR=$BASE_DIR/results
-rm -rf $RESULT_DIR
-mkdir -p $RESULT_DIR
+#rm -rf $RESULT_DIR
+#mkdir -p $RESULT_DIR
 
 #Boki-local
 #cp $MACHINE_SPEC_DIR/boki/machines_eng1-st1-seq3.json $BASE_DIR/machines.json
 #$HELPER_SCRIPT start-machines --base-dir=$BASE_DIR
-./run_build.sh boki-local $CONTROLLER_SPEC_DIR/boki/eng1-st1-seq3-ir1-ur1-mr3.json $BASE_DIR/specs/exp-cf1.json
-./run_build.sh boki-local $CONTROLLER_SPEC_DIR/boki/eng1-st1-seq3-ir1-ur1-mr3.json $BASE_DIR/specs/exp-cf2.json
-./run_build.sh boki-local $CONTROLLER_SPEC_DIR/boki/eng1-st1-seq3-ir1-ur1-mr3.json $BASE_DIR/specs/exp-cf4.json
-./run_build.sh boki-local $CONTROLLER_SPEC_DIR/boki/eng1-st1-seq3-ir1-ur1-mr3.json $BASE_DIR/specs/exp-cf8.json
-./run_build.sh boki-local $CONTROLLER_SPEC_DIR/boki/eng1-st1-seq3-ir1-ur1-mr3.json $BASE_DIR/specs/exp-cf12.json
-./run_build.sh boki-local $CONTROLLER_SPEC_DIR/boki/eng1-st1-seq3-ir1-ur1-mr3.json $BASE_DIR/specs/exp-cf16.json
+# ./run_build.sh boki-local $CONTROLLER_SPEC_DIR/boki/eng1-st1-seq3-ir1-ur1-mr3.json $BASE_DIR/specs/exp-cf1.json
+# ./run_build.sh boki-local $CONTROLLER_SPEC_DIR/boki/eng1-st1-seq3-ir1-ur1-mr3.json $BASE_DIR/specs/exp-cf2.json
+# ./run_build.sh boki-local $CONTROLLER_SPEC_DIR/boki/eng1-st1-seq3-ir1-ur1-mr3.json $BASE_DIR/specs/exp-cf4.json
+# ./run_build.sh boki-local $CONTROLLER_SPEC_DIR/boki/eng1-st1-seq3-ir1-ur1-mr3.json $BASE_DIR/specs/exp-cf8.json
+# ./run_build.sh boki-local $CONTROLLER_SPEC_DIR/boki/eng1-st1-seq3-ir1-ur1-mr3.json $BASE_DIR/specs/exp-cf12.json
+# ./run_build.sh boki-local $CONTROLLER_SPEC_DIR/boki/eng1-st1-seq3-ir1-ur1-mr3.json $BASE_DIR/specs/exp-cf16.json
+
+#cp $MACHINE_SPEC_DIR/boki/machines_eng1-ei1-st1-seq3.json $BASE_DIR/machines.json
+#$HELPER_SCRIPT start-machines --base-dir=$BASE_DIR
+#./run_build.sh boki-remote $CONTROLLER_SPEC_DIR/boki/eng1-ei1-st1-seq3-ir1-ur1-mr3.json $BASE_DIR/specs/exp-cf1.json
+#./run_build.sh boki-remote $CONTROLLER_SPEC_DIR/boki/eng1-ei1-st1-seq3-ir1-ur1-mr3.json $BASE_DIR/specs/exp-cf2.json
+# ./run_build.sh boki-remote $CONTROLLER_SPEC_DIR/boki/eng1-ei1-st1-seq3-ir1-ur1-mr3.json $BASE_DIR/specs/exp-cf4.json
+# ./run_build.sh boki-remote $CONTROLLER_SPEC_DIR/boki/eng1-ei1-st1-seq3-ir1-ur1-mr3.json $BASE_DIR/specs/exp-cf8.json
+# ./run_build.sh boki-remote $CONTROLLER_SPEC_DIR/boki/eng1-ei1-st1-seq3-ir1-ur1-mr3.json $BASE_DIR/specs/exp-cf12.json
+# ./run_build.sh boki-remote $CONTROLLER_SPEC_DIR/boki/eng1-ei1-st1-seq3-ir1-ur1-mr3.json $BASE_DIR/specs/exp-cf16.json
+
+#cp $MACHINE_SPEC_DIR/boki/machines_eng1-eh1-st2-seq3.json $BASE_DIR/machines.json
+#$HELPER_SCRIPT start-machines --base-dir=$BASE_DIR
+#./run_build.sh boki-hybrid $CONTROLLER_SPEC_DIR/boki/eng1-eh1-st2-seq3-ir1-ur1-mr3.json $BASE_DIR/specs/exp-cf1.json
+#./run_build.sh boki-hybrid $CONTROLLER_SPEC_DIR/boki/eng1-eh1-st2-seq3-ir1-ur1-mr3.json $BASE_DIR/specs/exp-cf2.json
+# ./run_build.sh boki-hybrid $CONTROLLER_SPEC_DIR/boki/eng1-eh1-st2-seq3-ir1-ur1-mr3.json $BASE_DIR/specs/exp-cf4.json
+# ./run_build.sh boki-hybrid $CONTROLLER_SPEC_DIR/boki/eng1-eh1-st2-seq3-ir1-ur1-mr3.json $BASE_DIR/specs/exp-cf8.json
+# ./run_build.sh boki-hybrid $CONTROLLER_SPEC_DIR/boki/eng1-eh1-st2-seq3-ir1-ur1-mr3.json $BASE_DIR/specs/exp-cf12.json
+# ./run_build.sh boki-hybrid $CONTROLLER_SPEC_DIR/boki/eng1-eh1-st2-seq3-ir1-ur1-mr3.json $BASE_DIR/specs/exp-cf16.json
 
 
 # Benchmark collected csv file

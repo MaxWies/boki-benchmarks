@@ -117,6 +117,19 @@ def count_csv_entries_in_directory(directory, filter):
                 csv_entries += 1
     return csv_entries
 
+def large_file_compute_column_average(file, index):
+    csv_entries = 0
+    total = 0.0
+    with open(file) as f:
+        for line in f:
+            chunks = line.split(',')
+            csv_entries += 1
+            total += float(chunks[index])
+    print(round(total / csv_entries, 2))
+
+def compute_throughput(directory, exp_duration):
+    print(round(count_csv_entries_in_directory(directory, '') / exp_duration / 1000, 2))
+
 def compute_csv_percentile(csv_file, column_ix, percentile):
     return pd.read_csv(csv_file).iloc[:, column_ix].quantile(q=percentile)
 
@@ -138,6 +151,7 @@ if __name__ == '__main__':
     parser.add_argument('--ts', type=int)
     parser.add_argument('--column', type=str)
     parser.add_argument('--divisor', type=int)
+    parser.add_argument('--index', type=int)
     parser.add_argument('--round-decimals', type=int)
     parser.add_argument('--workload', type=str)
     parser.add_argument('--result-file', type=str)
@@ -154,10 +168,14 @@ if __name__ == '__main__':
             discard_csv_entries(args.file, args.ts, before=True)
         elif args.cmd == 'discard-csv-entries-after':
             discard_csv_entries(args.file, args.ts, before=False) # == after
+        elif args.cmd == 'compute-throughput':
+            compute_throughput(args.directory, args.exp_duration)
         elif args.cmd == 'add-slog-info':
             add_column(args.file, 0, 'slog', args.slog)
         elif args.cmd == 'compute-column-average':
             compute_column_average(args.file, args.column)
+        elif args.cmd == 'large-file-compute-column-average':
+            large_file_compute_column_average(args.file, args.index)
         elif args.cmd == 'parse-iftop-log':
             parse_iftop_log(args.file, args.machine_file, args.exp_duration, args.result_file) 
         else:

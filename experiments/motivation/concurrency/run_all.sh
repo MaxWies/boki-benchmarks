@@ -6,6 +6,7 @@ CONTROLLER_SPEC_DIR=$ROOT_DIR/controller-spec
 
 HELPER_SCRIPT=$ROOT_DIR/scripts/exp_helper
 BENCHMARK_SCRIPT=$BASE_DIR/summarize_benchmarks
+GARBAGE_SCRIPT=$ROOT_DIR/scripts/garbage.sh
 
 RESULT_DIR=$BASE_DIR/results
 
@@ -67,3 +68,5 @@ RESULT_DIR=$BASE_DIR/results
 
 # Benchmark collected csv file
 $BENCHMARK_SCRIPT generate-plot --file=$RESULT_DIR/concurrency-vs-latency.csv --slog=boki-local --result-file=$RESULT_DIR/concurrency-vs-latency.png
+
+$GARBAGE_SCRIPT $BASE_DIR

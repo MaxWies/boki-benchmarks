@@ -74,8 +74,6 @@ $ROOT_DIR/../zookeeper/bin/zkCli.sh -server $MANAGER_IP:2181 \
     create /faas/stat/start $ENGINE_STAT_THREAD_INTERVAL \
     >/dev/null
 
-touch $BASE_DIR/results/collection/client-results.csv
-
 # run benchmark
 ssh -q $CLIENT_HOST -- docker run \
     -v /tmp:/tmp \

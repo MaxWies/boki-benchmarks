@@ -40,27 +40,27 @@ RESULT_DIR=$BASE_DIR/results/$WORKLOAD
 # Boki-local
 # cp $MACHINE_SPEC_DIR/boki/machines_eng2-st2-seq3.json $BASE_DIR/machines.json
 # $HELPER_SCRIPT start-machines --base-dir=$BASE_DIR
-# ./run_build.sh boki-local $CONTROLLER_SPEC_DIR/boki/eng2-st2-seq3-ir2-ur1-mr3.json $BASE_DIR/specs/exp-cf24.json
+# ./run_build.sh boki-local $CONTROLLER_SPEC_DIR/boki/eng2-st2-seq3-ir2-ur1-mr3.json $BASE_DIR/specs/exp-cf3.json
 
 # # Boki-remote
 # cp $MACHINE_SPEC_DIR/boki/machines_eng2-ei2-st2-seq3.json $BASE_DIR/machines.json
 # $HELPER_SCRIPT start-machines --base-dir=$BASE_DIR
-# ./run_build.sh boki-remote $CONTROLLER_SPEC_DIR/boki/eng2-ei2-st2-seq3-ir2-ur1-mr3.json $BASE_DIR/specs/exp-cf24.json
+# ./run_build.sh boki-remote $CONTROLLER_SPEC_DIR/boki/eng2-ei2-st2-seq3-ir2-ur1-mr3.json $BASE_DIR/specs/exp-cf3.json
 
-# Boki-full
-# cp $MACHINE_SPEC_DIR/boki/machines_eng1-ef1-st1-seq3.json $BASE_DIR/machines.json
-# $HELPER_SCRIPT start-machines --base-dir=$BASE_DIR
-# ./run_build.sh boki-full $CONTROLLER_SPEC_DIR/boki/eng3-ei1-st3-seq3-ir1-ur1-mr3.json $BASE_DIR/specs/exp-cf24.json
+# Boki-hybrid
+cp $MACHINE_SPEC_DIR/boki/machines_eng1-eh1-st2-seq3.json $BASE_DIR/machines.json
+$HELPER_SCRIPT start-machines --base-dir=$BASE_DIR
+./run_build.sh boki-hybrid $CONTROLLER_SPEC_DIR/boki/eng1-eh1-st2-seq3-ir1-ur1-mr3.json $BASE_DIR/specs/exp-cf3.json
 
 # Indilog-local
 # cp $MACHINE_SPEC_DIR/indilog/machines_eng2-st2-seq3-ix2.json $BASE_DIR/machines.json
 # $HELPER_SCRIPT start-machines --base-dir=$BASE_DIR
-# ./run_build.sh indilog-local $CONTROLLER_SPEC_DIR/indilog/eng2-st2-seq3-ix2-is2-ir1-ur1-mr3-ssmx4.json $BASE_DIR/specs/exp-cf24.json 
+# ./run_build.sh indilog-local $CONTROLLER_SPEC_DIR/indilog/eng2-st2-seq3-ix2-is2-ir1-ur1-mr3-ssmx4.json $BASE_DIR/specs/exp-cf3.json 
 
 # # Indilog-remote
 # cp $MACHINE_SPEC_DIR/indilog/machines_eng2-st2-seq3-ix2.json $BASE_DIR/machines.json
 # $HELPER_SCRIPT start-machines --base-dir=$BASE_DIR
-# ./run_build.sh indilog-remote $CONTROLLER_SPEC_DIR/indilog/eng2-st2-seq3-ix2-is2-ir1-ur1-mr3-ssmx4.json $BASE_DIR/specs/exp-cf24.json 
+# ./run_build.sh indilog-remote $CONTROLLER_SPEC_DIR/indilog/eng2-st2-seq3-ix2-is2-ir1-ur1-mr3-ssmx4.json $BASE_DIR/specs/exp-cf3.json 
 
 # Benchmark collected csv file
 $BENCHMARK_SCRIPT generate-plot-time-vs-throughput --file=$RESULT_DIR/time-latency-index-memory.csv --workload=$WORKLOAD --result-file=$RESULT_DIR/time-vs-throughput.png

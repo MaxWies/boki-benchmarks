@@ -137,10 +137,13 @@ def generate_swarm_application_less(base_dir, config, slog, controller_spec, exp
                     "replicas": replicas
             }
     elif slog.lower().startswith('boki'):
+        replicas = controller_spec['slog_engine_replicas']
+        if 'slog_hybrid_engine_replicas' in controller_spec:
+            replicas += controller_spec['slog_hybrid_engine_replicas']
         for key, _ in exp_spec['functions'].items():
                 config["services"][function_definitions['functions'][key]['service_name']] = {
                         "placement_label": "engine_node",
-                        "replicas": controller_spec['slog_engine_replicas']
+                        "replicas": replicas
                 }
 
 def generate_swarm_config_engines(config, slog, controller_spec):
@@ -164,6 +167,11 @@ def generate_swarm_config_engines(config, slog, controller_spec):
                 "placement_label": "index_engine_node", 
                 "replicas": controller_spec['slog_index_engine_replicas']
             }
+        if "slog_hybrid_engine_replicas" in controller_spec.keys():
+            config["services"]["slog-hybrid-engine"] = { 
+                "placement_label": "hybrid_engine_node", 
+                "replicas": controller_spec['slog_hybrid_engine_replicas']
+            }
     else:
         raise Exception("Unknown shared log")
 
@@ -184,6 +192,8 @@ def generate_swarm_config(base_dir, slog, controller_spec, exp_spec):
     elif slog.lower().startswith('boki'):
         if 'slog_index_engine_replicas' in config.keys() and 0 < controller_spec['slog_index_engine_replicas']:
             config["services"]["slog-index-engine"] = { "placement_label": "index_engine_node", "replicas": controller_spec['slog_index_engine_replicas'] }
+        if 'slog_hybrid_engine_replicas' in config.keys() and 0 < controller_spec['slog_hybrid_engine_replicas']:
+            config["services"]["slog-hybrid-engine"] = { "placement_label": "hybrid_engine_node", "replicas": controller_spec['slog_hybrid_engine_replicas'] }
     else:
         raise Exception("Unknown shared log")
     generate_swarm_config_engines(config, slog, controller_spec)

@@ -13,45 +13,36 @@ import math
 import pandas as pd
 import csv
 
-def merge_csv_files(directory, filter, result_file):
-    csv_files = [file for file in os.listdir(directory) if file.endswith('.csv') and filter in file]
-    combined_csv = pd.concat([pd.read_csv(os.path.join(directory, file)) for file in csv_files])
-    combined_csv.to_csv(result_file, index=False)
-
-def count_csv_entries(csv_files):
-    return pd.concat([pd.read_csv(file) for file in csv_files]).shape[0]
-
-def count_csv_entries_in_directory(directory, filter):
-    csv_files = [file for file in os.listdir(directory) if file.endswith('.csv') and filter in file]
-    return pd.concat([pd.read_csv(os.path.join(directory, file)) for file in csv_files]).shape[0]
-
 def compute_csv_percentile(csv_file, column_ix, percentile):
     return pd.read_csv(csv_file).iloc[:, column_ix].quantile(q=percentile)
 
 def compute_df_percentile(df, column_ix, percentile):
     return df.iloc[:, column_ix].quantile(q=percentile)
 
-def compute_throughput(directory, exp_duration):
-    print(round(count_csv_entries_in_directory(directory, '') / exp_duration / 1000, 2))
-
-def get_throughput(throughput_csv_file, slog_config):
+def get_throughput(throughput_csv_file, index_tier_config):
     df = pd.read_csv(throughput_csv_file)
-    df_config = df.loc[df['slog_index_config'] == slog_config]
+    df_config = df.loc[df['index_tier_config'] == index_tier_config]
     return df_config['throughput'].iloc[0]
 
-def add_row(slog, slog_config, throughput, point_hit, read_latency_file, result_file):
+def get_avg_latency(throughput_csv_file, index_tier_config):
+    df = pd.read_csv(throughput_csv_file)
+    df_config = df.loc[df['index_tier_config'] == index_tier_config]
+    return df_config['latency_avg'].iloc[0]
+
+def add_row(slog, index_tier_config, throughput, latency_avg, point_hit, read_latency_file, result_file):
     write_header = not os.path.exists(result_file)
     with open(result_file, 'a', encoding='UTF8', newline='') as f:
         writer = csv.writer(f)
         if write_header:
             writer.writerow([
-                'slog', 'slog_index_config', 'point_hit', 'throughput',
+                'slog', 'index_tier_config', 'point_hit', 'throughput', 'latency_avg',
                 'latency_read_50','latency_read_75', 'latency_read_90','latency_read_99','latency_read_999'])
         data = [
             slog,
-            slog_config,
+            index_tier_config,
             point_hit,
             throughput,
+            int(latency_avg),
             int(compute_csv_percentile((read_latency_file), 0, 0.5)),
             int(compute_csv_percentile((read_latency_file), 0, 0.75)),
             int(compute_csv_percentile((read_latency_file), 0, 0.9)),
@@ -62,7 +53,7 @@ def add_row(slog, slog_config, throughput, point_hit, read_latency_file, result_
 
 def generate_plot(directory, throughput_csv_file, result_file):
     fig, ax = plt.subplots()
-    csv_files = sorted([os.path.join(directory, file) for file in os.listdir(directory) if file.endswith('.csv')])
+    csv_files = sorted([os.path.join(directory, file) for file in os.listdir(directory) if file.endswith('.csv') and 'latencies-read' in file])
     for csv_file in csv_files:
         special_percentiles = [0.50,0.90]
         special_percentiles_latencies = []
@@ -73,28 +64,36 @@ def generate_plot(directory, throughput_csv_file, result_file):
         for i in range(1,100):
             percentile = round(i/100, 2)
             cdf.append(percentile)
-            latency = compute_df_percentile(df, 0, percentile)
+            latency = float(compute_df_percentile(df, 0, percentile))
             latencies.append(latency)
             if percentile in special_percentiles:
                 special_percentiles_latencies.append(latency)
         csv_file_name = os.path.basename(csv_file)
-        slog_index_config = csv_file_name.split('.')[0].split('_')[1]
-        slog_index_config_chunks = slog_index_config.split('-')
-        linestyle = '-'
-        print(slog_index_config_chunks[2].lower())
-        if slog_index_config_chunks[2].lower() == 'false':
-            linestyle = '--'
-        ax.plot(latencies, cdf, label='S:{}|R:{}, Tp:{}Kop/s'.format(
-            slog_index_config_chunks[0],
-            slog_index_config_chunks[1],
-            str(get_throughput(throughput_csv_file, slog_index_config))
-        ), linestyle=linestyle)
+        index_tier_config = csv_file_name.split('.')[0].split('_')[1]
+        index_tier_config_chunks = index_tier_config.split('-')
+        query_semantic = 'Point'
+        color = 'blue'
+        linestyle = 'dotted'
+        if index_tier_config_chunks[2].lower() == 'false':
+            query_semantic = 'Range'
+            color = 'green'
+            linestyle = 'solid'
+        label = '{}, Tp:{}Kop/s , Avg Lat: {}\u03BCs'.format(
+                query_semantic,
+                get_throughput(throughput_csv_file, index_tier_config),
+                get_avg_latency(throughput_csv_file, index_tier_config)
+        )
+        ax.plot(latencies, cdf, 
+            label=label, 
+            linestyle=linestyle,
+            color=color
+        )
 
-    ax.set_xlim(0, 1200)
+    ax.set_xlim(0, 2400)
     ax.set_ylim(0, 1.03)
 
-    x_major_ticks = np.arange(0, 1201, 400)
-    x_minor_ticks = np.arange(0, 1201, 100)
+    x_major_ticks = np.arange(0, 2401, 800)
+    x_minor_ticks = np.arange(0, 2401, 200)
     y_ticks = np.arange(0, 1.1, 0.1)
 
     ax.set_xticks(x_major_ticks)
@@ -106,6 +105,8 @@ def generate_plot(directory, throughput_csv_file, result_file):
 
     plt.xlabel('Latency (\u03BCs)')
     plt.ylabel('Cumulated Latency')
+
+    plt.title('Latency impact of point queries and range queries')
 
     plt.savefig(result_file)
     plt.close
@@ -150,22 +151,19 @@ if __name__ == '__main__':
     parser.add_argument('--directory', type=str)
     parser.add_argument('--file', type=str)
     parser.add_argument('--slog', type=str)
-    parser.add_argument('--slog-config', type=str)
+    parser.add_argument('--index-tier-config', type=str)
     parser.add_argument('--exp-duration', type=int)
     parser.add_argument('--filter', type=str)
     parser.add_argument('--throughput', type=float)
+    parser.add_argument('--latency-avg', type=float)
     parser.add_argument('--is-point-hit', type=str)
     parser.add_argument('--read-latency-file', type=str)
     parser.add_argument('--result-file', type=str)
     args = parser.parse_args()
     try:
-        if args.cmd == 'merge-csv':
-            merge_csv_files(args.directory, args.filter, args.result_file)
-        elif args.cmd == 'compute-throughput':
-            compute_throughput(args.directory, args.exp_duration)
-        elif args.cmd == 'add-row':
+        if args.cmd == 'add-row':
             point_hit = args.is_point_hit.lower() == 'true'
-            add_row(args.slog, args.slog_config, args.throughput, point_hit, args.read_latency_file, args.result_file)
+            add_row(args.slog, args.index_tier_config, args.throughput, args.latency_avg, point_hit, args.read_latency_file, args.result_file)
         elif args.cmd == 'generate-plot':
             generate_plot(args.directory, args.file, args.result_file)
         else:

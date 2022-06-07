@@ -11,8 +11,8 @@ BENCHMARK_SCRIPT=$BASE_DIR/summarize_benchmarks
 
 export BENCHMARK_TYPE=throughput-vs-latency
 export RECORD_LENGTH=1024
-export ENGINE_STAT_THREAD_INTERVAL=30
-export DURATION=600
+export ENGINE_STAT_THREAD_INTERVAL=10
+export DURATION=60
 export APPEND_TIMES=1
 export READ_TIMES=1
 
@@ -33,9 +33,15 @@ ENTRY_HOST=`$HELPER_SCRIPT get-service-host --base-dir=$BASE_DIR --service=slog-
 
 ALL_ENGINE_HOSTS=`$HELPER_SCRIPT get-machine-with-label --base-dir=$BASE_DIR --machine-label=engine_node`
 ENGINE_NODES=$(wc -w <<< $ALL_ENGINE_HOSTS)
-EXP_HOST=`$HELPER_SCRIPT get-single-machine-with-label --base-dir=$BASE_DIR --machine-label=engine_node`
-if [[ $SLOG_CONFIG == boki-remote ]]; then
+
+if [[ $SLOG == boki-local ]] || [[ $SLOG == indilog-local ]] || [[ $SLOG == indilog-remote ]]; then
+    EXP_HOST=`$HELPER_SCRIPT get-single-machine-with-label --base-dir=$BASE_DIR --machine-label=engine_node`
+elif [[ $SLOG == boki-remote ]]; then
     EXP_HOST=`$HELPER_SCRIPT get-single-machine-with-label --base-dir=$BASE_DIR --machine-label=index_engine_node`
+elif [[ $SLOG == boki-hybrid ]]; then
+    EXP_HOST=`$HELPER_SCRIPT get-single-machine-with-label --base-dir=$BASE_DIR --machine-label=hybrid_engine_node`
+else
+    exit 1
 fi
 
 for HOST in $ALL_ENGINE_HOSTS; do

@@ -8,6 +8,7 @@
         }
     },
     "exp_variables": {
-        "CONCURRENCY_WORKER": "8"
+        "CONCURRENCY_WORKER": "8",
+        "CONCURRENCY_OPERATION": "32"
     }
 }
