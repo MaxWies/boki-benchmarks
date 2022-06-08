@@ -5,9 +5,14 @@
 /workloads/micro/bin
 
 /experiments/**/docker-compose-generated.yml
+/experiments/**/docker-compose.yml
+/experiments/**/config.json
+/experiments/**/nightcore_config.json
 /experiments/**/results
 /experiments/**/machines.json
 /experiments/**/machines*.json
+
+/machine-spec/**/machines*.json
 
 *.code-workspace
 /.vscode/*

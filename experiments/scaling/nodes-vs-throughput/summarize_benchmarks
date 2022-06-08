@@ -93,12 +93,12 @@ def add_row(directory, slog, nodes, interval, result_file):
 def generate_plot(csv_file, workload, result_file):
 
     df = pd.read_csv(csv_file)
-    df_boki = df.loc[df['slog'] == 'boki']
+    df_boki = df.loc[df['slog'] == 'boki-hybrid']
     df_indilog = df.loc[df['slog'] == 'indilog']
 
     fig, ax = plt.subplots()
 
-    ax.plot(df_boki['nodes'], df_boki['throughput'], linestyle='solid', color='royalblue', marker='o', label='Boki')
+    ax.plot(df_boki['nodes'], df_boki['throughput'], linestyle='solid', color='royalblue', marker='o', label='Boki Hybrid')
     ax.plot(df_indilog['nodes'], df_indilog['throughput'], linestyle='solid', color='darkgreen', marker='o', label='Indilog')
 
     ax.set_xlabel('# Compute Nodes after Scaling')

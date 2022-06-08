@@ -44,9 +44,7 @@ services:
       - FAAS_CGROUP_FS_ROOT=/tmp/root_cgroupfs
     restart: always
     ulimits:
-        memlock:
-                soft: 67108864
-                hard: 67108864
+      memlock: -1
 
   slog-gateway:
     image: maxwie/boki:latest
@@ -73,9 +71,7 @@ services:
       - /mnt/inmem/store:/tmp/store
     restart: always
     ulimits:
-        memlock:
-                soft: 67108864
-                hard: 67108864
+      memlock: -1
 
   slog-storage:
     image: maxwie/boki:latest
@@ -101,9 +97,7 @@ services:
       - FAAS_NODE_ID={{.Task.Slot}}
     restart: always
     ulimits:
-        memlock:
-                soft: 67108864
-                hard: 67108864
+      memlock: -1
 
   slog-sequencer:
     image: maxwie/boki:latest
@@ -123,6 +117,4 @@ services:
       - FAAS_NODE_ID={{.Task.Slot}}
     restart: always
     ulimits:
-        memlock:
-                soft: 67108864
-                hard: 67108864
+      memlock: -1

@@ -1,13 +1,14 @@
 {
     "functions": {
         "RandomAppendAndReadLoopAsync" : {
-            "concurrency": 160
+            "concurrency": 1
         },
         "TestSystem" : {
             "concurrency": 1
         }
     },
     "exp_variables": {
-        "CONCURRENCY_WORKER": "160"
+        "CONCURRENCY_WORKER": "1",
+        "CONCURRENCY_OPERATION": "8"
     }
 }

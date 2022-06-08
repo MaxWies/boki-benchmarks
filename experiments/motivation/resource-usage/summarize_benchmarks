@@ -70,9 +70,9 @@ def generate_plot_concurrency_vs_cpu(csv_file, component, result_file):
     df_component_boki_remote = df_component.loc[df_component['slog'] == 'boki-remote']
     df_component_boki_hybrid = df_component.loc[df_component['slog'] == 'boki-hybrid']
 
-    plt.plot(df_component_boki_local['concurrency'], df_component_boki_local['cpu_avg'], 'o-', color='blue', label='Function communication + local index requests')
-    plt.plot(df_component_boki_remote['concurrency'], df_component_boki_remote['cpu_avg'], 'o-', color='green', label='No function communication + remote index requests')
-    plt.plot(df_component_boki_hybrid['concurrency'], df_component_boki_hybrid['cpu_avg'], 'o-', color='orange', label='Function communication + local and remote index requests')
+    plt.plot(df_component_boki_local['concurrency'], df_component_boki_local['cpu_avg'], 'o-', color='royalblue', label='Function communication + local index requests')
+    plt.plot(df_component_boki_remote['concurrency'], df_component_boki_remote['cpu_avg'], 'x-', color='darkviolet', label='No function communication + remote index requests')
+    plt.plot(df_component_boki_hybrid['concurrency'], df_component_boki_hybrid['cpu_avg'], 'v-', color='slategrey', label='Function communication + local and remote index requests')
     
     plt.xlabel('Concurrency (# Go Routines)')
     plt.ylabel('CPU (%)')

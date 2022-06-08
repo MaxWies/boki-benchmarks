@@ -20,6 +20,8 @@ def workload_info(workload):
         return 'always the same tag'
     elif workload.lower() == 'new-tags-always':
         return 'always a new tag'
+    elif workload.lower() == 'mix':
+        return 'mixed workload'
 
 def discard_csv_files(directory, ts, before = True):
     csv_file_names = [file for file in os.listdir(directory) if file.endswith('.csv')]

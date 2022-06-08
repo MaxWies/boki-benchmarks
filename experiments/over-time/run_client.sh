@@ -11,8 +11,8 @@ BENCHMARK_SCRIPT=$BASE_DIR/summarize_benchmarks
 
 export BENCHMARK_TYPE=throughput-vs-latency
 export RECORD_LENGTH=1024
-export ENGINE_STAT_THREAD_INTERVAL=10
-export DURATION=60
+export ENGINE_STAT_THREAD_INTERVAL=60
+export DURATION=600
 export APPEND_TIMES=1
 export READ_TIMES=1
 

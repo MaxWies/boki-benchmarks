@@ -3,8 +3,9 @@ BASE_DIR=`realpath $(dirname $0)`
 ROOT_DIR=`realpath $BASE_DIR/../../..`
 
 SLOG=$1
-CONTROLLER_SPEC_FILE=$2
-EXP_SPEC_FILE=$3
+NODE_TARGET=$2
+CONTROLLER_SPEC_FILE=$3
+EXP_SPEC_FILE=$4
 
 HELPER_SCRIPT=$ROOT_DIR/scripts/exp_helper
 CONFIG_MAKER_SCRIPT=$ROOT_DIR/scripts/config_maker
@@ -48,7 +49,7 @@ for HOST in $ALL_ENGINE_HOSTS; do
     ssh -q $HOST -- sudo cp /tmp/nightcore_config.json /mnt/inmem/slog/func_config.json
 done
 
-if [[ $SLOG == boki-remote ]]; then
+if [[ $SLOG == boki-remote-local ]]; then
     ALL_INDEX_ENGINE_HOSTS=`$HELPER_SCRIPT get-machine-with-label --base-dir=$BASE_DIR --machine-label=index_engine_node`
     for HOST in $ALL_INDEX_ENGINE_HOSTS; do
         scp -q $BASE_DIR/run_launcher $HOST:/tmp/run_launcher
@@ -76,4 +77,4 @@ done
 
 sleep 10
 
-$BASE_DIR/run_client.sh $SLOG $EXP_SPEC_FILE $EXP_DIR
+$BASE_DIR/run_client.sh $SLOG $NODE_TARGET $EXP_SPEC_FILE $EXP_DIR

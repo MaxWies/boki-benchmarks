@@ -2,9 +2,9 @@
 BASE_DIR=`realpath $(dirname $0)`
 ROOT_DIR=`realpath $BASE_DIR/../../..`
 
-SLOG=$1
-EXP_SPEC_FILE=$2
-EXP_DIR=$3
+SLOG=$1-$2
+EXP_SPEC_FILE=$3
+EXP_DIR=$4
 
 HELPER_SCRIPT=$ROOT_DIR/scripts/exp_helper
 BENCHMARK_SCRIPT=$BASE_DIR/summarize_benchmarks
@@ -15,23 +15,17 @@ export APPEND_TIMES=1
 export READ_TIMES=1
 
 # Set the workload semantics
-export OPERATION_SEMANTICS_PERCENTAGES=50,50
-export SEQNUM_READ_PERCENTAGES=0,0,0,0,100
+export OPERATION_SEMANTICS_PERCENTAGES=0,100
+export SEQNUM_READ_PERCENTAGES=100,0,0,0,0
 export TAG_APPEND_PERCENTAGES=100,0,0
-export TAG_READ_PERCENTAGES=0,0,0,0,0,100
-
-if [[ $SLOG == indilog-remote-point ]]; then
-    # read tag directly
-    export TAG_READ_PERCENTAGES=0,100,0,0,0,0
-fi
+export TAG_READ_PERCENTAGES=0,100,0,0,0,0
+export DURATION=60
+export ENGINE_STAT_THREAD_INTERVAL=5
 
 # Overwrite environment with spec file
 for s in $(echo $values | jq -r ".exp_variables | to_entries | map(\"\(.key)=\(.value|tostring)\") | .[]" $EXP_SPEC_FILE); do
     export $s
 done
-
-export DURATION=30
-export ENGINE_STAT_THREAD_INTERVAL=5
 
 BENCHMARK_DESCRIPTION="Append-${APPEND_TIMES}-and-read-${READ_TIMES}-times"
 
@@ -47,8 +41,8 @@ ALL_ENGINE_HOSTS=`$HELPER_SCRIPT get-machine-with-label --base-dir=$BASE_DIR --m
 ENGINE_NODES=$(wc -w <<< $ALL_ENGINE_HOSTS)
 
 EXP_HOST=`$HELPER_SCRIPT get-single-machine-with-label --base-dir=$BASE_DIR --machine-label=engine_node`
-if [[ $SLOG_CONFIG == boki-full ]]; then
-    EXP_HOST=`$HELPER_SCRIPT get-single-machine-with-label --base-dir=$BASE_DIR --machine-label=index_engine_node`
+if [[ $SLOG == boki-hybrid-hybrid ]]; then
+    EXP_HOST=`$HELPER_SCRIPT get-single-machine-with-label --base-dir=$BASE_DIR --machine-label=hybrid_engine_node`
 fi
 
 for HOST in $ALL_ENGINE_HOSTS; do
@@ -74,6 +68,7 @@ ssh -q $CLIENT_HOST -- /tmp/benchmark \
 
 # get timestamp on exp engine
 EXP_ENGINE_START_TS=$(ssh -q $EXP_HOST -- date +%s)
+EXP_ENGINE_END_TS=$((EXP_ENGINE_START_TS+DURATION-ENGINE_STAT_THREAD_INTERVAL))
 
 # activiate statistic thread on engine
 $ROOT_DIR/../zookeeper/bin/zkCli.sh -server $MANAGER_IP:2181 \
@@ -85,7 +80,7 @@ ssh -q $CLIENT_HOST -- /tmp/benchmark \
     --faas_gateway=$ENTRY_HOST:8080 \
     --benchmark_description=$BENCHMARK_DESCRIPTION \
     --benchmark_type=$BENCHMARK_TYPE \
-    --duration=$((DURATION+ENGINE_STAT_THREAD_INTERVAL*2)) \
+    --duration=$DURATION \
     --record_length=$RECORD_LENGTH \
     --append_times=$APPEND_TIMES \
     --read_times=$READ_TIMES \
@@ -98,7 +93,6 @@ ssh -q $CLIENT_HOST -- /tmp/benchmark \
     --tag_read_percentages=$TAG_READ_PERCENTAGES \
     >$EXP_DIR/results.log
 
-EXP_ENGINE_END_TS=$((EXP_ENGINE_START_TS+DURATION+ENGINE_STAT_THREAD_INTERVAL))
 
 mkdir -p $EXP_DIR/stats/latencies
 scp -r -q $EXP_HOST:/mnt/inmem/slog/stats/all-latencies-*.csv $EXP_DIR/stats/latencies

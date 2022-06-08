@@ -13,7 +13,7 @@ BENCHMARK_ROOT_SCRIPT=$ROOT_DIR/scripts/benchmark_helper
 export BENCHMARK_TYPE=throughput-vs-latency
 export RECORD_LENGTH=1024
 export ENGINE_STAT_THREAD_INTERVAL=5
-export DURATION=30
+export DURATION=60
 export APPEND_TIMES=1
 export READ_TIMES=1
 
@@ -84,8 +84,6 @@ EXP_STORAGE_END_TS=$((EXP_STORAGE_START_TS+DURATION-ENGINE_STAT_THREAD_INTERVAL)
 for i in "$EXP_ENGINE_HOST engine" "$EXP_STORAGE_HOST storage";
 do
     set -- $i
-    echo $1
-    echo $2
     COMPONENT=$2
     ssh -q $1 -- sudo rm /tmp/resource_usage.sh /tmp/resource_usage
     scp -q $ROOT_DIR/scripts/resource_usage $ROOT_DIR/scripts/resource_usage.sh $1:/tmp
@@ -127,11 +125,6 @@ ssh -q $CLIENT_HOST -- /tmp/benchmark \
     --tag_read_percentages=$TAG_READ_PERCENTAGES \
     >$EXP_DIR/results.log
 
-echo $EXP_ENGINE_START_TS
-echo $EXP_ENGINE_END_TS
-echo $EXP_STORAGE_START_TS
-echo $EXP_STORAGE_END_TS
-
 for i in "$EXP_ENGINE_HOST $EXP_ENGINE_START_TS $EXP_ENGINE_END_TS engine" "$EXP_STORAGE_HOST $EXP_STORAGE_START_TS $EXP_STORAGE_END_TS storage";
 do
     set -- $i
@@ -146,7 +139,7 @@ do
 
     $BENCHMARK_ROOT_SCRIPT discard-csv-entries-before \
         --file=$EXP_DIR/$COMPONENT/time-cpu-memory.csv \
-        --ts=$((START_TS+10))
+        --ts=$((START_TS+ENGINE_STAT_THREAD_INTERVAL))
 
     $BENCHMARK_ROOT_SCRIPT discard-csv-entries-after \
         --file=$EXP_DIR/$COMPONENT/time-cpu-memory.csv \

@@ -28,6 +28,11 @@ def run_remote_command(ssh_ip, cmd):
         raise Exception('Failed to run remote command: ' + ' '.join(cmd) + '\n' + ret.stderr)
     return ret.stdout, ret.stderr
 
+def run_remote_command_without_check(ssh_ip, cmd):
+    print(cmd, file=sys.stderr)
+    sp.run(['ssh', '-q', ssh_ip + '-' + USER_NAME, '--'] + cmd,
+            stdout=sp.PIPE, stderr=sp.PIPE, encoding='utf8')
+
 def setup_hostname_for_machines(machine_configs):
     for name, machine_config in machine_configs.items():
         if machine_config['role'] != 'dirigent':
@@ -224,6 +229,15 @@ def get_single_machine_with_label_main(base_dir, label):
                 print(machine_info['ip'] + '-' + USER_NAME)
                 return
 
+def get_single_machine_with_label_and_without_label_main(base_dir, label_with, label_without):
+    for machine_info in load_machines_file(base_dir)['machines'].values():
+        if 'labels' in machine_info:
+            labels = machine_info['labels']
+            if label_with in labels or label_with+'=true' in labels:
+                if label_without not in labels or label_without+'=true' not in labels:
+                    print(machine_info['ip'] + '-' + USER_NAME)
+                    return
+
 def get_client_with_merged_results(base_dir):
     label = 'merged_results=true'
     for machine_info in load_machines_file(base_dir)['machines'].values():
@@ -329,12 +343,20 @@ def collect_container_logs_main(base_dir, log_path):
             with open(os.path.join(log_path, '%s.stderr' % container_name), 'w') as fout:
                 fout.write(log_stderr)
 
+def reboot_machines(base_dir):
+    for machine_info in load_machines_file(base_dir)['machines'].values():
+        run_remote_command_without_check(machine_info['ip'], ['sudo', 'reboot'])
+
+def remove_docker_stack(base_dir):
+    run_remote_command(get_manager_ip(base_dir), ['docker', 'stack', 'rm', 'boki-experiment'])
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('cmd', type=str)
     parser.add_argument('--base-dir', type=str, default='.')
     parser.add_argument('--machine-name', type=str, default=None)
     parser.add_argument('--machine-label', type=str, default=None)
+    parser.add_argument('--machine-label-without', type=str, default=None)
     parser.add_argument('--machine-labels', type=str, default=None)
     parser.add_argument('--machine-host', type=str, default=None)
     parser.add_argument('--service', type=str, default=None)
@@ -368,6 +390,8 @@ if __name__ == '__main__':
             get_machine_ip_with_label_main(args.base_dir, args.machine_label)
         elif args.cmd == 'get-single-machine-with-label':
             get_single_machine_with_label_main(args.base_dir, args.machine_label)
+        elif args.cmd == 'get-single-machine-with-label-without-label':
+            get_single_machine_with_label_and_without_label_main(args.base_dir, args.machine_label, args.machine_label_without)
         elif args.cmd == 'get-client-with-merged-results':
             get_client_with_merged_results(args.base_dir)
         elif args.cmd == 'get-dynamic-hostnames':
@@ -382,6 +406,10 @@ if __name__ == '__main__':
             collect_container_logs_main(args.base_dir, args.log_path)
         elif args.cmd == 'get-num-active-service-replicas':
             get_num_active_service_replicas(args.base_dir, args.service)
+        elif args.cmd == 'reboot-machines':
+            reboot_machines(args.base_dir)
+        elif args.cmd == 'remove-docker-stack':
+            remove_docker_stack(args.base_dir)
         else:
             raise Exception('Unknown command: ' + args.cmd)
     except Exception as e:

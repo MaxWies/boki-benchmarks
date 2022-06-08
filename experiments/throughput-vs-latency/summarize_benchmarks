@@ -61,13 +61,18 @@ def generate_throughput_vs_latency_plot_append(csv_file, result_file):
     fig = plt.figure()
     ax = plt.subplot(111)
 
-    df_boki.plot.line(x='throughput_append', y='latency_append_50', label='Boki-Local Append 0.5', color='steelblue', style='o-', ax=ax)
-    df_boki.plot.line(x='throughput_append', y='latency_append_99', label='Boki-Local Append 0.99', color='darkblue', style='o-', ax=ax)
-    df_indilog.plot.line(x='throughput_append', y='latency_append_50', label='Indilog-Local Append 0.5', color='lightgreen', style='o-', ax=ax)
-    df_indilog.plot.line(x='throughput_append', y='latency_append_99', label='Indilog-Local Append 0.99', color='darkgreen', style='o-', ax=ax)
+    df_boki.plot.line(x='throughput_append', y='latency_append_50', label='Boki-Local Append 0.5', color='royalblue', style='o--', ax=ax)
+    df_boki.plot.line(x='throughput_append', y='latency_append_99', label='Boki-Local Append 0.99', color='royalblue', style='o-', ax=ax)
+    df_indilog.plot.line(x='throughput_append', y='latency_append_50', label='Indilog Append 0.5', color='darkgreen', style='o--', ax=ax)
+    df_indilog.plot.line(x='throughput_append', y='latency_append_99', label='Indilog Append 0.99', color='darkgreen', style='o-', ax=ax)
+
+    plt.xlim(left=0)
+    plt.ylim(bottom=0)
 
     plt.xlabel('Throughput (kOp/s)')
     plt.ylabel('Latency (\u03BCs)')
+
+    plt.title('Throughput vs latency')
 
     plt.savefig(result_file)
     plt.close
@@ -80,13 +85,18 @@ def generate_throughput_vs_latency_plot_read_local(csv_file, result_file):
     fig = plt.figure()
     ax = plt.subplot(111)
 
-    df_boki.plot.line(x='throughput_read', y='latency_read_50', label='Boki-Local Read 0.5', color='steelblue', style='o-', ax=ax)
-    df_boki.plot.line(x='throughput_read', y='latency_read_99', label='Boki-Local Read 0.99', color='darkblue', style='o-', ax=ax)
-    df_indilog.plot.line(x='throughput_read', y='latency_read_50', label='Indilog-Local Read 0.5', color='lightgreen', style='o-', ax=ax)
-    df_indilog.plot.line(x='throughput_read', y='latency_read_99', label='Indilog-Local Read 0.99', color='darkgreen', style='o-', ax=ax)
+    df_boki.plot.line(x='throughput_read', y='latency_read_50', label='Boki-Local Read 0.5', color='royalblue', style='o--', ax=ax)
+    df_boki.plot.line(x='throughput_read', y='latency_read_99', label='Boki-Local Read 0.99', color='royalblue', style='o-', ax=ax)
+    df_indilog.plot.line(x='throughput_read', y='latency_read_50', label='Indilog Read 0.5', color='darkgreen', style='o--', ax=ax)
+    df_indilog.plot.line(x='throughput_read', y='latency_read_99', label='Indilog Read 0.99', color='darkgreen', style='o-', ax=ax)
+
+    plt.xlim(left=0)
+    plt.ylim(bottom=0)
 
     plt.xlabel('Throughput (kOp/s)')
     plt.ylabel('Latency (\u03BCs)')
+
+    plt.title('Throughput vs latency')
 
     plt.savefig(result_file)
     plt.close
@@ -100,15 +110,20 @@ def generate_throughput_vs_latency_plot_read_remote(csv_file, result_file):
     fig = plt.figure()
     ax = plt.subplot(111)
 
-    df_boki.plot.line(x='throughput_read', y='latency_read_50', label='Boki-Remote Read 0.5', color='steelblue', style='o-', ax=ax)
-    df_boki.plot.line(x='throughput_read', y='latency_read_99', label='Boki-Remote Read 0.99', color='darkblue', style='o-', ax=ax)
-    df_indilog.plot.line(x='throughput_read', y='latency_read_50', label='Indilog-Remote Read 0.5', color='lightgreen', style='o-', ax=ax)
-    df_indilog.plot.line(x='throughput_read', y='latency_read_99', label='Indilog-Remote Read 0.99', color='darkgreen', style='o-', ax=ax)
-    df_indilog_point.plot.line(x='throughput_read', y='latency_read_50', label='Indilog-Remote Point Read 0.5', color='wheat', style='o-', ax=ax)
-    df_indilog_point.plot.line(x='throughput_read', y='latency_read_99', label='Indilog-Remote Point Read 0.99', color='darkorange', style='o-', ax=ax)
+    df_boki.plot.line(x='throughput_read', y='latency_read_50', label='Boki-Remote Read 0.5', color='royalblue', style='o--', ax=ax)
+    df_boki.plot.line(x='throughput_read', y='latency_read_99', label='Boki-Remote Read 0.99', color='royalblue', style='o-', ax=ax)
+    df_indilog.plot.line(x='throughput_read', y='latency_read_50', label='Indilog-Remote (Range) Read 0.5', color='lightgreen', style='o--', ax=ax)
+    df_indilog.plot.line(x='throughput_read', y='latency_read_99', label='Indilog-Remote (Range) Read 0.99', color='darkgreen', style='o-', ax=ax)
+    df_indilog_point.plot.line(x='throughput_read', y='latency_read_50', label='Indilog-Remote (Point) Read 0.5', color='darkorange', style='o--', ax=ax)
+    df_indilog_point.plot.line(x='throughput_read', y='latency_read_99', label='Indilog-Remote (Point) Read 0.99', color='darkorange', style='o-', ax=ax)
+
+    plt.xlim(left=0)
+    plt.ylim(bottom=0)
 
     plt.xlabel('Throughput (kOp/s)')
     plt.ylabel('Latency (\u03BCs)')
+
+    plt.title('Throughput vs latency having remote index only')
 
     plt.savefig(result_file)
     plt.close

@@ -17,9 +17,9 @@ export RECORD_LENGTH=1024
 
 # Set the workload semantics
 export OPERATION_SEMANTICS_PERCENTAGES=50,50
-export SEQNUM_READ_PERCENTAGES=0,0,0,0,100
-export TAG_APPEND_PERCENTAGES=100,0,0
-export TAG_READ_PERCENTAGES=0,0,0,0,0,100
+export SEQNUM_READ_PERCENTAGES=25,25,25,0,25
+export TAG_APPEND_PERCENTAGES=33,34,33
+export TAG_READ_PERCENTAGES=16,17,17,17,16,17
 
 if [[ $SLOG == indilog-remote-point ]]; then
     # read tag directly

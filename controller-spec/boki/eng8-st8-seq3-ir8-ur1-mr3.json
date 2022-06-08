@@ -1,8 +1,7 @@
 {
-    "slog_engine_replicas": 3,
-    "slog_storage_replicas": 3,
+    "slog_engine_replicas": 8,
+    "slog_storage_replicas": 8,
     "slog_sequencers_replicas": 3,
-    "slog_index_engine_replicas": 1,
     "slog_controller": {
         "image": "maxwie/boki:latest",
         "entrypoint" : [
@@ -10,13 +9,13 @@
             "--zookeeper_host=zookeeper:2181", 
             "--metalog_replicas=3", 
             "--userlog_replicas=1", 
-            "--index_replicas=1"
+            "--index_replicas=8"
         ],
         "depends_on": [
             "zookeeper-setup"
         ]
     },
     "exp_variables": {
-        "slog_SETTING": "eng3-ei1-st3-seq3"
+        "SLOG_SETTING": "eng8-st8-seq3"
     }
 }

@@ -8,6 +8,7 @@ EXP_DIR=$3
 
 HELPER_SCRIPT=$ROOT_DIR/scripts/exp_helper
 BENCHMARK_SCRIPT=$BASE_DIR/summarize_benchmarks
+BENCHMARK_HELPER_SCRIPT=$ROOT_DIR/scripts/benchmark_helper
 
 export BENCHMARK_TYPE=scaling
 export APPEND_TIMES=1
@@ -59,7 +60,7 @@ ssh -q $CLIENT_HOST -- /tmp/benchmark \
 # ts
 START_TS=$(date +%s)
 SCALE_TS=$((START_TS+RELATIVE_SCALE_TS))
-END_TS=$((START_TS+DURATION-2*ENGINE_STAT_THREAD_INTERVAL))
+END_TS=$((START_TS+DURATION-ENGINE_STAT_THREAD_INTERVAL))
 
 echo $START_TS
 echo $SCALE_TS
@@ -157,3 +158,59 @@ $BENCHMARK_SCRIPT make-time-relative \
     --start-ts=$START_TS \
     --end-ts=$END_TS \
     --result-file=$BASE_DIR/results/$WORKLOAD/time-vs-throughput-latency.csv
+
+
+# For boki
+if [[ $SLOG == boki-hybrid ]]; then
+    HYBRID_ENGINE_HOST=`$HELPER_SCRIPT get-single-machine-with-label --base-dir=$BASE_DIR --machine-label=hybrid_engine_node`
+    INDEX_LESS_ENGINE_HOST=`$HELPER_SCRIPT get-single-machine-with-label-extended --base-dir=$BASE_DIR --machine-label=engine_node --machine-label-without=hybrid_engine_node`
+
+    for i in "$HYBRID_ENGINE_HOST hybrid" "$INDEX_LESS_ENGINE_HOST index_less";
+    do
+        set -- $i
+        HOST=$1
+        ENGINE_TYPE=$2
+        mkdir -p $EXP_DIR/stats/latencies/$ENGINE_TYPE
+        scp -r -q $HOST:/mnt/inmem/slog/stats/latencies-*-*.csv $EXP_DIR/stats/latencies/$ENGINE_TYPE
+        for FILE in $EXP_DIR/stats/latencies/$ENGINE_TYPE/latencies-append-*-*.csv; do
+            $BENCHMARK_SCRIPT add-single-engine-row \
+            --directory=$EXP_DIR/stats \
+            --file=$FILE \
+            --type=$ENGINE_TYPE
+            --slog=$SLOG \
+            --interval=$ENGINE_STAT_THREAD_INTERVAL \
+            --result-file=$EXP_DIR/stats/latencies/$ENGINE_TYPE/time-vs-engine-type-latency.csv
+        done
+        # make time in csv data relative and finally store data in main folder
+        $BENCHMARK_SCRIPT make-time-relative \
+            --file=$EXP_DIR/stats/latencies/$ENGINE_TYPE/time-vs-engine-type-latency.csv \
+            --start-ts=$START_TS \
+            --end-ts=$END_TS \
+            --result-directory=$BASE_DIR/results/$WORKLOAD
+    done
+else
+    HOST=`$HELPER_SCRIPT get-single-machine-with-label --base-dir=$BASE_DIR --machine-label=engine_node`
+    ENGINE_TYPE=indilog
+    mkdir -p $EXP_DIR/stats/latencies/$ENGINE_TYPE
+    scp -r -q $HOST:/mnt/inmem/slog/stats/latencies-*-*.csv $EXP_DIR/stats/latencies/$ENGINE_TYPE
+    for FILE in $EXP_DIR/stats/latencies/$ENGINE_TYPE/latencies-append-*-*.csv; do
+        $BENCHMARK_SCRIPT add-single-engine-row \
+        --directory=$EXP_DIR/stats \
+        --file=$FILE \
+        --type=$ENGINE_TYPE
+        --slog=$SLOG \
+        --interval=$ENGINE_STAT_THREAD_INTERVAL \
+        --result-file=$EXP_DIR/stats/latencies/$ENGINE_TYPE/time-vs-engine-type-latency.csv
+    done
+    # cut before scale ts
+    $BENCHMARK_HELPER_SCRIPT discard-csv-entries-before \
+        --file=$EXP_DIR/stats/latencies/$ENGINE_TYPE/time-vs-engine-type-latency.csv \
+        --ts=$SCALE_TS
+
+    # make time in csv data relative and finally store data in main folder
+    $BENCHMARK_SCRIPT make-time-relative \
+        --file=$BASE_DIR/results/$WORKLOAD/$SLOG/$ENGINE_TYPE/time-vs-engine-type-latency.csv \
+        --start-ts=$START_TS \
+        --end-ts=$END_TS \
+        --result-directory=$BASE_DIR/results/$WORKLOAD
+fi
