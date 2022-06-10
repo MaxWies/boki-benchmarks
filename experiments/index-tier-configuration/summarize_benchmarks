@@ -72,12 +72,12 @@ def generate_plot(directory, throughput_csv_file, result_file):
         index_tier_config = csv_file_name.split('.')[0].split('_')[1]
         index_tier_config_chunks = index_tier_config.split('-')
         query_semantic = 'Point'
-        color = 'green'
+        color = 'blue'
         linestyle = 'dotted'
         if index_tier_config_chunks[2].lower() == 'false':
             query_semantic = 'Range'
             color = 'green'
-            linestyle = 'solid'            
+            linestyle = 'solid'
         label = '{}, Tp:{}Kop/s , Avg Lat: {}\u03BCs'.format(
                 query_semantic,
                 get_throughput(throughput_csv_file, index_tier_config),
@@ -89,11 +89,11 @@ def generate_plot(directory, throughput_csv_file, result_file):
             color=color
         )
 
-    ax.set_xlim(0, 6000)
+    ax.set_xlim(0, 2400)
     ax.set_ylim(0, 1.03)
 
-    x_major_ticks = np.arange(0, 6001, 2400)
-    x_minor_ticks = np.arange(0, 6001, 600)
+    x_major_ticks = np.arange(0, 2401, 800)
+    x_minor_ticks = np.arange(0, 2401, 200)
     y_ticks = np.arange(0, 1.1, 0.1)
 
     ax.set_xticks(x_major_ticks)

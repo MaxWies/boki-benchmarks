@@ -34,7 +34,7 @@ services:
       - --slog_engine_cache_cap_mb=1024
       - --slog_engine_propagate_auxdata
       - --engine_node_type=engine
-      - --v=1
+      # - --v=1
     depends_on:
       - zookeeper-setup
     volumes:
@@ -65,7 +65,7 @@ services:
       - --slog_engine_cache_cap_mb=1024
       - --slog_engine_propagate_auxdata
       - --engine_node_type=index_engine
-      - --v=1
+      # - --v=1
     depends_on:
       - zookeeper-setup
     volumes:

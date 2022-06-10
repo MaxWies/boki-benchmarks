@@ -3,14 +3,12 @@ BASE_DIR=`realpath $(dirname $0)`
 ROOT_DIR=`realpath $BASE_DIR/../..`
 
 SLOG=$1
-SLOG_CONFIG=$2
-EXP_SPEC_FILE=$3
-EXP_DIR=$4
+EXP_SPEC_FILE=$2
+EXP_DIR=$3
 
 HELPER_SCRIPT=$ROOT_DIR/scripts/exp_helper
 BENCHMARK_SCRIPT=$BASE_DIR/summarize_benchmarks
 
-export COLLECT_CONTAINER_LOGS=false
 export DURATION=30
 export CONCURRENCY_CLIENT=10
 export NUM_USERS=1000
@@ -91,10 +89,6 @@ ssh -q $CLIENT_HOST -- /tmp/benchmark \
 
 sleep 15
 
-if [ $COLLECT_CONTAINER_LOGS == 'true' ]; then
-    $HELPER_SCRIPT collect-container-logs --base-dir=$BASE_DIR --log-path=$EXP_DIR/logs
-fi
-
 # get operation stats
 mkdir -p $EXP_DIR/stats/op
 for HOST in $ALL_ENGINE_HOSTS; do
@@ -108,13 +102,12 @@ if [[ $SLOG_CONFIG == boki-remote ]]; then
 fi
 
 # get client stats
-scp -q $CLIENT_HOST:/tmp/client-results.csv $BASE_DIR/results/collection/$SLOG_CONFIG/client-results.csv 
+scp -q $CLIENT_HOST:/tmp/client-results.csv $BASE_DIR/results/$SLOG/client-results.csv 
 
 # merge operation stats of all engines and of all timestamps
 $BENCHMARK_SCRIPT merge-csv \
     --directory=$EXP_DIR/stats/op \
     --filter="" \
     --slog=$SLOG \
-    --slog-config=$SLOG_CONFIG \
-    --result-file=$BASE_DIR/results/collection/$SLOG_CONFIG/op-stats.csv
+    --result-file=$BASE_DIR/results/$SLOG/op-stats.csv
 

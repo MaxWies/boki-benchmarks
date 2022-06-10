@@ -1,21 +1,21 @@
 #!/bin/bash
 BASE_DIR=`realpath $(dirname $0)`
-ROOT_DIR=`realpath $BASE_DIR/../../..`
+ROOT_DIR=`realpath $BASE_DIR/../..`
 
 SLOG=$1
-EXP_SPEC_FILE=$2
-EXP_DIR=$3
+INDEX_TIER_CONFIG=$2
+EXP_SPEC_FILE=$3
+EXP_DIR=$4
 
 HELPER_SCRIPT=$ROOT_DIR/scripts/exp_helper
 BENCHMARK_SCRIPT=$BASE_DIR/summarize_benchmarks
+BENCHMARK_ROOT_SCRIPT=$ROOT_DIR/scripts/benchmark_helper
 
-export BENCHMARK_TYPE=scaling
-export RECORD_LENGTH=1024
-export DURATION=120
-export RELATIVE_SCALE_TS=30
 export APPEND_TIMES=1
 export READ_TIMES=19
+export RECORD_LENGTH=1024
 export ENGINE_STAT_THREAD_INTERVAL=10
+export DURATION=60
 
 # Overwrite environment with spec file
 for s in $(echo $values | jq -r ".exp_variables | to_entries | map(\"\(.key)=\(.value|tostring)\") | .[]" $EXP_SPEC_FILE); do
@@ -34,8 +34,6 @@ ENTRY_HOST=`$HELPER_SCRIPT get-service-host --base-dir=$BASE_DIR --service=slog-
 
 ALL_ENGINE_HOSTS=`$HELPER_SCRIPT get-machine-with-label --base-dir=$BASE_DIR --machine-label=engine_node`
 ENGINE_NODES=$(wc -w <<< $ALL_ENGINE_HOSTS)
-
-EXP_ENGINE_HOST=`$HELPER_SCRIPT get-single-machine-with-label --base-dir=$BASE_DIR --machine-label=engine_node`
 
 for HOST in $ALL_ENGINE_HOSTS; do
     ssh -q $HOST -- sudo rm -rf /mnt/inmem/slog/output/benchmark/$BENCHMARK_TYPE
@@ -58,94 +56,53 @@ ssh -q $CLIENT_HOST -- /tmp/benchmark \
     --benchmark_type=warmup \
     >$EXP_DIR/results.log
 
-# get timestamp on exp engine
-START_TS=$(date +%s)
-SCALE_TS=$((START_TS+RELATIVE_SCALE_TS))
-END_TS=$((START_TS+DURATION))
-
-echo $START_TS
-echo $SCALE_TS
-echo $END_TS
-
 # activiate statistic thread on engines
 $ROOT_DIR/../zookeeper/bin/zkCli.sh -server $MANAGER_IP:2181 \
     create /faas/stat/start $ENGINE_STAT_THREAD_INTERVAL \
     >/dev/null
 
-# run scaler in background if indilog
-if [[ 'indilog' ]]; 
-then
-    # run
-    ssh -q $CLIENT_HOST -- /tmp/benchmark \
+# run experiment
+ssh -q $CLIENT_HOST -- /tmp/benchmark \
     --faas_gateway=$ENTRY_HOST:8080 \
     --benchmark_description=$BENCHMARK_DESCRIPTION \
     --benchmark_type=$BENCHMARK_TYPE \
-    --engine_nodes=$ENGINE_NODES \
     --duration=$DURATION \
     --record_length=$RECORD_LENGTH \
     --append_times=$APPEND_TIMES \
     --read_times=$READ_TIMES \
-    --concurrency_worker=$CONCURRENCY_WORKER \
-    --concurrency_operation=$CONCURRENCY_OPERATION \
-    --operation_semantics_percentages=$OPERATION_SEMANTICS_PERCENTAGES \
-    --seqnum_read_percentages=$SEQNUM_READ_PERCENTAGES \
-    --tag_append_percentages=$TAG_APPEND_PERCENTAGES \
-    --tag_read_percentages=$TAG_READ_PERCENTAGES \
-    --shared_tags_capacity=$SHARED_TAGS_CAPACITY \
-    >$EXP_DIR/results.log
-
-    # sleep
-    sleep $RELATIVE_SCALE_TS
-
-    # activiate postponed engines
-    $ROOT_DIR/../zookeeper/bin/zkCli.sh -server $MANAGER_IP:2181 \
-        create /faas/activate/register \
-        >/dev/null
-
-    # sleep remaining time
-    sleep $((DURATION-RELATIVE_SCALE_TS))
-else
-    # run
-    ssh -q $CLIENT_HOST -- /tmp/benchmark \
-    --faas_gateway=$ENTRY_HOST:8080 \
-    --benchmark_description=$BENCHMARK_DESCRIPTION \
-    --benchmark_type=$BENCHMARK_TYPE \
     --engine_nodes=$ENGINE_NODES \
-    --duration=$DURATION \
-    --record_length=$RECORD_LENGTH \
-    --append_times=$APPEND_TIMES \
-    --read_times=$READ_TIMES \
     --concurrency_worker=$CONCURRENCY_WORKER \
     --concurrency_operation=$CONCURRENCY_OPERATION \
     --operation_semantics_percentages=$OPERATION_SEMANTICS_PERCENTAGES \
-    --seqnum_read_percentages=$SEQNUM_READ_PERCENTAGES \
     --tag_append_percentages=$TAG_APPEND_PERCENTAGES \
     --tag_read_percentages=$TAG_READ_PERCENTAGES \
-    --shared_tags_capacity=$SHARED_TAGS_CAPACITY \
     >$EXP_DIR/results.log
 
-    # sleep
-    sleep $DURATION
-fi
-
-# get latency files from engines
+# get complete latency files from engines
 mkdir -p $EXP_DIR/stats/latencies
 for HOST in $ALL_ENGINE_HOSTS; do
-    scp -r -q $HOST:/mnt/inmem/slog/stats/latencies*.csv $EXP_DIR/stats/latencies
+    scp -r -q $HOST:/mnt/inmem/slog/stats/all-latencies-*.csv $EXP_DIR/stats/latencies
 done
 
-$BENCHMARK_SCRIPT discard-csv-files-before \
-    --directory=$EXP_DIR/stats/latencies \
-    --ts=$((SCALE_TS+ENGINE_STAT_THREAD_INTERVAL))
+# compute throughput
+THROUGHPUT=`$BENCHMARK_ROOT_SCRIPT compute-throughput --exp-duration=$DURATION --directory=$EXP_DIR/stats/latencies`
 
-$BENCHMARK_SCRIPT discard-csv-files-after \
+# merge read latencies of all engines
+$BENCHMARK_ROOT_SCRIPT concatenate-csv \
     --directory=$EXP_DIR/stats/latencies \
-    --ts=$((END_TS-ENGINE_STAT_THREAD_INTERVAL))
+    --filter=read \
+    --result-file=$BASE_DIR/results/latencies-read_$INDEX_TIER_CONFIG.csv
 
-# combine (overall throughput after adding nodes)
+LATENCY_AVG=`$BENCHMARK_ROOT_SCRIPT large-file-compute-column-average --file=$BASE_DIR/results/latencies-read_$INDEX_TIER_CONFIG.csv --index=0`
+
+echo $LATENCY_AVG
+
+# add row to results
 $BENCHMARK_SCRIPT add-row \
-    --directory=$EXP_DIR/stats/latencies \
     --slog=$SLOG \
-    --nodes=$ENGINE_NODES \
-    --interval=$ENGINE_STAT_THREAD_INTERVAL \
-    --result-file=$BASE_DIR/results/$WORKLOAD/nodes-vs-throughput.csv
+    --index-tier-config=$INDEX_TIER_CONFIG \
+    --throughput=$THROUGHPUT \
+    --latency-avg=$LATENCY_AVG \
+    --is-point-hit=$IS_POINT_HIT \
+    --read-latency-file=$BASE_DIR/results/latencies-read_$INDEX_TIER_CONFIG.csv \
+    --result-file=$BASE_DIR/results/throughput-vs-latency.csv

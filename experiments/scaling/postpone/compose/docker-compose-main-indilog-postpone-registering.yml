@@ -38,7 +38,6 @@ services:
       - --slog_engine_tag_cache_cap=1000000
       - --slog_engine_per_tag_seqnums_limit=10000
       - --slog_engine_postpone_registration=2,3
-      - --slog_deactivate_min_seqnum_completion
       #- --v=1
     depends_on:
       - zookeeper-setup

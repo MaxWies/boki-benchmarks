@@ -229,8 +229,8 @@ def generate_plot_boki_vs_indilog_latency(csv_file, relative_scale_ts, engines_b
     plt.plot(df_boki_index_less['ts_relative'], df_boki_index_less['latency_read_50'], linestyle='dotted', color='royalblue', marker='x', label='Boki node without index: Read 0.5')
     plt.plot(df_boki_index_less['ts_relative'], df_boki_index_less['latency_read_99'], linestyle='dashed', color='royalblue', marker='x', label='Boki node without index: Read 0.99')
 
-    plt.plot(df_boki_hybrid['ts_relative'], df_boki_hybrid['hybrid_read_50'], linestyle='dotted', color='darkviolet', marker='v', label='Boki Hybrid node: Read 0.5')
-    plt.plot(df_boki_hybrid['ts_relative'], df_boki_hybrid['hybrid_read_99'], linestyle='dashed', color='darkviolet', marker='v', label='Boki Hybrid node: Read 0.99')
+    plt.plot(df_boki_hybrid['ts_relative'], df_boki_hybrid['latency_read_50'], linestyle='dotted', color='darkviolet', marker='v', label='Boki Hybrid node: Read 0.5')
+    plt.plot(df_boki_hybrid['ts_relative'], df_boki_hybrid['latency_read_99'], linestyle='dashed', color='darkviolet', marker='v', label='Boki Hybrid node: Read 0.99')
 
     plt.plot(df_indilog['ts_relative'], df_indilog['latency_read_50'], linestyle='dotted', color='darkgreen', marker='o', label='Indilog node: Read 0.5')
     plt.plot(df_indilog['ts_relative'], df_indilog['latency_read_99'], linestyle='dashed', color='darkgreen', marker='o', label='Indilog node: Read 0.99')
@@ -303,7 +303,7 @@ if __name__ == '__main__':
     parser.add_argument('--directory', type=str)
     parser.add_argument('--file', type=str)
     parser.add_argument('--slog', type=str)
-    parser.add_argument('--engine_type', type=str)
+    parser.add_argument('--engine-type', type=str)
     parser.add_argument('--exp-duration', type=int)
     parser.add_argument('--append-times', type=int)
     parser.add_argument('--read-times', type=int)

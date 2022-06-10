@@ -54,15 +54,17 @@ RESULT_DIR=$BASE_DIR/results
 
 for i in "engine" "storage";
 do
-    set -- $i
-    COMPONENT=$1
-    echo $COMPONENT
-    $BENCHMARK_SCRIPT generate-plot-concurrency-vs-cpu \
-        --file=$RESULT_DIR/concurrency-cpu-bandwidth.csv \
-        --component=$COMPONENT \
-        --result-file=$RESULT_DIR/$COMPONENT-concurrency-vs-cpu.pdf
-    $BENCHMARK_SCRIPT generate-plot-concurrency-vs-bandwidth \
-        --file=$RESULT_DIR/concurrency-cpu-bandwidth.csv \
-        --component=$COMPONENT \
-        --result-file=$RESULT_DIR/$COMPONENT-concurrency-vs-bandwidth.pdf
+    for FILE_TYPE in "png" "pdf";
+    do
+        set -- $i
+        COMPONENT=$1
+        $BENCHMARK_SCRIPT generate-plot-concurrency-vs-cpu \
+            --file=$RESULT_DIR/concurrency-cpu-bandwidth.csv \
+            --component=$COMPONENT \
+            --result-file=$RESULT_DIR/$COMPONENT-concurrency-vs-cpu.$FILE_TYPE
+        $BENCHMARK_SCRIPT generate-plot-concurrency-vs-bandwidth \
+            --file=$RESULT_DIR/concurrency-cpu-bandwidth.csv \
+            --component=$COMPONENT \
+            --result-file=$RESULT_DIR/$COMPONENT-concurrency-vs-bandwidth.$FILE_TYPE
+    done
 done

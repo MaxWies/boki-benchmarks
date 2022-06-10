@@ -15,11 +15,11 @@ import csv
 
 def workload_info(workload):
     if workload.lower() == 'empty-tag':
-        return 'only the empty tag'
+        return 'empty tag'
     elif workload.lower() == 'one-tag-only':
-        return 'always the same tag'
+        return 'same tag'
     elif workload.lower() == 'new-tags-always':
-        return 'always a new tag'
+        return 'new tag'
 
 def discard_csv_files(directory, ts_end):
     csv_file_names = [file for file in os.listdir(directory) if file.endswith('.csv')]
@@ -158,7 +158,7 @@ def generate_plot_time_vs_memory(directory, workload, result_file):
     plt.savefig(result_file)
     plt.close
 
-def generate_plot_all_time_vs_memory(directories, result_file):
+def generate_plot_all_time_vs_memory(directories, display_title, result_file):
     for directory in directories:
         workload = os.path.basename(directory)
 
@@ -175,17 +175,16 @@ def generate_plot_all_time_vs_memory(directories, result_file):
         plt.plot(df_index_memory['ts_relative'], df_index_memory['index_memory'], linestyle=line, color='blue', label='Index Memory - {}'.format(workload_info(workload)))
         plt.plot(df_cpu_memory['ts_relative'], df_cpu_memory['mem_tot'], linestyle=line, color='darkred', label='RAM of VM - {}'.format(workload_info(workload)))
 
-    plt.xlabel('Time (s)')
-    plt.ylabel('Memory (MB)')
-    plt.ylabel('Memory (MB)')
+    plt.xlabel('Time (s)', fontsize=12)
+    plt.ylabel('Memory (MB)', fontsize=12)
 
-    plt.ylim(bottom=0)
     plt.ylim(bottom=0)
 
     plt.legend()
 
-    plt.title('Memory usage of a Boki engine')
-    plt.savefig(result_file)
+    if display_title:
+        plt.title('Memory usage of a Boki engine')
+    plt.savefig(result_file, bbox_inches='tight')
     plt.close
 
 if __name__ == '__main__':
@@ -206,6 +205,7 @@ if __name__ == '__main__':
     parser.add_argument('--round-decimals', type=int)
     parser.add_argument('--workload', type=str)
     parser.add_argument('--concurrency', type=int)
+    parser.add_argument('--display-title', type=str, default='')
     parser.add_argument('--result-file', type=str)
     parser.add_argument('--result-directory', type=str)
     args = parser.parse_args()
@@ -229,8 +229,11 @@ if __name__ == '__main__':
         elif args.cmd == 'generate-plot-time-vs-memory':
             generate_plot_time_vs_memory(args.directory, args.workload, args.result_file)
         elif args.cmd == 'generate-plot-all-time-vs-memory':
+            display_title = False
+            if args.display_title != "":
+                display_title = True
             directories = args.directories.split(',')
-            generate_plot_all_time_vs_memory(directories, args.result_file)
+            generate_plot_all_time_vs_memory(directories, args.display_title, args.result_file)
         else:
             raise Exception('Unknown command: ' + args.cmd)
     except Exception as e:

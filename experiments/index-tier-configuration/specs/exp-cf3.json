@@ -8,8 +8,12 @@
         }
     },
     "exp_variables": {
+        "BENCHMARK_TYPE": "throughput-vs-latency",
         "CONCURRENCY_WORKER": "3",
         "CONCURRENCY_OPERATION": "32",
-        "RELATIVE_SCALE_TS": "30"
+        "OPERATION_SEMANTICS_PERCENTAGES": "0,100",
+        "TAG_APPEND_PERCENTAGES": "100,0,0",
+        "TAG_READ_PERCENTAGES": "0,0,0,0,0,100",
+        "IS_POINT_HIT": "False"
     }
 }

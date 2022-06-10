@@ -2,9 +2,9 @@
 BASE_DIR=`realpath $(dirname $0)`
 ROOT_DIR=`realpath $BASE_DIR/../../..`
 
-SLOG=$1
-EXP_SPEC_FILE=$2
-EXP_DIR=$3
+SLOG=boki-hybrid
+EXP_SPEC_FILE=/home/mrc/run/boki-benchmarks/experiments/scaling/postpone/specs/exp-cf3.json
+EXP_DIR=/home/mrc/run/boki-benchmarks/experiments/scaling/postpone/results/boki-hybrid/eng2-eh1-st3-seq3-ir1-ur1-mr3/exp-cf3
 
 HELPER_SCRIPT=$ROOT_DIR/scripts/exp_helper
 BENCHMARK_SCRIPT=$BASE_DIR/summarize_benchmarks
@@ -17,6 +17,7 @@ export RECORD_LENGTH=1024
 export DURATION=180
 export RELATIVE_SCALE_TS=30
 export ENGINE_STAT_THREAD_INTERVAL=5
+export WORKLOAD=mix
 
 # Overwrite environment with spec file
 for s in $(echo $values | jq -r ".exp_variables | to_entries | map(\"\(.key)=\(.value|tostring)\") | .[]" $EXP_SPEC_FILE); do
@@ -24,6 +25,7 @@ for s in $(echo $values | jq -r ".exp_variables | to_entries | map(\"\(.key)=\(.
 done
 
 BENCHMARK_DESCRIPTION="Append-${APPEND_TIMES}-and-read-${READ_TIMES}-times"
+
 
 rm -rf $EXP_DIR
 mkdir -p $EXP_DIR
@@ -36,110 +38,19 @@ ENTRY_HOST=`$HELPER_SCRIPT get-service-host --base-dir=$BASE_DIR --service=slog-
 ALL_ENGINE_HOSTS=`$HELPER_SCRIPT get-machine-with-label --base-dir=$BASE_DIR --machine-label=engine_node`
 ENGINE_NODES=$(wc -w <<< $ALL_ENGINE_HOSTS)
 
-for HOST in $ALL_ENGINE_HOSTS; do
-    ssh -q $HOST -- sudo rm -rf /mnt/inmem/slog/output/benchmark/$BENCHMARK_TYPE
-    ssh -q $HOST -- sudo mkdir -p /mnt/inmem/slog/output/benchmark/$BENCHMARK_TYPE
-done
-
-ssh -q $MANAGER_HOST -- cat /proc/cmdline >>$EXP_DIR/kernel_cmdline
-ssh -q $MANAGER_HOST -- uname -a >>$EXP_DIR/kernel_version
-
-ssh -q $CLIENT_HOST -- docker run \
-    --pull always \
-    -v /tmp:/tmp \
-    maxwie/indilog-microbench:latest \
-    cp /microbench-bin/benchmark /tmp/benchmark
-
-# run warmup
-ssh -q $CLIENT_HOST -- /tmp/benchmark \
-    --faas_gateway=$ENTRY_HOST:8080 \
-    --benchmark_description=warmup-system \
-    --benchmark_type=warmup \
-    >$EXP_DIR/results.log
-
 # ts
-START_TS=$(date +%s)
-SCALE_TS=$((START_TS+RELATIVE_SCALE_TS))
-END_TS=$((START_TS+DURATION-ENGINE_STAT_THREAD_INTERVAL))
+START_TS=1654785102
+SCALE_TS=1654785132
+END_TS=1654785277
 
 echo $START_TS
 echo $SCALE_TS
 echo $END_TS
 
-# activiate statistic thread on engines
-$ROOT_DIR/../zookeeper/bin/zkCli.sh -server $MANAGER_IP:2181 \
-    create /faas/stat/start $ENGINE_STAT_THREAD_INTERVAL \
-    >/dev/null
-
-# run scaler in background if indilog
-if [[ $SLOG == 'indilog-postpone-caching' ]] || [[ 'indilog-postpone-registering' ]]; 
-then
-    # run
-    ssh -q $CLIENT_HOST -- /tmp/benchmark \
-    --faas_gateway=$ENTRY_HOST:8080 \
-    --benchmark_description=$BENCHMARK_DESCRIPTION \
-    --benchmark_type=$BENCHMARK_TYPE \
-    --engine_nodes=$ENGINE_NODES \
-    --duration=$DURATION \
-    --record_length=$RECORD_LENGTH \
-    --append_times=$APPEND_TIMES \
-    --read_times=$READ_TIMES \
-    --concurrency_worker=$CONCURRENCY_WORKER \
-    --concurrency_operation=$CONCURRENCY_OPERATION \
-    --operation_semantics_percentages=$OPERATION_SEMANTICS_PERCENTAGES \
-    --seqnum_read_percentages=$SEQNUM_READ_PERCENTAGES \
-    --tag_append_percentages=$TAG_APPEND_PERCENTAGES \
-    --tag_read_percentages=$TAG_READ_PERCENTAGES \
-    --shared_tags_capacity=$SHARED_TAGS_CAPACITY \
-    >$EXP_DIR/results.log
-
-    # sleep
-    sleep $RELATIVE_SCALE_TS
-    if [[ $SLOG == 'indilog-postpone-caching' ]];
-    then
-        # activiate postponed engines
-        $ROOT_DIR/../zookeeper/bin/zkCli.sh -server $MANAGER_IP:2181 \
-            create /faas/activate/cache \
-            >/dev/null
-    else
-        # activiate postponed engines
-        $ROOT_DIR/../zookeeper/bin/zkCli.sh -server $MANAGER_IP:2181 \
-            create /faas/activate/register \
-            >/dev/null
-    fi
-
-    # sleep remaining time
-    sleep $((DURATION-RELATIVE_SCALE_TS))
-else
-    # run
-    ssh -q $CLIENT_HOST -- /tmp/benchmark \
-    --faas_gateway=$ENTRY_HOST:8080 \
-    --benchmark_description=$BENCHMARK_DESCRIPTION \
-    --benchmark_type=$BENCHMARK_TYPE \
-    --engine_nodes=$ENGINE_NODES \
-    --duration=$DURATION \
-    --record_length=$RECORD_LENGTH \
-    --append_times=$APPEND_TIMES \
-    --read_times=$READ_TIMES \
-    --concurrency_worker=$CONCURRENCY_WORKER \
-    --concurrency_operation=$CONCURRENCY_OPERATION \
-    --operation_semantics_percentages=$OPERATION_SEMANTICS_PERCENTAGES \
-    --seqnum_read_percentages=$SEQNUM_READ_PERCENTAGES \
-    --tag_append_percentages=$TAG_APPEND_PERCENTAGES \
-    --tag_read_percentages=$TAG_READ_PERCENTAGES \
-    --shared_tags_capacity=$SHARED_TAGS_CAPACITY \
-    >$EXP_DIR/results.log
-
-    # sleep
-    sleep $DURATION
-fi
-
 # get latency files from engines
 mkdir -p $EXP_DIR/stats/latencies
-mkdir -p $EXP_DIR/stats/op
 for HOST in $ALL_ENGINE_HOSTS; do
     scp -r -q $HOST:/mnt/inmem/slog/stats/latencies*.csv $EXP_DIR/stats
-    scp -r -q $HOST:/mnt/inmem/slog/stats/op-stat-*.csv $EXP_DIR/op
 done
 
 $BENCHMARK_SCRIPT discard-csv-files-after \
@@ -176,7 +87,7 @@ if [[ $SLOG == boki-hybrid ]]; then
         scp -r -q $HOST:/mnt/inmem/slog/stats/latencies-*-*.csv $EXP_DIR/stats/latencies/$ENGINE_TYPE
         for FILE in $EXP_DIR/stats/latencies/$ENGINE_TYPE/latencies-append-*-*.csv; do
             $BENCHMARK_SCRIPT add-single-engine-row \
-            --directory=$EXP_DIR/stats/latencies/$ENGINE_TYPE \
+            --directory=$EXP_DIR/stats \
             --file=$FILE \
             --engine-type=$ENGINE_TYPE \
             --slog=$SLOG \
@@ -188,7 +99,7 @@ if [[ $SLOG == boki-hybrid ]]; then
             --file=$EXP_DIR/stats/latencies/$ENGINE_TYPE/time-vs-engine-type-latency.csv \
             --start-ts=$START_TS \
             --end-ts=$END_TS \
-            --result-file=$BASE_DIR/results/$WORKLOAD/time-vs-engine-type-latency.csv
+            --result-file=$BASE_DIR/results/$WORKLOAD/time-vs-engine-type-latency.csv 
     done
 else
     HOST=`$HELPER_SCRIPT get-single-machine-with-label --base-dir=$BASE_DIR --machine-label=engine_node`
@@ -197,7 +108,7 @@ else
     scp -r -q $HOST:/mnt/inmem/slog/stats/latencies-*-*.csv $EXP_DIR/stats/latencies/$ENGINE_TYPE
     for FILE in $EXP_DIR/stats/latencies/$ENGINE_TYPE/latencies-append-*-*.csv; do
         $BENCHMARK_SCRIPT add-single-engine-row \
-        --directory=$EXP_DIR/stats/latencies/$ENGINE_TYPE \
+        --directory=$EXP_DIR/stats \
         --file=$FILE \
         --engine-type=$ENGINE_TYPE \
         --slog=$SLOG \

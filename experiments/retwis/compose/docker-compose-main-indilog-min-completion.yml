@@ -34,10 +34,10 @@ services:
       - --slog_engine_cache_cap_mb=1024
       - --slog_engine_propagate_auxdata
       - --slog_engine_distributed_indexing
-      - --slog_engine_seqnum_suffix_cap=100000
-      - --slog_engine_tag_cache_cap=1000000
-      - --slog_engine_per_tag_seqnums_limit=10000
-      - --slog_engine_postpone_caching=2,3
+      - --slog_engine_seqnum_suffix_cap=1000
+      - --slog_engine_tag_cache_cap=100000
+      - --slog_engine_per_tag_seqnums_limit=1000
+      - --slog_engine_min_seqnum_completion
       # - --v=1
     depends_on:
       - zookeeper-setup
@@ -49,7 +49,9 @@ services:
       - FAAS_CGROUP_FS_ROOT=/tmp/root_cgroupfs
     restart: always
     ulimits:
-        memlock: -1
+        memlock:
+                soft: 67108864
+                hard: 67108864
 
   slog-gateway:
     image: maxwie/indilog:latest
@@ -78,7 +80,9 @@ services:
     environment:
       - FAAS_NODE_ID={{.Task.Slot}}
     ulimits:
-        memlock: -1
+        memlock:
+                soft: 67108864
+                hard: 67108864
 
   slog-storage:
     image: maxwie/indilog:latest
@@ -95,7 +99,7 @@ services:
       - --slog_storage_bgthread_interval_ms=1
       - --slog_storage_backend=rocksdb
       - --slog_storage_cache_cap_mb=4096
-      # - --v=1
+      #- --v=1
     depends_on:
       - zookeeper-setup
     volumes:
@@ -104,7 +108,9 @@ services:
       - FAAS_NODE_ID={{.Task.Slot}}
     restart: always
     ulimits:
-        memlock: -1
+        memlock:
+                soft: 67108864
+                hard: 67108864
 
   slog-sequencer:
     image: maxwie/indilog:latest
@@ -117,14 +123,16 @@ services:
       - --io_uring_entries=2048
       - --io_uring_fd_slots=4096
       - --slog_global_cut_interval_us=300
-      # - --v=1
+      #- --v=1
     depends_on:
       - zookeeper-setup
     environment:
       - FAAS_NODE_ID={{.Task.Slot}}
     restart: always
     ulimits:
-        memlock: -1
+        memlock:
+                soft: 67108864
+                hard: 67108864
 
   slog-index:
     image: maxwie/indilog:latest
@@ -136,11 +144,13 @@ services:
       - --num_io_workers=4
       - --io_uring_entries=2048
       - --io_uring_fd_slots=4096
-      # - --v=1
+      #- --v=1
     depends_on:
       - zookeeper-setup
     environment:
       - FAAS_NODE_ID={{.Task.Slot}}
     restart: always
     ulimits:
-        memlock: -1
+        memlock:
+                soft: 67108864
+                hard: 67108864

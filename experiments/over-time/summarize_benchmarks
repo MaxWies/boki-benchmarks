@@ -315,7 +315,7 @@ def generate_plot_time_vs_cpu_memory(directory, workload, result_file):
     # ax1.legend(loc='upper center', bbox_to_anchor=(0.5, 1.12),
     #       ncol=6, fancybox=True, shadow=True, handles=[p1, p2, p3, p4],
     #       prop={'size':6})
-    ax1.legend(( handles=[p1, p2, p3, p4, p5, p6]))
+    #ax1.legend(handles=[p1, p2, p3, p4, p5, p6])
     plt.savefig(result_file)
     plt.close
 

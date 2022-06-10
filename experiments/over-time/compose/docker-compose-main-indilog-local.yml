@@ -35,7 +35,7 @@ services:
       - --slog_engine_propagate_auxdata
       - --slog_engine_distributed_indexing
       - --slog_engine_seqnum_suffix_cap=100000
-      - --slog_engine_tag_cache_cap=10000000
+      - --slog_engine_tag_cache_cap=1000000
       - --slog_engine_per_tag_seqnums_limit=10000
       # - --v=1
     depends_on:
@@ -48,9 +48,7 @@ services:
       - FAAS_CGROUP_FS_ROOT=/tmp/root_cgroupfs
     restart: always
     ulimits:
-        memlock:
-                soft: 67108864
-                hard: 67108864
+      memlock: -1
 
   slog-gateway:
     image: maxwie/indilog:latest
@@ -79,9 +77,7 @@ services:
     environment:
       - FAAS_NODE_ID={{.Task.Slot}}
     ulimits:
-        memlock:
-                soft: 67108864
-                hard: 67108864
+      memlock: -1
 
   slog-storage:
     image: maxwie/indilog:latest
@@ -107,9 +103,7 @@ services:
       - FAAS_NODE_ID={{.Task.Slot}}
     restart: always
     ulimits:
-        memlock:
-                soft: 67108864
-                hard: 67108864
+      memlock: -1
 
   slog-sequencer:
     image: maxwie/indilog:latest
@@ -129,9 +123,7 @@ services:
       - FAAS_NODE_ID={{.Task.Slot}}
     restart: always
     ulimits:
-        memlock:
-                soft: 67108864
-                hard: 67108864
+      memlock: -1
 
   slog-index:
     image: maxwie/indilog:latest
@@ -150,6 +142,4 @@ services:
       - FAAS_NODE_ID={{.Task.Slot}}
     restart: always
     ulimits:
-        memlock:
-                soft: 67108864
-                hard: 67108864
+      memlock: -1

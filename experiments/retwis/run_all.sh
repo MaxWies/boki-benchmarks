@@ -6,39 +6,42 @@ CONTROLLER_SPEC_DIR=$ROOT_DIR/controller-spec
 HELPER_SCRIPT=$ROOT_DIR/scripts/exp_helper
 BENCHMARK_SCRIPT=$BASE_DIR/summarize_benchmarks
 
-COLLECTION_DIR=$BASE_DIR/results/collection
-rm -rf $COLLECTION_DIR
+RESULT_DIR=$BASE_DIR/results
+rm -rf $RESULT_DIR
 mkdir -p \
-    $COLLECTION_DIR \
-    $COLLECTION_DIR/boki-local \
-    $COLLECTION_DIR/boki-remote \
-    $COLLECTION_DIR/indilog
+    $RESULT_DIR \
+    $RESULT_DIR/boki-local \
+    $RESULT_DIR/boki-remote \
+    $RESULT_DIR/indilog
+
+$HELPER_SCRIPT reboot-machines --base-dir=$MACHINE_SPEC_DIR
+sleep 90
 
 # Boki-Local
-cp $BASE_DIR/machines_eng2-st2-seq3.json $BASE_DIR/machines.json
-$HELPER_SCRIPT start-machines --base-dir=$BASE_DIR
-./run_build.sh boki boki-local $CONTROLLER_SPEC_DIR/boki/eng2-st2-seq3-ir2-ur1-mr3.json $BASE_DIR/specs/exp-cf24.json
+# cp $BASE_DIR/machines_eng4-st4-seq3.json $BASE_DIR/machines.json
+# $HELPER_SCRIPT start-machines --base-dir=$BASE_DIR
+# ./run_build.sh boki-local $CONTROLLER_SPEC_DIR/boki/eng4-st4-seq3-ir4-ur1-mr3.json $BASE_DIR/specs/exp-cf24.json
 
-ssh -q $MANAGER_HOST -- docker stack rm boki-experiment
-sleep 20
+# $HELPER_SCRIPT reboot-machines --base-dir=$MACHINE_SPEC_DIR
+# sleep 90
 
-# Boki-Remote
-cp $BASE_DIR/machines_eng2-ei1-st2-seq3.json $BASE_DIR/machines.json
-$HELPER_SCRIPT start-machines --base-dir=$BASE_DIR
-./run_build.sh boki boki-remote $CONTROLLER_SPEC_DIR/boki/eng2-ei1-st2-seq3-ir1-ur1-mr3.json $BASE_DIR/specs/exp-cf24.json
+# # Boki-Remote
+# cp $BASE_DIR/machines_eng4-ei2-st4-seq3.json $BASE_DIR/machines.json
+# $HELPER_SCRIPT start-machines --base-dir=$BASE_DIR
+# ./run_build.sh boki-remote $CONTROLLER_SPEC_DIR/boki/eng4-ei2-st4-seq3-ir2-ur1-mr3.json $BASE_DIR/specs/exp-cf24.json
 
-ssh -q $MANAGER_HOST -- docker stack rm boki-experiment
-sleep 20
+# $HELPER_SCRIPT reboot-machines --base-dir=$MACHINE_SPEC_DIR
+# sleep 90
 
 # Indilog
-cp $BASE_DIR/machines_eng2-st2-seq3-ix1.json $BASE_DIR/machines.json
+cp $BASE_DIR/machines_eng4-st4-seq3-ix2.json $BASE_DIR/machines.json
 $HELPER_SCRIPT start-machines --base-dir=$BASE_DIR
-./run_build.sh indilog indilog $CONTROLLER_SPEC_DIR/indilog/eng2-st2-seq3-ix1-is1-ir1-ur1-mr3-ssmx4.json $BASE_DIR/specs/exp-cf24.json
+./run_build.sh indilog-no-min-completion $CONTROLLER_SPEC_DIR/indilog/eng4-st4-seq3-ix2-is2-ir1-ur1-mr3-ssmx4.json $BASE_DIR/specs/exp-cf24.json
 
 # Plotting
-for SLOG_CONFIG in boki-local boki-remote indilog; do
+for SLOG in boki-local boki-remote indilog; do
     $BENCHMARK_SCRIPT generate-plot \
-        --op-stats-csv-file=$BASE_DIR/results/collection/$SLOG_CONFIG/op-stats.csv \
-        --client-csv-file=$BASE_DIR/results/collection/$SLOG_CONFIG/client-results.csv \
-        --result-file=$BASE_DIR/results/collection/$SLOG_CONFIG/op-stats.png
+        --op-stats-csv-file=$RESULT_DIR/results/$SLOG/op-stats.csv \
+        --client-csv-file=$BASE_DIR/results/$SLOG/client-results.csv \
+        --result-file=$BASE_DIR/results/$SLOG/op-stats.png
 done

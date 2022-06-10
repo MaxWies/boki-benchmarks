@@ -81,25 +81,28 @@ def add_concurrency_throughput_latency_row(directory, slog, concurrency, through
         ]
         writer.writerow(data)
 
-def generate_concurrency_vs_latency_plot(csv_file, slog, result_file):
+def generate_concurrency_vs_latency_plot(csv_file, slog, display_title, result_file):
     df = pd.read_csv(csv_file)
     df_boki = df.loc[df['slog'] == slog]
 
     fig, ax1 = plt.subplots()
     ax2 = ax1.twinx()
 
-    p1, = ax1.plot(df_boki['concurrency'], df_boki['latency_append_50'], label='Append 0.5', color='blue', linestyle=':', marker='o')
-    p2, = ax1.plot(df_boki['concurrency'], df_boki['latency_append_99'], label='Append 0.99', color='blue', linestyle='--', marker='o')
-    p3, = ax1.plot(df_boki['concurrency'], df_boki['latency_read_50'], label='Read 0.5', color='green', linestyle=':', marker='o')
-    p4, = ax1.plot(df_boki['concurrency'], df_boki['latency_read_99'], label='Read 0.99', color='green', linestyle='--', marker='o')
+    p1, = ax1.plot(df_boki['concurrency'], df_boki['latency_append_50'], label='Append 0.5', color='blue', linestyle=':', marker='o', linewidth='2')
+    p2, = ax1.plot(df_boki['concurrency'], df_boki['latency_append_99'], label='Append 0.99', color='blue', linestyle='--', marker='o', linewidth='2')
+    p3, = ax1.plot(df_boki['concurrency'], df_boki['latency_read_50'], label='Read 0.5', color='green', linestyle=':', marker='v', linewidth='2')
+    p4, = ax1.plot(df_boki['concurrency'], df_boki['latency_read_99'], label='Read 0.99', color='green', linestyle='--', marker='v', linewidth='2')
 
-    p5, = ax2.plot(df_boki['concurrency'], df_boki['throughput'], label='Throughput', color='darkorange', linestyle='-', marker='o')
+    p5, = ax2.plot(df_boki['concurrency'], df_boki['throughput'], label='Throughput', color='darkorange', linestyle='-')
 
-    ax1.set_xlabel('Concurrency (Number of GO Routines) [32 GO Routines = 1 OS Thread]')
-    ax1.set_ylabel('Latency (\u03BCs)')
-    ax2.set_ylabel('Throughput (kOp/s)')
+    ax1.set_xlabel('Concurrency (# GO Routines)', fontsize=12)
+    ax1.set_ylabel('Latency (\u03BCs)', fontsize=12)
+    ax2.set_ylabel('Throughput (kOp/s)', fontsize=12)
 
-    ax1.set_ylim(bottom=-200)
+    if df_boki['latency_append_99'].max() < 12000 and df_boki['latency_read_99'].max() < 12000:
+        ax1.set_ylim(bottom=-200, top=12000)
+    else:
+        ax1.set_ylim(bottom=-200)
     ax2.set_ylim(bottom=0, top=110)
 
     # ax1.legend(loc='upper center', bbox_to_anchor=(0.5, 1.12),
@@ -108,8 +111,9 @@ def generate_concurrency_vs_latency_plot(csv_file, slog, result_file):
 
     ax1.grid(which='both')
     ax1.legend(handles=[p1, p2, p3, p4, p5])
-    plt.title('Latency and throughput {}'.format(slog_info(slog)))
-    plt.savefig(result_file)
+    if display_title:
+        plt.title('Latency and throughput {}'.format(slog_info(slog)))
+    plt.savefig(result_file, bbox_inches='tight')
     plt.close
 
 if __name__ == '__main__':
@@ -126,6 +130,7 @@ if __name__ == '__main__':
     parser.add_argument('--throughput', type=float)
     parser.add_argument('--result-file', type=str)
     parser.add_argument('--result-directory', type=str)
+    parser.add_argument('--display-title', type=str, default='')
     args = parser.parse_args()
     try:
         if args.cmd == 'compute-throughput':
@@ -137,7 +142,10 @@ if __name__ == '__main__':
         elif args.cmd == 'add-row':
             add_concurrency_throughput_latency_row(args.directory, args.slog, args.concurrency, args.throughput, args.result_file)
         elif args.cmd == 'generate-plot':
-            generate_concurrency_vs_latency_plot(args.file, args.slog, args.result_file)
+            display_title = False
+            if args.display_title != '':
+                display_title = True
+            generate_concurrency_vs_latency_plot(args.file, args.slog, display_title, args.result_file)
         else:
             raise Exception('Unknown command: ' + args.cmd)
     except Exception as e:

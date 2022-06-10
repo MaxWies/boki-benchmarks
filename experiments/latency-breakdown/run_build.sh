@@ -46,7 +46,6 @@ for HOST in $ALL_ENGINE_HOSTS; do
 done
 
 if [[ $SLOG_CONFIG == Boki-Remote* ]]; then
-    echo "Match"
     ALL_INDEX_ENGINE_HOSTS=`$HELPER_SCRIPT get-machine-with-label --base-dir=$BASE_DIR --machine-label=index_engine_node`
     for HOST in $ALL_INDEX_ENGINE_HOSTS; do
         scp -q $BASE_DIR/run_launcher $HOST:/tmp/run_launcher

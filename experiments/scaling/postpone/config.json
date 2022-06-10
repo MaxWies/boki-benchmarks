@@ -20,13 +20,13 @@
       "placement_label": "sequencer_node",
       "replicas": 3
     },
-    "slog-engine": {
-      "placement_label": "engine_node",
+    "slog-index": {
+      "placement_label": "index_node",
       "replicas": 2
     },
-    "slog-hybrid-engine": {
-      "placement_label": "hybrid_engine_node",
-      "replicas": 1
+    "slog-engine": {
+      "placement_label": "engine_node",
+      "replicas": 3
     },
     "random-append-read-service": {
       "placement_label": "engine_node",

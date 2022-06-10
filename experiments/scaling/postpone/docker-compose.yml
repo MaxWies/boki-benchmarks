@@ -15,7 +15,7 @@ services:
     - /tmp/zk_setup.sh:/tmp/slog/zk_setup.sh
     restart: always
   slog-engine:
-    image: maxwie/boki:latest
+    image: maxwie/indilog:latest
     hostname: faas-engine-{{.Task.Slot}}
     entrypoint:
     - /slog/engine
@@ -31,7 +31,11 @@ services:
     - --slog_engine_enable_cache
     - --slog_engine_cache_cap_mb=1024
     - --slog_engine_propagate_auxdata
-    - --engine_node_type=engine
+    - --slog_engine_distributed_indexing
+    - --slog_engine_seqnum_suffix_cap=100000
+    - --slog_engine_tag_cache_cap=1000000
+    - --slog_engine_per_tag_seqnums_limit=10000
+    - --slog_engine_postpone_caching=2,3
     depends_on:
     - zookeeper-setup
     volumes:
@@ -44,7 +48,7 @@ services:
     ulimits:
       memlock: -1
   slog-gateway:
-    image: maxwie/boki:latest
+    image: maxwie/indilog:latest
     hostname: faas-gateway
     ports:
     - 8080:8080
@@ -66,10 +70,12 @@ services:
     - /tmp/nightcore_config.json:/tmp/slog/func_config.json
     - /mnt/inmem/store:/tmp/store
     restart: always
+    environment:
+    - FAAS_NODE_ID={{.Task.Slot}}
     ulimits:
       memlock: -1
   slog-storage:
-    image: maxwie/boki:latest
+    image: maxwie/indilog:latest
     hostname: faas-storage-{{.Task.Slot}}
     entrypoint:
     - /slog/storage
@@ -93,7 +99,7 @@ services:
     ulimits:
       memlock: -1
   slog-sequencer:
-    image: maxwie/boki:latest
+    image: maxwie/indilog:latest
     hostname: faas-sequencer-{{.Task.Slot}}
     entrypoint:
     - /slog/sequencer
@@ -110,14 +116,33 @@ services:
     restart: always
     ulimits:
       memlock: -1
+  slog-index:
+    image: maxwie/indilog:latest
+    hostname: faas-index-{{.Task.Slot}}
+    entrypoint:
+    - /slog/index
+    - --zookeeper_host=zookeeper:2181
+    - --listen_iface=eth0
+    - --num_io_workers=4
+    - --io_uring_entries=2048
+    - --io_uring_fd_slots=4096
+    depends_on:
+    - zookeeper-setup
+    environment:
+    - FAAS_NODE_ID={{.Task.Slot}}
+    restart: always
+    ulimits:
+      memlock: -1
   slog-controller:
-    image: maxwie/boki:latest
+    image: maxwie/indilog:latest
     entrypoint:
     - /slog/controller
     - --zookeeper_host=zookeeper:2181
     - --metalog_replicas=3
     - --userlog_replicas=1
+    - --index_shards=2
     - --index_replicas=1
+    - --max_num_storage_shards=4
     depends_on:
     - zookeeper-setup
   random-append-read-service:
@@ -129,7 +154,7 @@ services:
     volumes:
     - /mnt/inmem/slog:/tmp/slog
     environment:
-    - FAAS_GO_MAX_PROC_FACTOR=8
+    - FAAS_GO_MAX_PROC_FACTOR=1
     - GOGC=1000
     depends_on:
     - slog-engine
@@ -142,7 +167,7 @@ services:
     volumes:
     - /mnt/inmem/slog:/tmp/slog
     environment:
-    - FAAS_GO_MAX_PROC_FACTOR=8
+    - FAAS_GO_MAX_PROC_FACTOR=1
     - GOGC=1000
     depends_on:
     - slog-engine

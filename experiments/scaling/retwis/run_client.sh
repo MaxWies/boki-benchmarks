@@ -10,10 +10,10 @@ BENCHMARK_SCRIPT=$ROOT_DIR/scripts/benchmark/summarize_benchmarks
 SCALER_SCRIPT=$ROOT_DIR/scripts/scaler
 
 export COLLECT_CONTAINER_LOGS=false
-export DURATION=60
-export CONCURRENCY_CLIENT=16
+export DURATION=10
+export CONCURRENCY_CLIENT=1
 export CONCURRENCY_CLIENT_STEP_SIZE=16
-export CONCURRENCY_CLIENT_STEP_INTERVAL=15
+export CONCURRENCY_CLIENT_STEP_INTERVAL=500
 export NUM_USERS=1000
 
 for s in $(echo $values | jq -r ".exp_variables | to_entries | map(\"\(.key)=\(.value|tostring)\") | .[]" $EXP_SPEC_FILE); do
@@ -32,37 +32,38 @@ ssh -q $MANAGER_HOST -- uname -a >>$EXP_DIR/kernel_version
 
 # ssh -q $CLIENT_HOST -- curl -X POST http://$ENTRY_HOST:8080/function/RetwisInit
 
-ssh -q $CLIENT_HOST -- docker run \
-    --pull always \
-    -v /tmp:/tmp \
-    maxwie/boki-retwisbench:latest \
-    cp /retwisbench-bin/init /tmp/init
+#ssh -q $CLIENT_HOST -- docker run \
+ #   --pull always \
+  #  -v /tmp:/tmp \
+   # maxwie/boki-retwisbench:latest \
+    #cp /retwisbench-bin/init /tmp/init
 
-ssh -q $CLIENT_HOST -- /tmp/init \
-    --faas_gateway=$ENTRY_HOST:8080
+#ssh -q $CLIENT_HOST -- /tmp/init \
+ #   --faas_gateway=$ENTRY_HOST:8080
 
-ssh -q $CLIENT_HOST -- docker run \
-    -v /tmp:/tmp \
-    maxwie/boki-retwisbench:latest \
-    cp /retwisbench-bin/create_users /tmp/create_users
+#ssh -q $CLIENT_HOST -- docker run \
+ #   -v /tmp:/tmp \
+  #  maxwie/boki-retwisbench:latest \
+   # cp /retwisbench-bin/create_users /tmp/create_users
 
-ssh -q $CLIENT_HOST -- /tmp/create_users \
-    --faas_gateway=$ENTRY_HOST:8080 \
-    --num_users=$NUM_USERS \
-    --concurrency=16
+#ssh -q $CLIENT_HOST -- /tmp/create_users \
+ #   --faas_gateway=$ENTRY_HOST:8080 \
+  #  --num_users=$NUM_USERS \
+   # --concurrency=16
 
-ssh -q $CLIENT_HOST -- docker run \
-    -v /tmp:/tmp \
-    maxwie/boki-retwisbench:latest \
-    cp /retwisbench-bin/benchmark /tmp/benchmark
+#ssh -q $CLIENT_HOST -- docker run \
+ #   -v /tmp:/tmp \
+  #  maxwie/boki-retwisbench:latest \
+   # cp /retwisbench-bin/benchmark /tmp/benchmark
 
 # background python script for scaling system
-$SCALER_SCRIPT boki-engine-scale-out-continously \
-    --base-dir=$BASE_DIR \
-    --hostnames=$AVAILABLE_HOSTS \
-    --duration=$DURATION \
-    --interval=$CONCURRENCY_CLIENT_STEP_INTERVAL \
-    &
+#$SCALER_SCRIPT boki-engine-scale-out-continously \
+#    --base-dir=$BASE_DIR \
+#    --hostnames=$AVAILABLE_HOSTS \
+#    --service=boki-engine \
+#    --duration=$DURATION \
+#    --interval=10 \
+#    &
 
 ssh -q $CLIENT_HOST -- /tmp/benchmark \
     --faas_gateway=$ENTRY_HOST:8080 \

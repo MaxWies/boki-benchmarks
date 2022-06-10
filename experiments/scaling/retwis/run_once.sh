@@ -60,4 +60,4 @@ done
 
 sleep 10
 
-$BASE_DIR/run_client.sh $EXP_SPEC_FILE $EXP_DIR
+#$BASE_DIR/run_client.sh $EXP_SPEC_FILE $EXP_DIR

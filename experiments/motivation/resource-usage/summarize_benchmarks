@@ -45,7 +45,7 @@ def generate_plot_concurrency_vs_bandwidth(csv_file, component, result_file):
     p1, = ax1.plot(df_component_boki_local['concurrency'], df_component_boki_local['mb_per_second_sent'], 'o-', color='blue', label='Bandwidth Sent')
     p2, = ax2.plot(df_component_boki_local['concurrency'], df_component_boki_local['mb_per_second_received'], 'o-', color='darkred', label='Bandwidth Received')
 
-    ax1.set_xlabel('Concurrency (# Go Routines)')
+    ax1.set_xlabel('Concurrency (# GO Routines)')
     ax1.set_ylabel('Bandwidth (Mb/s)')
     ax2.set_ylabel('Bandwidth (Mb/s)')
 
@@ -62,7 +62,7 @@ def generate_plot_concurrency_vs_bandwidth(csv_file, component, result_file):
     plt.savefig(result_file)
     plt.close
 
-def generate_plot_concurrency_vs_cpu(csv_file, component, result_file):
+def generate_plot_concurrency_vs_cpu(csv_file, component, display_title, result_file):
     df = pd.read_csv(csv_file)
     df_component = df.loc[df['component'] == component]
 
@@ -74,16 +74,17 @@ def generate_plot_concurrency_vs_cpu(csv_file, component, result_file):
     plt.plot(df_component_boki_remote['concurrency'], df_component_boki_remote['cpu_avg'], 'x-', color='darkviolet', label='No function communication + remote index requests')
     plt.plot(df_component_boki_hybrid['concurrency'], df_component_boki_hybrid['cpu_avg'], 'v-', color='slategrey', label='Function communication + local and remote index requests')
     
-    plt.xlabel('Concurrency (# Go Routines)')
-    plt.ylabel('CPU (%)')
+    plt.xlabel('Concurrency (# GO Routines)', fontsize=12)
+    plt.ylabel('CPU (%)', fontsize=12)
 
     plt.xlim(left=0)
     plt.ylim(bottom=0)
 
-    plt.legend(prop={'size':7})
+    plt.legend()
 
-    plt.title('CPU use of Boki {} node'.format(component))
-    plt.savefig(result_file)
+    if display_title:
+        plt.title('CPU use of Boki {} node'.format(component))
+    plt.savefig(result_file, bbox_inches='tight')
     plt.close
 
 if __name__ == '__main__':
@@ -95,13 +96,17 @@ if __name__ == '__main__':
     parser.add_argument('--component', type=str)
     parser.add_argument('--cpu-avg', type=float)
     parser.add_argument('--bandwidth-file', type=str)
+    parser.add_argument('--display-title', type=str, default='')
     parser.add_argument('--result-file', type=str)
     args = parser.parse_args()
     try:
         if args.cmd == 'add-row':
             add_row(args.slog, args.component, args.concurrency, args.cpu_avg, args.bandwidth_file, args.result_file)
         elif args.cmd == 'generate-plot-concurrency-vs-cpu':
-            generate_plot_concurrency_vs_cpu(args.file, args.component, args.result_file)
+            display_title = False
+            if args.display_title != '':
+                display_title = True
+            generate_plot_concurrency_vs_cpu(args.file, args.component, display_title, args.result_file)
         elif args.cmd == 'generate-plot-concurrency-vs-bandwidth':
             generate_plot_concurrency_vs_bandwidth(args.file, args.component, args.result_file)
         else:
