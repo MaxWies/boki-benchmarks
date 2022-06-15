@@ -98,21 +98,29 @@ def generate_plot(csv_file, workload, result_file):
 
     fig, ax = plt.subplots()
 
-    ax.plot(df_boki['nodes'], df_boki['throughput'], linestyle='solid', color='royalblue', marker='o', label='Boki Hybrid')
-    ax.plot(df_indilog['nodes'], df_indilog['throughput'], linestyle='solid', color='darkgreen', marker='o', label='Indilog')
+    ax.plot(df_boki['nodes'], df_boki['throughput'], linestyle='solid', color='royalblue', marker='x', label='Boki Hybrid', linewidth='2')
+    ax.plot(df_indilog['nodes'], df_indilog['throughput'], linestyle='solid', color='darkgreen', marker='o', label='Indilog', linewidth='2')
 
-    ax.set_xlabel('# Compute Nodes after Scaling')
-    ax.set_ylabel('Throughput (kOp/s)')
+    ax.set_xlabel('# Compute Nodes after Scaling', fontsize=14)
+    ax.set_ylabel('Throughput (kOp/s)', fontsize=14)
 
-    ax.set_ylim(bottom=0)
+    ax.set_xlim(left=0)
+    ax.set_ylim(bottom=0, top=700)
 
-    # ax2.legend(loc='upper center', bbox_to_anchor=(0.5, 1.12),
-    #       ncol=6, fancybox=True, shadow=True, handles=[p1, p2, p3, p4, p5, p6, p7],
-    #       prop={'size':5})
+    x_major_ticks = np.arange(0, 8, 2)
+    x_minor_ticks = np.arange(0, 8, 1)
+    ax.set_xticks(x_major_ticks)
+    ax.set_xticks(x_minor_ticks, minor=True)
+
+    info_text = 'Scaling from one engine'
+    ax.text(
+        0.17, 0.7, info_text, transform=ax.transAxes, verticalalignment='top', size=10,
+        bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.5)
+    )
+
     ax.legend()
 
-    plt.title('Scaling from one node (Workload: {})'.format(workload_info(workload)))
-    plt.savefig(result_file)
+    plt.savefig(result_file, bbox_inches='tight')
     plt.close
 
 if __name__ == '__main__':

@@ -46,18 +46,6 @@ for HOST in $ALL_ENGINE_HOSTS; do
     ssh -q $HOST -- sudo cp /tmp/nightcore_config.json /mnt/inmem/slog/func_config.json
 done
 
-# if [[ $SLOG_CONFIG == boki-remote ]]; then
-#     ALL_INDEX_ENGINE_HOSTS=`$HELPER_SCRIPT get-machine-with-label --base-dir=$BASE_DIR --machine-label=index_engine_node`
-#     for HOST in $ALL_INDEX_ENGINE_HOSTS; do
-#         scp -q $BASE_DIR/run_launcher $HOST:/tmp/run_launcher
-#         ssh -q $HOST -- sudo rm -rf /mnt/inmem/slog
-#         ssh -q $HOST -- sudo mkdir -p /mnt/inmem/slog
-#         ssh -q $HOST -- sudo mkdir -p /mnt/inmem/slog/output /mnt/inmem/slog/ipc /mnt/inmem/slog/stats
-#         ssh -q $HOST -- sudo rm /tmp/nightcore_config.json
-#         ssh -q $HOST -- sudo cp /tmp/run_launcher /mnt/inmem/slog/run_launcher
-#     done
-# fi
-
 ALL_STORAGE_HOSTS=`$HELPER_SCRIPT get-machine-with-label --base-dir=$BASE_DIR --machine-label=storage_node`
 for HOST in $ALL_STORAGE_HOSTS; do
     ssh -q $HOST -- sudo rm -rf   /mnt/storage/logdata
@@ -73,15 +61,5 @@ for HOST in $ALL_ENGINE_HOSTS; do
 done
 
 sleep 10
-
-# if [[ $SLOG_CONFIG == indilog ]]; then
-#     DYNAMIC_HOSTS=`$HELPER_SCRIPT get-dynamic-hostnames --base-dir=$BASE_DIR --machine-label=engine_node`
-#     for HOST in $DYNAMIC_HOSTS; do
-#         $SCALER_SCRIPT node-join \
-#         --base-dir=$BASE_DIR \
-#         --hostname=$HOST
-#     done
-#     sleep 20
-# fi
 
 $BASE_DIR/run_client.sh $SLOG $SLOG_CONFIG $EXP_SPEC_FILE $EXP_DIR

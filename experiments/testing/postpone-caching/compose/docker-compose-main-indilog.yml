@@ -30,16 +30,16 @@ services:
       - --io_uring_entries=2048
       - --io_uring_fd_slots=4096
       - --enable_shared_log
-      - --slog_engine_enable_cache
+      # - --slog_engine_enable_cache
       - --slog_engine_cache_cap_mb=1024
       - --slog_engine_propagate_auxdata
       - --slog_engine_distributed_indexing
       - --slog_engine_seqnum_suffix_cap=1000
       - --slog_engine_tag_cache_cap=5000
       - --slog_engine_per_tag_seqnums_limit=100
-      - --slog_engine_postpone_caching=2
+      - --slog_engine_postpone_caching=2,3,4
         #- --slog_engine_index_tier_only
-      - --v=1
+      # - --v=1
     depends_on:
       - zookeeper-setup
     volumes:
@@ -71,7 +71,7 @@ services:
       - --io_uring_fd_slots=4096
       - --lb_per_fn_round_robin
       - --max_running_requests=0
-      - --v=1
+      # - --v=1
     depends_on:
       - zookeeper-setup
     volumes:
@@ -100,7 +100,7 @@ services:
       - --slog_storage_bgthread_interval_ms=1
       - --slog_storage_backend=rocksdb
       - --slog_storage_cache_cap_mb=4096
-      - --v=1
+      # - --v=1
     depends_on:
       - zookeeper-setup
     volumes:
@@ -124,7 +124,7 @@ services:
       - --io_uring_entries=2048
       - --io_uring_fd_slots=4096
       - --slog_global_cut_interval_us=300
-      - --v=1
+      # - --v=1
     depends_on:
       - zookeeper-setup
     environment:
@@ -145,7 +145,28 @@ services:
       - --num_io_workers=2
       - --io_uring_entries=2048
       - --io_uring_fd_slots=4096
-      - --v=1
+      # - --v=1
+    depends_on:
+      - zookeeper-setup
+    environment:
+      - FAAS_NODE_ID={{.Task.Slot}}
+    restart: always
+    ulimits:
+        memlock:
+                soft: 67108864
+                hard: 67108864
+
+  slog-merger:
+    image: maxwie/indilog:latest
+    hostname: faas-merger-{{.Task.Slot}}
+    entrypoint:
+      - /slog/merger
+      - --zookeeper_host=zookeeper:2181
+      - --listen_iface=eth0
+      - --num_io_workers=2
+      - --io_uring_entries=2048
+      - --io_uring_fd_slots=4096
+      # - --v=1
     depends_on:
       - zookeeper-setup
     environment:

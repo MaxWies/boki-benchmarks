@@ -3,7 +3,7 @@ BASE_DIR=`realpath $(dirname $0)`
 ROOT_DIR=`realpath $BASE_DIR/../..`
 
 SLOG=$1
-SLOG_SPEC_FILE=$2
+CONTROLLER_SPEC_FILE=$2
 EXP_SPEC_FILE=$3
 
 HELPER_SCRIPT=$ROOT_DIR/scripts/exp_helper

@@ -12,9 +12,9 @@ BENCHMARK_HELPER_SCRIPT=$ROOT_DIR/scripts/benchmark_helper
 
 export BENCHMARK_TYPE=scaling
 export APPEND_TIMES=1
-export READ_TIMES=19
+export READ_TIMES=1
 export RECORD_LENGTH=1024
-export DURATION=180
+export DURATION=90
 export RELATIVE_SCALE_TS=30
 export ENGINE_STAT_THREAD_INTERVAL=5
 
@@ -136,10 +136,8 @@ fi
 
 # get latency files from engines
 mkdir -p $EXP_DIR/stats/latencies
-mkdir -p $EXP_DIR/stats/op
 for HOST in $ALL_ENGINE_HOSTS; do
     scp -r -q $HOST:/mnt/inmem/slog/stats/latencies*.csv $EXP_DIR/stats
-    scp -r -q $HOST:/mnt/inmem/slog/stats/op-stat-*.csv $EXP_DIR/op
 done
 
 $BENCHMARK_SCRIPT discard-csv-files-after \
@@ -216,3 +214,27 @@ else
         --end-ts=$END_TS \
         --result-file=$BASE_DIR/results/$WORKLOAD/time-vs-engine-type-latency.csv 
 fi
+
+# operations stat
+i=0
+mkdir -p $EXP_DIR/stats/op
+for HOST in $ALL_ENGINE_HOSTS; do
+    scp -r -q $HOST:/mnt/inmem/slog/stats/op-stat-*.csv $EXP_DIR/stats/op
+    # single engine result
+    SINGLE_HOST_RESULT_DIR=$EXP_DIR/stats/op/host$i
+    mkdir -p $SINGLE_HOST_RESULT_DIR
+    scp -r -q $HOST:/mnt/inmem/slog/stats/op-stat-*.csv $SINGLE_HOST_RESULT_DIR
+    $BENCHMARK_HELPER_SCRIPT create-operation-statistics \
+        --directory=$SINGLE_HOST_RESULT_DIR \
+        --slog=$SLOG \
+        --result-directory=$SINGLE_HOST_RESULT_DIR
+    ((i=i+1))
+done
+mkdir -p $BASE_DIR/results/$WORKLOAD/$SLOG
+$BENCHMARK_HELPER_SCRIPT create-operation-statistics \
+    --directory=$EXP_DIR/stats/op \
+    --slog=$SLOG \
+    --result-directory=$EXP_DIR/stats/op
+$BENCHMARK_HELPER_SCRIPT generate-operation-statistics-plot \
+    --file=$EXP_DIR/stats/op/operations.csv \
+    --result-file=$BASE_DIR/results/$WORKLOAD/$SLOG/operations-$SLOG.png

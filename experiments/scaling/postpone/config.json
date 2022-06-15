@@ -14,7 +14,7 @@
     },
     "slog-storage": {
       "placement_label": "storage_node",
-      "replicas": 3
+      "replicas": 4
     },
     "slog-sequencer": {
       "placement_label": "sequencer_node",
@@ -24,17 +24,21 @@
       "placement_label": "index_node",
       "replicas": 2
     },
+    "slog-merger": {
+      "placement_label": "merger_node",
+      "replicas": 1
+    },
     "slog-engine": {
       "placement_label": "engine_node",
-      "replicas": 3
+      "replicas": 4
     },
     "random-append-read-service": {
       "placement_label": "engine_node",
-      "replicas": 3
+      "replicas": 4
     },
     "test-system-service": {
       "placement_label": "engine_node",
-      "replicas": 3
+      "replicas": 4
     }
   }
 }

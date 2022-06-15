@@ -99,7 +99,7 @@ then
 
     # activiate postponed engines
     $ROOT_DIR/../zookeeper/bin/zkCli.sh -server $MANAGER_IP:2181 \
-        create /faas/activate/register \
+        create /faas/activate/cache \
         >/dev/null
 
     # sleep remaining time

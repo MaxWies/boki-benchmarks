@@ -49,6 +49,19 @@ for HOST in $ALL_ENGINE_HOSTS; do
     ssh -q $HOST -- sudo cp /tmp/nightcore_config.json /mnt/inmem/slog/func_config.json
 done
 
+if [[ $SLOG == boki-remote ]]; then
+    ALL_INDEX_ENGINE_HOSTS=`$HELPER_SCRIPT get-machine-with-label --base-dir=$BASE_DIR --machine-label=index_engine_node`
+    for HOST in $ALL_INDEX_ENGINE_HOSTS; do
+        scp -q $BASE_DIR/nightcore_config_empty.json $HOST:/tmp/nightcore_config_empty.json
+        scp -q $BASE_DIR/run_launcher $HOST:/tmp/run_launcher
+        ssh -q $HOST -- sudo rm -rf /mnt/inmem/slog
+        ssh -q $HOST -- sudo mkdir -p /mnt/inmem/slog
+        ssh -q $HOST -- sudo mkdir -p /mnt/inmem/slog/output /mnt/inmem/slog/ipc /mnt/inmem/slog/stats
+        ssh -q $HOST -- sudo cp /tmp/run_launcher /mnt/inmem/slog/run_launcher
+        ssh -q $HOST -- sudo cp /tmp/nightcore_config_empty.json /mnt/inmem/slog/func_config_empty.json
+    done
+fi
+
 ALL_STORAGE_HOSTS=`$HELPER_SCRIPT get-machine-with-label --base-dir=$BASE_DIR --machine-label=storage_node`
 for HOST in $ALL_STORAGE_HOSTS; do
     ssh -q $HOST -- sudo rm -rf   /mnt/storage/logdata

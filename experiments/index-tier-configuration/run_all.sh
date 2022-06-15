@@ -11,21 +11,26 @@ RESULT_DIR=$BASE_DIR/results
 rm -rf $RESULT_DIR
 mkdir -p $RESULT_DIR
 
-# this benchmark uses range queries
+# this benchmark uses range queries only
 
-#cp $MACHINE_SPEC_DIR/indilog/machines_eng2-st2-seq3-ix2.json $BASE_DIR/machines.json
-#$HELPER_SCRIPT start-machines --base-dir=$BASE_DIR
-./run_build.sh indilog 2-1 $CONTROLLER_SPEC_DIR/indilog/eng4-st4-seq3-ix2-is2-ir1-ur1-mr3-ssmx4.json $BASE_DIR/specs/exp-cf3.json
-./run_build.sh indilog 2-1-false $CONTROLLER_SPEC_DIR/indilog/eng4-st4-seq3-ix2-is2-ir1-ur1-mr3-ssmx4.json $BASE_DIR/specs/exp-cf3-point-miss.json
+cp $MACHINE_SPEC_DIR/indilog/machines_eng2-st2-seq3-ix2-m1.json $BASE_DIR/machines.json
+$HELPER_SCRIPT start-machines --base-dir=$BASE_DIR
+./run_build.sh indilog 1-2-1-false $CONTROLLER_SPEC_DIR/indilog/eng4-st4-seq3-ix2-m1-is2-ir1-ur1-mr3-ssmx4.json $BASE_DIR/specs/exp-cf3.json
 
-# # Machine config 2
-# cp $BASE_DIR/machines_eng2-st2-seq3-ix3.json $BASE_DIR/machines.json
-# $HELPER_SCRIPT start-machines --base-dir=$BASE_DIR
-# ./run_build.sh indilog $CONTROLLER_SPEC_DIR/indilog/eng2-st2-seq3-ix3-is3-ir1-ur1-mr3-ssmx4.json $BASE_DIR/specs/exp-cf24-point-hit.json
-# ./run_build.sh indilog $CONTROLLER_SPEC_DIR/indilog/eng2-st2-seq3-ix3-is3-ir1-ur1-mr3-ssmx4.json $BASE_DIR/specs/exp-cf24-point-miss.json
+cp $MACHINE_SPEC_DIR/indilog/machines_eng2-st2-seq3-ix2-m1.json $BASE_DIR/machines.json
+$HELPER_SCRIPT start-machines --base-dir=$BASE_DIR
+./run_build.sh indilog 2-1-1-false $CONTROLLER_SPEC_DIR/indilog/eng4-st4-seq3-ix2-m1-is2-ir1-ur1-mr3-ssmx4.json $BASE_DIR/specs/exp-cf3.json
+
+cp $MACHINE_SPEC_DIR/indilog/machines_eng2-st2-seq3-ix4-m1.json $BASE_DIR/machines.json
+$HELPER_SCRIPT start-machines --base-dir=$BASE_DIR
+./run_build.sh indilog 2-2-1-false $CONTROLLER_SPEC_DIR/indilog/eng4-st4-seq3-ix4-m1-is2-ir1-ur1-mr3-ssmx4.json $BASE_DIR/specs/exp-cf3.json
+
+cp $MACHINE_SPEC_DIR/indilog/machines_eng2-st2-seq3-ix4-m2.json $BASE_DIR/machines.json
+$HELPER_SCRIPT start-machines --base-dir=$BASE_DIR
+./run_build.sh indilog 2-2-2-false $CONTROLLER_SPEC_DIR/indilog/eng4-st4-seq3-ix4-m2-is2-ir1-ur1-mr3-ssmx4.json $BASE_DIR/specs/exp-cf3.json
 
 # Benchmark collected csv file
-for $FILE_TYPE in "pdf" "png":
+for FILE_TYPE in "png" "pdf";
 do
-    $BENCHMARK_SCRIPT generate-plot --directory=$RESULT_DIR --file=$BASE_DIR/results/throughput-vs-latency.csv --result-file=$RESULT_DIR/throughput-vs-latency.$FILE_TYPE
+    $BENCHMARK_SCRIPT generate-plot --directory=$RESULT_DIR --file=$BASE_DIR/results/throughput-vs-latency.csv --result-file=$RESULT_DIR/cumulated-latency.$FILE_TYPE
 done

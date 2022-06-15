@@ -12,6 +12,8 @@ import numpy as np
 import math
 import pandas as pd
 import csv
+import itertools
+
 
 def workload_info(workload):
     if workload.lower() == 'empty-tag':
@@ -188,6 +190,9 @@ def add_single_engine_row(directory, latency_append_file, slog, engine_type, int
         ]
         writer.writerow(data)
 
+def flip(items, ncol):
+    return itertools.chain(*[items[i::ncol] for i in range(ncol)])
+
 def generate_plot_boki_vs_indilog(csv_file, relative_scale_ts, engines_before, engines_after, workload, result_file):
     df = pd.read_csv(csv_file)
     df_boki = df.loc[df['slog'] == 'boki-hybrid']
@@ -220,29 +225,82 @@ def generate_plot_boki_vs_indilog(csv_file, relative_scale_ts, engines_before, e
     plt.savefig(result_file)
     plt.close
 
-def generate_plot_boki_vs_indilog_latency(csv_file, relative_scale_ts, engines_before, engines_after, workload, result_file):
+def generate_plot_boki_vs_indilog_append_latency(csv_file, relative_scale_ts, engines_before, engines_after, workload, result_file):
     df = pd.read_csv(csv_file)
     df_boki_index_less = df.loc[df['engine_type'] == 'index_less']
     df_boki_hybrid = df.loc[df['engine_type'] == 'hybrid']
     df_indilog = df.loc[df['engine_type'] == 'indilog']
 
-    plt.plot(df_boki_index_less['ts_relative'], df_boki_index_less['latency_read_50'], linestyle='dotted', color='royalblue', marker='x', label='Boki node without index: Read 0.5')
-    plt.plot(df_boki_index_less['ts_relative'], df_boki_index_less['latency_read_99'], linestyle='dashed', color='royalblue', marker='x', label='Boki node without index: Read 0.99')
+    ax = plt.subplot(111)
 
-    plt.plot(df_boki_hybrid['ts_relative'], df_boki_hybrid['latency_read_50'], linestyle='dotted', color='darkviolet', marker='v', label='Boki Hybrid node: Read 0.5')
-    plt.plot(df_boki_hybrid['ts_relative'], df_boki_hybrid['latency_read_99'], linestyle='dashed', color='darkviolet', marker='v', label='Boki Hybrid node: Read 0.99')
+    ax.plot(df_boki_index_less['ts_relative'], df_boki_index_less['latency_append_50'], linestyle='dotted', color='royalblue', marker='x', label='Boki no index: Append 0.5', linewidth='2')
+    ax.plot(df_boki_index_less['ts_relative'], df_boki_index_less['latency_append_99'], linestyle='dashed', color='royalblue', marker='x', label='Boki no index: Append 0.99', linewidth='2')
 
-    plt.plot(df_indilog['ts_relative'], df_indilog['latency_read_50'], linestyle='dotted', color='darkgreen', marker='o', label='Indilog node: Read 0.5')
-    plt.plot(df_indilog['ts_relative'], df_indilog['latency_read_99'], linestyle='dashed', color='darkgreen', marker='o', label='Indilog node: Read 0.99')
+    ax.plot(df_boki_hybrid['ts_relative'], df_boki_hybrid['latency_append_50'], linestyle='dotted', color='slategrey', marker='v', label='Boki hybrid: Append 0.5', linewidth='2')
+    ax.plot(df_boki_hybrid['ts_relative'], df_boki_hybrid['latency_append_99'], linestyle='dashed', color='slategrey', marker='v', label='Boki hybrid: Append 0.99', linewidth='2')
+
+    ax.plot(df_indilog['ts_relative'], df_indilog['latency_append_50'], linestyle='dotted', color='darkgreen', marker='o', label='Indilog: Append 0.5', linewidth='2')
+    ax.plot(df_indilog['ts_relative'], df_indilog['latency_append_99'], linestyle='dashed', color='darkgreen', marker='o', label='Indilog: Append 0.99', linewidth='2')
+
+    ax.set_xlabel('Time (s)', fontsize=14)
+    ax.set_ylabel('Latency (\u03BCs)', fontsize=14)
+
+    info_text = 'Scaling from {} to {} engines'.format(engines_before, engines_after)
+    ax.text(
+        0.17, 0.7, info_text, transform=ax.transAxes, verticalalignment='top', size=10,
+        bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.5)
+    )
+
+    plt.subplots_adjust(top=0.8)
+
+    handles, labels = ax.get_legend_handles_labels()
+
+    plt.legend(flip(handles, 2), flip(labels, 2), 
+               bbox_to_anchor=(0,1.02,1,0.2), loc="lower left",
+               mode="expand", borderaxespad=0, ncol=2)
 
     plt.axvline(x=relative_scale_ts, color='grey', linestyle='dotted', label='Scale')
 
-    plt.xlabel('Time (s)')
-    plt.ylabel('Latency (\u03BCs)')
+    plt.savefig(result_file, bbox_inches='tight')
+    plt.close
 
-    plt.title('Latency: Scaling from {} to {} engines (Workload: {})'.format(engines_before, engines_after, workload_info(workload)))
+def generate_plot_boki_vs_indilog_read_latency(csv_file, relative_scale_ts, engines_before, engines_after, workload, result_file):
+    df = pd.read_csv(csv_file)
+    df_boki_index_less = df.loc[df['engine_type'] == 'index_less']
+    df_boki_hybrid = df.loc[df['engine_type'] == 'hybrid']
+    df_indilog = df.loc[df['engine_type'] == 'indilog']
 
-    plt.savefig(result_file)
+    ax = plt.subplot(111)
+
+    ax.plot(df_boki_index_less['ts_relative'], df_boki_index_less['latency_read_50'], linestyle='dotted', color='royalblue', marker='x', label='Boki no index: Read 0.5', linewidth='2')
+    ax.plot(df_boki_index_less['ts_relative'], df_boki_index_less['latency_read_99'], linestyle='dashed', color='royalblue', marker='x', label='Boki no index: Read 0.99', linewidth='2')
+
+    ax.plot(df_boki_hybrid['ts_relative'], df_boki_hybrid['latency_read_50'], linestyle='dotted', color='slategrey', marker='v', label='Boki hybrid: Read 0.5', linewidth='2')
+    ax.plot(df_boki_hybrid['ts_relative'], df_boki_hybrid['latency_read_99'], linestyle='dashed', color='slategrey', marker='v', label='Boki hybrid: Read 0.99', linewidth='2')
+
+    ax.plot(df_indilog['ts_relative'], df_indilog['latency_read_50'], linestyle='dotted', color='darkgreen', marker='o', label='Indilog: Read 0.5', linewidth='2')
+    ax.plot(df_indilog['ts_relative'], df_indilog['latency_read_99'], linestyle='dashed', color='darkgreen', marker='o', label='Indilog: Read 0.99', linewidth='2')
+
+    ax.set_xlabel('Time (s)', fontsize=14)
+    ax.set_ylabel('Latency (\u03BCs)', fontsize=14)
+
+    info_text = 'Scaling from {} to {} engines'.format(engines_before, engines_after)
+    ax.text(
+        0.17, 0.7, info_text, transform=ax.transAxes, verticalalignment='top', size=10,
+        bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.5)
+    )
+
+    plt.subplots_adjust(top=0.8)
+
+    handles, labels = ax.get_legend_handles_labels()
+
+    plt.legend(flip(handles, 2), flip(labels, 2), 
+               bbox_to_anchor=(0,1.02,1,0.2), loc="lower left",
+               mode="expand", borderaxespad=0, ncol=2)
+
+    plt.axvline(x=relative_scale_ts, color='grey', linestyle='dotted', label='Scale')
+
+    plt.savefig(result_file, bbox_inches='tight')
     plt.close
 
 def generate_plot_boki_vs_indilog_throughput(csv_file, relative_scale_ts, engines_before, engines_after, workload, result_file):
@@ -250,19 +308,25 @@ def generate_plot_boki_vs_indilog_throughput(csv_file, relative_scale_ts, engine
     df_boki = df.loc[df['slog'] == 'boki-hybrid']
     df_indilog = df.loc[df['slog'] == 'indilog-postpone-caching']
 
-    plt.plot(df_boki['ts_relative'], df_boki['throughput'], linestyle='solid', color='royalblue', marker='x', label='Boki-Hybrid Throughput')
-    plt.plot(df_indilog['ts_relative'], df_indilog['throughput'], linestyle='solid', color='darkgreen', marker='o', label='Indilog Throughput')
+    ax = plt.subplot(111)
 
+    ax.plot(df_boki['ts_relative'], df_boki['throughput'], linestyle='solid', color='royalblue', marker='x', label='Boki Throughput', linewidth='2')
+    ax.plot(df_indilog['ts_relative'], df_indilog['throughput'], linestyle='solid', color='darkgreen', marker='o', label='Indilog Throughput', linewidth='2')
+
+    ax.set_ylim(bottom=0)
+    ax.set_ylim(bottom=0)
+    ax.set_xlabel('Time (s)', fontsize=14)
+    ax.set_ylabel('Throughput (kOp/s)', fontsize=14)
+
+    info_text = 'Scaling from {} to {} engines'.format(engines_before, engines_after)
+    ax.text(
+        0.17, 0.5, info_text, transform=ax.transAxes, verticalalignment='top', size=10,
+        bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.5)
+    )
+
+    plt.legend()
     plt.axvline(x=relative_scale_ts, color='grey', linestyle='dotted', label='Scale')
-
-    plt.ylim(bottom=0)
-    plt.ylim(bottom=0)
-
-    plt.xlabel('Time (s)')
-    plt.ylabel('Throughput (kOp/s)')
-
-    plt.title('Throughput: Scaling from {} to {} engines (Workload: {})'.format(engines_before, engines_after, workload_info(workload)))
-    plt.savefig(result_file)
+    plt.savefig(result_file, bbox_inches='tight')
     plt.close
 
 def generate_plot_indilog_postpone_caching_vs_registration(csv_file, relative_scale_ts, result_file):
@@ -293,7 +357,7 @@ def generate_plot_indilog_postpone_caching_vs_registration(csv_file, relative_sc
     ax2.set_ylabel('Throughput (kOp/s)')
 
     ax1.legend(handles=[p1, p2, p3, p4, p5, p6, p7], prop={'size':7})
-    plt.title('Indilog: Later Servicing compared with later Servicing+Registration')
+    # plt.title('Indilog: Later Servicing compared with later Servicing+Registration')
     plt.savefig(result_file)
     plt.close
 
@@ -335,8 +399,10 @@ if __name__ == '__main__':
             generate_plot_boki_vs_indilog(args.file, args.relative_scale_ts, args.engines_before, args.engines_after, args.workload, args.result_file)
         elif args.cmd == 'generate-plot-boki-vs-indilog-throughput':
             generate_plot_boki_vs_indilog_throughput(args.file, args.relative_scale_ts, args.engines_before, args.engines_after, args.workload, args.result_file)
-        elif args.cmd == 'generate-plot-boki-vs-indilog-latency':
-            generate_plot_boki_vs_indilog_latency(args.file, args.relative_scale_ts, args.engines_before, args.engines_after, args.workload, args.result_file)
+        elif args.cmd == 'generate-plot-boki-vs-indilog-append-latency':
+            generate_plot_boki_vs_indilog_append_latency(args.file, args.relative_scale_ts, args.engines_before, args.engines_after, args.workload, args.result_file)
+        elif args.cmd == 'generate-plot-boki-vs-indilog-read-latency':
+            generate_plot_boki_vs_indilog_read_latency(args.file, args.relative_scale_ts, args.engines_before, args.engines_after, args.workload, args.result_file)
         elif args.cmd == 'generate-plot-postpone-caching-vs-registration':
             generate_plot_indilog_postpone_caching_vs_registration(args.file, args.relative_scale_ts, args.result_file)
         else:

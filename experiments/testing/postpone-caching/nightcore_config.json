@@ -2,7 +2,7 @@
   {
     "funcName": "TestSystem",
     "funcId": 1,
-    "minWorkers": 24,
-    "maxWorkers": 24
+    "minWorkers": 128,
+    "maxWorkers": 128
   }
 ]

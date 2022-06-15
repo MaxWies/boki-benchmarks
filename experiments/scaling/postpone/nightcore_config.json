@@ -2,8 +2,8 @@
   {
     "funcName": "RandomAppendAndReadLoopAsync",
     "funcId": 1,
-    "minWorkers": 3,
-    "maxWorkers": 3
+    "minWorkers": 15,
+    "maxWorkers": 15
   },
   {
     "funcName": "TestSystem",

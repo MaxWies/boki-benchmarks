@@ -189,6 +189,7 @@ def generate_swarm_config(base_dir, slog, controller_spec, exp_spec):
     }
     if slog.lower().startswith('indilog'):
         config["services"]["slog-index"] = { "placement_label": "index_node", "replicas": controller_spec['slog_index_shards'] * controller_spec['slog_index_replicas'] }
+        config["services"]["slog-merger"] = { "placement_label": "merger_node", "replicas": controller_spec['slog_merger_replicas'] }
     elif slog.lower().startswith('boki'):
         if 'slog_index_engine_replicas' in config.keys() and 0 < controller_spec['slog_index_engine_replicas']:
             config["services"]["slog-index-engine"] = { "placement_label": "index_engine_node", "replicas": controller_spec['slog_index_engine_replicas'] }

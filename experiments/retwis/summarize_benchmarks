@@ -72,7 +72,7 @@ def generate_plot(op_stat_csv_file, client_csv_file, result_file):
     ax.set_xticks(ind, labels=op_stat_header_row, fontsize=6, rotation=15)
 
     local_index_hit_ratio = round(int(op_stat_data_row[2]) / int(op_stat_data_row[1]), 2)
-    log_cache_hit_ratio = round(int(op_stat_data_row[5]) / int(op_stat_data_row[1]), 2)
+    log_cache_hit_ratio = round(int(op_stat_data_row[4]) / int(op_stat_data_row[1]), 2)
 
     info_text = '\n'.join((
         r'Local Index Hit Ratio: {}'.format(str(local_index_hit_ratio)),

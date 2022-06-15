@@ -54,6 +54,7 @@ def add_row(slog, index_tier_config, throughput, latency_avg, point_hit, read_la
 def generate_plot(directory, throughput_csv_file, result_file):
     fig, ax = plt.subplots()
     csv_files = sorted([os.path.join(directory, file) for file in os.listdir(directory) if file.endswith('.csv') and 'latencies-read' in file])
+
     for csv_file in csv_files:
         special_percentiles = [0.50,0.90]
         special_percentiles_latencies = []
@@ -71,13 +72,17 @@ def generate_plot(directory, throughput_csv_file, result_file):
         csv_file_name = os.path.basename(csv_file)
         index_tier_config = csv_file_name.split('.')[0].split('_')[1]
         index_tier_config_chunks = index_tier_config.split('-')
-        query_semantic = 'Point'
-        color = 'green'
+        query_semantic = 'Indilog Point'
+        color = 'darkgreen'
         linestyle = 'dotted'
         if index_tier_config_chunks[2].lower() == 'false':
-            query_semantic = 'Range'
-            color = 'green'
-            linestyle = 'solid'            
+            query_semantic = 'Indilog Range'
+            color = 'darkgreen'
+            linestyle = 'solid'
+        if index_tier_config_chunks[2].lower() == 'boki':
+            query_semantic = 'Boki-Remote'
+            color = 'royalblue'
+            linestyle = 'dashed'
         label = '{}, Tp:{}Kop/s , Avg Lat: {}\u03BCs'.format(
                 query_semantic,
                 get_throughput(throughput_csv_file, index_tier_config),
@@ -86,7 +91,9 @@ def generate_plot(directory, throughput_csv_file, result_file):
         ax.plot(latencies, cdf, 
             label=label, 
             linestyle=linestyle,
-            color=color
+            color=color,
+            fontsize=14,
+            linewidth=2
         )
 
     ax.set_xlim(0, 6000)
