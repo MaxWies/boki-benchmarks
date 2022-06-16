@@ -11,11 +11,11 @@ BENCHMARK_SCRIPT=$BASE_DIR/summarize_benchmarks
 
 export BENCHMARK_TYPE=scaling
 export RECORD_LENGTH=1024
-export DURATION=120
+export DURATION=90
 export RELATIVE_SCALE_TS=30
 export APPEND_TIMES=1
-export READ_TIMES=19
-export ENGINE_STAT_THREAD_INTERVAL=10
+export READ_TIMES=1
+export ENGINE_STAT_THREAD_INTERVAL=5
 
 # Overwrite environment with spec file
 for s in $(echo $values | jq -r ".exp_variables | to_entries | map(\"\(.key)=\(.value|tostring)\") | .[]" $EXP_SPEC_FILE); do
@@ -61,7 +61,7 @@ ssh -q $CLIENT_HOST -- /tmp/benchmark \
 # get timestamp on exp engine
 START_TS=$(date +%s)
 SCALE_TS=$((START_TS+RELATIVE_SCALE_TS))
-END_TS=$((START_TS+DURATION))
+END_TS=$((START_TS+DURATION-ENGINE_STAT_THREAD_INTERVAL))
 
 echo $START_TS
 echo $SCALE_TS
@@ -73,7 +73,7 @@ $ROOT_DIR/../zookeeper/bin/zkCli.sh -server $MANAGER_IP:2181 \
     >/dev/null
 
 # run scaler in background if indilog
-if [[ 'indilog' ]]; 
+if [[ $SLOG == 'indilog' ]]; 
 then
     # run
     ssh -q $CLIENT_HOST -- /tmp/benchmark \
@@ -136,11 +136,11 @@ done
 
 $BENCHMARK_SCRIPT discard-csv-files-before \
     --directory=$EXP_DIR/stats/latencies \
-    --ts=$((SCALE_TS+ENGINE_STAT_THREAD_INTERVAL))
+    --ts=$((SCALE_TS+2*ENGINE_STAT_THREAD_INTERVAL))
 
 $BENCHMARK_SCRIPT discard-csv-files-after \
     --directory=$EXP_DIR/stats/latencies \
-    --ts=$((END_TS-ENGINE_STAT_THREAD_INTERVAL))
+    --ts=$((END_TS))
 
 # combine (overall throughput after adding nodes)
 $BENCHMARK_SCRIPT add-row \

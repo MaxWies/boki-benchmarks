@@ -34,7 +34,7 @@ services:
       - --slog_engine_cache_cap_mb=1024
       - --slog_engine_propagate_auxdata
       - --slog_engine_distributed_indexing
-      - --slog_engine_seqnum_suffix_cap=1000000
+      - --slog_engine_seqnum_suffix_cap=100000
       - --slog_engine_tag_cache_cap=1000000
       - --slog_engine_per_tag_seqnums_limit=1000
       - --slog_engine_postpone_caching=2,3,4

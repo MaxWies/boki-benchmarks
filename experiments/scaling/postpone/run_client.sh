@@ -11,8 +11,6 @@ BENCHMARK_SCRIPT=$BASE_DIR/summarize_benchmarks
 BENCHMARK_HELPER_SCRIPT=$ROOT_DIR/scripts/benchmark_helper
 
 export BENCHMARK_TYPE=scaling
-export APPEND_TIMES=1
-export READ_TIMES=1
 export RECORD_LENGTH=1024
 export DURATION=90
 export RELATIVE_SCALE_TS=30
@@ -35,6 +33,8 @@ ENTRY_HOST=`$HELPER_SCRIPT get-service-host --base-dir=$BASE_DIR --service=slog-
 
 ALL_ENGINE_HOSTS=`$HELPER_SCRIPT get-machine-with-label --base-dir=$BASE_DIR --machine-label=engine_node`
 ENGINE_NODES=$(wc -w <<< $ALL_ENGINE_HOSTS)
+
+echo $ENGINE_NODES
 
 for HOST in $ALL_ENGINE_HOSTS; do
     ssh -q $HOST -- sudo rm -rf /mnt/inmem/slog/output/benchmark/$BENCHMARK_TYPE
@@ -72,7 +72,7 @@ $ROOT_DIR/../zookeeper/bin/zkCli.sh -server $MANAGER_IP:2181 \
     >/dev/null
 
 # run scaler in background if indilog
-if [[ $SLOG == 'indilog-postpone-caching' ]] || [[ 'indilog-postpone-registering' ]]; 
+if [[ $SLOG == 'indilog-postpone-caching' ]] || [[ $SLOG == 'indilog-postpone-registering' ]]; 
 then
     # run
     ssh -q $CLIENT_HOST -- /tmp/benchmark \
@@ -137,6 +137,7 @@ fi
 # get latency files from engines
 mkdir -p $EXP_DIR/stats/latencies
 for HOST in $ALL_ENGINE_HOSTS; do
+    echo "Get latency files from $HOST"
     scp -r -q $HOST:/mnt/inmem/slog/stats/latencies*.csv $EXP_DIR/stats
 done
 

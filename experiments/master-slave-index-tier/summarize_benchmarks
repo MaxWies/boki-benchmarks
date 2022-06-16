@@ -75,15 +75,15 @@ def generate_plot(directory, throughput_csv_file, result_file):
         query_semantic = 'Indilog Point'
         color = 'darkgreen'
         linestyle = 'dotted'
-        if index_tier_config_chunks[2].lower() == 'false':
+        if index_tier_config_chunks[3].lower() == 'false':
             query_semantic = 'Indilog Range'
             color = 'darkgreen'
             linestyle = 'solid'
-        if index_tier_config_chunks[2].lower() == 'boki':
+        if index_tier_config_chunks[3].lower() == 'boki':
             query_semantic = 'Boki-Remote'
             color = 'royalblue'
             linestyle = 'dashed'
-        label = '{}, Tp:{}Kop/s , Avg Lat: {}\u03BCs'.format(
+        label = '{}, Tp: {}Kop/s, Avg Lat: {}\u03BCs'.format(
                 query_semantic,
                 get_throughput(throughput_csv_file, index_tier_config),
                 get_avg_latency(throughput_csv_file, index_tier_config)
@@ -92,15 +92,14 @@ def generate_plot(directory, throughput_csv_file, result_file):
             label=label, 
             linestyle=linestyle,
             color=color,
-            fontsize=14,
-            linewidth=2
+            linewidth='2'
         )
 
-    ax.set_xlim(0, 6000)
+    ax.set_xlim(0, 8000)
     ax.set_ylim(0, 1.03)
 
-    x_major_ticks = np.arange(0, 6001, 2400)
-    x_minor_ticks = np.arange(0, 6001, 600)
+    x_major_ticks = np.arange(0, 8001, 2000)
+    x_minor_ticks = np.arange(0, 8001, 500)
     y_ticks = np.arange(0, 1.1, 0.1)
 
     ax.set_xticks(x_major_ticks)
@@ -110,12 +109,12 @@ def generate_plot(directory, throughput_csv_file, result_file):
     ax.grid(which='both')
     ax.legend()
 
-    plt.xlabel('Latency (\u03BCs)')
-    plt.ylabel('Cumulated Latency')
+    plt.xlabel('Latency (\u03BCs)', fontsize=14)
+    plt.ylabel('Cumulated Latency', fontsize=14)
 
-    plt.title('Latency impact of point queries and range queries')
+    # plt.title('Latency impact of point queries and range queries')
 
-    plt.savefig(result_file)
+    plt.savefig(result_file, bbox_inches='tight')
     plt.close
         
 

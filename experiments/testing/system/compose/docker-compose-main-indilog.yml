@@ -30,14 +30,15 @@ services:
       - --io_uring_entries=2048
       - --io_uring_fd_slots=4096
       - --enable_shared_log
-      - --slog_engine_enable_cache
+      # - --slog_engine_enable_cache
       - --slog_engine_cache_cap_mb=1024
       - --slog_engine_propagate_auxdata
       - --slog_engine_distributed_indexing
       - --slog_engine_seqnum_suffix_cap=1000
       - --slog_engine_tag_cache_cap=5000
       - --slog_engine_per_tag_seqnums_limit=100
-        #- --slog_engine_index_tier_only
+      # - --slog_activate_min_seqnum_completion
+      # - --slog_engine_index_tier_only
       - --v=1
     depends_on:
       - zookeeper-setup
@@ -99,6 +100,8 @@ services:
       - --slog_storage_bgthread_interval_ms=1
       - --slog_storage_backend=rocksdb
       - --slog_storage_cache_cap_mb=4096
+      # - --slog_activate_min_seqnum_completion
+      # - --slog_storage_index_tier_only
       - --v=1
     depends_on:
       - zookeeper-setup
@@ -139,6 +142,28 @@ services:
     hostname: faas-index-{{.Task.Slot}}
     entrypoint:
       - /slog/index
+      - --zookeeper_host=zookeeper:2181
+      - --listen_iface=eth0
+      - --num_io_workers=2
+      - --io_uring_entries=2048
+      - --io_uring_fd_slots=4096
+      # - --slog_activate_min_seqnum_completion
+      - --v=1
+    depends_on:
+      - zookeeper-setup
+    environment:
+      - FAAS_NODE_ID={{.Task.Slot}}
+    restart: always
+    ulimits:
+        memlock:
+                soft: 67108864
+                hard: 67108864
+
+  slog-merger:
+    image: maxwie/indilog:latest
+    hostname: faas-merger-{{.Task.Slot}}
+    entrypoint:
+      - /slog/merger
       - --zookeeper_host=zookeeper:2181
       - --listen_iface=eth0
       - --num_io_workers=2

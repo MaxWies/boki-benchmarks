@@ -30,15 +30,16 @@ services:
       - --io_uring_entries=2048
       - --io_uring_fd_slots=4096
       - --enable_shared_log
-      - --slog_engine_enable_cache
+      # - --slog_engine_enable_cache
       - --slog_engine_cache_cap_mb=1024
       - --slog_engine_propagate_auxdata
       - --slog_engine_distributed_indexing
       - --slog_engine_seqnum_suffix_cap=1000
-      - --slog_engine_seqnum_cache_cap=1000
-      - --slog_engine_tag_cache_cap=100000
-      - --slog_engine_per_tag_seqnums_limit=1000
-      # - --v=1
+      - --slog_engine_tag_cache_cap=5000
+      - --slog_engine_per_tag_seqnums_limit=100
+      # - --slog_activate_min_seqnum_completion
+      - --slog_engine_index_tier_only
+      - --v=1
     depends_on:
       - zookeeper-setup
     volumes:
@@ -49,7 +50,9 @@ services:
       - FAAS_CGROUP_FS_ROOT=/tmp/root_cgroupfs
     restart: always
     ulimits:
-      memlock: -1
+        memlock:
+                soft: 67108864
+                hard: 67108864
 
   slog-gateway:
     image: maxwie/indilog:latest
@@ -68,7 +71,7 @@ services:
       - --io_uring_fd_slots=4096
       - --lb_per_fn_round_robin
       - --max_running_requests=0
-      # - --v=1
+      - --v=1
     depends_on:
       - zookeeper-setup
     volumes:
@@ -78,7 +81,9 @@ services:
     environment:
       - FAAS_NODE_ID={{.Task.Slot}}
     ulimits:
-      memlock: -1
+        memlock:
+                soft: 67108864
+                hard: 67108864
 
   slog-storage:
     image: maxwie/indilog:latest
@@ -95,7 +100,9 @@ services:
       - --slog_storage_bgthread_interval_ms=1
       - --slog_storage_backend=rocksdb
       - --slog_storage_cache_cap_mb=4096
-      # - --v=1
+      # - --slog_activate_min_seqnum_completion
+      - --slog_storage_index_tier_only
+      - --v=1
     depends_on:
       - zookeeper-setup
     volumes:
@@ -104,7 +111,9 @@ services:
       - FAAS_NODE_ID={{.Task.Slot}}
     restart: always
     ulimits:
-      memlock: -1
+        memlock:
+                soft: 67108864
+                hard: 67108864
 
   slog-sequencer:
     image: maxwie/indilog:latest
@@ -117,14 +126,16 @@ services:
       - --io_uring_entries=2048
       - --io_uring_fd_slots=4096
       - --slog_global_cut_interval_us=300
-      # - --v=1
+      - --v=1
     depends_on:
       - zookeeper-setup
     environment:
       - FAAS_NODE_ID={{.Task.Slot}}
     restart: always
     ulimits:
-      memlock: -1
+        memlock:
+                soft: 67108864
+                hard: 67108864
 
   slog-index:
     image: maxwie/indilog:latest
@@ -136,14 +147,17 @@ services:
       - --num_io_workers=2
       - --io_uring_entries=2048
       - --io_uring_fd_slots=4096
-      # - --v=1
+      # - --slog_activate_min_seqnum_completion
+      - --v=1
     depends_on:
       - zookeeper-setup
     environment:
       - FAAS_NODE_ID={{.Task.Slot}}
     restart: always
     ulimits:
-      memlock: -1
+        memlock:
+                soft: 67108864
+                hard: 67108864
 
   slog-merger:
     image: maxwie/indilog:latest
@@ -155,11 +169,13 @@ services:
       - --num_io_workers=2
       - --io_uring_entries=2048
       - --io_uring_fd_slots=4096
-      # - --v=1
+      - --v=1
     depends_on:
       - zookeeper-setup
     environment:
       - FAAS_NODE_ID={{.Task.Slot}}
     restart: always
     ulimits:
-      memlock: -1
+        memlock:
+                soft: 67108864
+                hard: 67108864

@@ -36,7 +36,6 @@ def run_remote_command_without_check(ssh_ip, cmd):
 def setup_hostname_for_machines(machine_configs):
     for name, machine_config in machine_configs.items():
         if machine_config['role'] != 'dirigent':
-            #run_remote_command(machine_config['ip'], ['sudo', 'docker system prune --all -f'])
             run_remote_command(machine_config['ip'], ['sudo', 'hostnamectl', 'set-hostname', name])
             #TODO: hot fix
             run_remote_command(machine_config['ip'], ['sudo', '/home/mrc/setup/hostname-fix.sh'])
@@ -350,6 +349,10 @@ def reboot_machines(base_dir):
 def remove_docker_stack(base_dir):
     run_remote_command(get_manager_ip(base_dir), ['docker', 'stack', 'rm', 'boki-experiment'])
 
+def prune_docker(base_dir):
+    for machine_info in load_machines_file(base_dir)['machines'].values():
+        run_remote_command(machine_info['ip'], ['sudo', 'docker system prune --all -f'])
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('cmd', type=str)
@@ -410,6 +413,8 @@ if __name__ == '__main__':
             reboot_machines(args.base_dir)
         elif args.cmd == 'remove-docker-stack':
             remove_docker_stack(args.base_dir)
+        elif args.cmd == 'prune-docker':
+            prune_docker(args.base_dir)
         else:
             raise Exception('Unknown command: ' + args.cmd)
     except Exception as e:

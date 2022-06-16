@@ -66,7 +66,6 @@ def concatenate(directory, csv_file_names, filter, result_file):
                     f.write(line)
 
 def add_rows(directory, slog, interval, result_file):
-    print('add rows')
     latency_append_files = sorted([os.path.join(directory, csv_file_name) for csv_file_name in os.listdir(directory) if 'combined-latencies-append' in csv_file_name])
     for latency_append_file in latency_append_files:
         print(latency_append_file)
@@ -97,6 +96,8 @@ def add_rows(directory, slog, interval, result_file):
 def combine_csv_files_filtered(directory, csv_file_names, engine_ids):
     ts_matrix = []
     num_ts_per_engine = 0
+    print("Engine ids:")
+    print(engine_ids)
     for id in engine_ids:
         engine_id_csv_files = [file for file in csv_file_names if '-{}-'.format(id) in file]
         ts_of_csv_files = [file.split('.')[0].split('-')[3] for file in engine_id_csv_files]
@@ -111,7 +112,7 @@ def combine_csv_files_filtered(directory, csv_file_names, engine_ids):
             id, ts_list = ts_row
             if i < len(ts_list):
                 ts = ts_list[i]
-                related_csv_file_names.extend([file for file in csv_file_names if '{}-{}'.format(id, ts) in file])
+                related_csv_file_names.extend([file for file in csv_file_names if '-{}-{}'.format(id, ts) in file])
 
         id, ts_list = ts_matrix[0]
         ts = ts_list[i]
@@ -171,7 +172,6 @@ def add_single_engine_row(directory, latency_append_file, slog, engine_type, int
     absolute_ts = int(name_chunks[3])
     # Write to result file
     write_header = not os.path.exists(result_file)
-    print("Add row for slog={}, ts={}".format(slog, absolute_ts))
     with open(result_file, 'a', encoding='UTF8', newline='') as f:
         writer = csv.writer(f)
         if write_header:

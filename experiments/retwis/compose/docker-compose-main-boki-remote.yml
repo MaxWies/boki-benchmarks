@@ -56,7 +56,7 @@ services:
       - --listen_iface=eth0
       - --root_path_for_ipc=/tmp/slog/ipc
       - --func_config_file=/tmp/slog/func_config_empty.json
-      - --num_io_workers=4
+      - --num_io_workers=2
       - --instant_rps_p_norm=0.8
       - --io_uring_entries=2048
       - --io_uring_fd_slots=4096
