@@ -31,6 +31,7 @@ var FLAGS_latency_head_size int
 var FLAGS_latency_tail_size int
 
 var FLAGS_snapshot_interval int
+var FLAGS_statistics_at_container bool
 
 var FLAGS_append_times int
 var FLAGS_read_times int
@@ -58,6 +59,8 @@ var FLAGS_storage_nodes int
 var FLAGS_sequencer_nodes int
 var FLAGS_index_nodes int
 
+var FLAGS_csv_result_file string
+
 func init() {
 	flag.StringVar(&FLAGS_faas_gateway, "faas_gateway", "127.0.0.1:8081", "")
 	flag.StringVar(&FLAGS_fn_prefix, "fn_prefix", "", "")
@@ -80,11 +83,12 @@ func init() {
 	flag.IntVar(&FLAGS_read_times, "read_times", 1, "")
 	flag.IntVar(&FLAGS_read_direction, "read_direction", 1, "")
 	flag.BoolVar(&FLAGS_use_tags, "use_tags", true, "")
+	flag.BoolVar(&FLAGS_statistics_at_container, "statistics_at_container", false, "")
 
 	flag.StringVar(&FLAGS_operation_semantics_percentages, "operation_semantics_percentages", "50,50", "opWithoutTags,opWithTags")
 	flag.StringVar(&FLAGS_seqnum_read_percentages, "seqnum_read_percentages", "30,30,20,10,10", "readOwn,readPopular,readSuffix,readHead,readTail")
 	flag.StringVar(&FLAGS_tag_append_percentages, "tag_append_percentages", "30,40,30", "appendNewTag,appendToOwnTag,appendToSharedTag")
-	flag.StringVar(&FLAGS_tag_read_percentages, "tag_read_percentages", "40,30,30", "readDirectly,readFromStart,readFromEnd")
+	flag.StringVar(&FLAGS_tag_read_percentages, "tag_read_percentages", "10,30,20,20,10,10", "readGap,readDirectly,readFromLeft,readFromRight,readFromHead,readFromTail")
 	flag.IntVar(&FLAGS_suffix_seqnums_capacity, "suffix_seqnums_capacity", 100, "")
 	flag.IntVar(&FLAGS_popular_seqnums_capacity, "popular_seqnums_capacity", 30, "")
 	flag.IntVar(&FLAGS_own_tags_capacity, "own_tags_capacity", 20, "")
@@ -101,10 +105,18 @@ func init() {
 	flag.IntVar(&FLAGS_sequencer_nodes, "sequencer_nodes", 1, "")
 	flag.IntVar(&FLAGS_index_nodes, "index_nodes", 0, "")
 
+	flag.StringVar(&FLAGS_csv_result_file, "csv_result_file", "", "")
+
 	rand.Seed(int64(FLAGS_rand_seed))
 }
 
 func buildAppendRequest() utils.JSONValue {
+	return utils.JSONValue{
+		"use_tags": FLAGS_use_tags,
+	}
+}
+
+func buildAppendAndReadRequest() utils.JSONValue {
 	return utils.JSONValue{
 		"use_tags": FLAGS_use_tags,
 	}
@@ -125,6 +137,7 @@ func buildMicrobenchmarkRequest() utils.JSONValue {
 		"latency_bucket_granularity":      FLAGS_latency_bucket_granularity,
 		"latency_head_size":               FLAGS_latency_head_size,
 		"latency_tail_size":               FLAGS_latency_tail_size,
+		"statistics_at_container":         FLAGS_statistics_at_container,
 		"benchmark_type":                  FLAGS_benchmark_type,
 		"concurrent_operations":           FLAGS_concurrency_operation,
 		"suffix_seqnums_capacity":         FLAGS_suffix_seqnums_capacity,
@@ -165,15 +178,20 @@ func runClientLevelBenchmark() {
 	switch FLAGS_benchmark_type {
 	case constants.BenchmarkAppend:
 		builder := buildAppendRequest
-		clientLoop(constants.FunctionAppend, builder)
+		clientLoop(constants.FunctionAppend, builder, FLAGS_csv_result_file)
 		break
 	case constants.BenchmarkRead:
 		builder := buildReadRequest
-		clientLoop(constants.FunctionRead, builder)
+		clientLoop(constants.FunctionRead, builder, FLAGS_csv_result_file)
+		break
+	case constants.FunctionAppendAndRead:
+		builder := buildAppendAndReadRequest
+		clientLoop(constants.FunctionRead, builder, FLAGS_csv_result_file)
 		break
 	case constants.BenchmarkTestSystem:
+		rand.Seed(time.Now().UnixNano())
 		builder := buildTestSystemRequest
-		clientLoop(constants.FunctionTestSystem, builder)
+		clientLoop(constants.FunctionTestSystem, builder, FLAGS_csv_result_file)
 		break
 	case constants.BenchmarkWarmup:
 		builder := buildWarmupRequest
@@ -214,25 +232,39 @@ func runContainerLevelBenchmark() {
 
 func runLogEngineLevelBenchmark() {
 	log.Printf("[INFO] Run log engine level benchmark")
+	log.Printf("[INFO] Operation semantics percentages: %s", FLAGS_operation_semantics_percentages)
+	log.Printf("[INFO] Seqnum read percentages: %s", FLAGS_seqnum_read_percentages)
+	log.Printf("[INFO] Tag append percentages: %s", FLAGS_tag_append_percentages)
+	log.Printf("[INFO] Tag read percentages: %s", FLAGS_tag_read_percentages)
+	log.Printf("[INFO] Suffix seqnums capacity percentages: %d", FLAGS_suffix_seqnums_capacity)
+	log.Printf("[INFO] Popular seqnums capacity percentages: %d", FLAGS_popular_seqnums_capacity)
+	log.Printf("[INFO] Own tags capacity percentages: %d", FLAGS_own_tags_capacity)
+	log.Printf("[INFO] Shared tags capacity percentages: %d", FLAGS_shared_tags_capacity)
 	builder := buildMicrobenchmarkRequest
 	var function string
 	switch FLAGS_benchmark_type {
 	case constants.BenchmarkThroughputVsLatency:
 		function = constants.FunctionRandomAppendAndReadLoopAsync
+		containerLoop(function, builder)
+		time.Sleep((time.Duration(FLAGS_duration) + 5) * time.Second)
+		log.Printf("[INFO] Loop finished")
+		break
+	case constants.BenchmarkScaling:
+		function = constants.FunctionRandomAppendAndReadLoopAsync
+		containerLoop(function, builder)
+		log.Printf("[INFO] Sent requests to %d engine nodes", FLAGS_engine_nodes)
 		break
 	default:
 		fmt.Printf("Unknown argument %s", FLAGS_benchmark_type)
 		break
 	}
-	containerLoop(function, builder)
-	time.Sleep((time.Duration(FLAGS_duration) + 5) * time.Second)
-	log.Printf("[INFO] Loop finished")
 }
 
 func main() {
 	flag.Parse()
 	log.Printf("[INFO] Faas gateway: %s", FLAGS_faas_gateway)
 	log.Printf("[INFO] Benchmark type: %s", FLAGS_benchmark_type)
+	log.Printf("[INFO] Seed: %d", FLAGS_rand_seed)
 	switch FLAGS_benchmark_type {
 	case
 		constants.BenchmarkAppend,
@@ -248,7 +280,9 @@ func main() {
 		constants.BenchmarkLogbookVirtualization:
 		runContainerLevelBenchmark()
 		break
-	case constants.BenchmarkThroughputVsLatency:
+	case
+		constants.BenchmarkThroughputVsLatency,
+		constants.BenchmarkScaling:
 		runLogEngineLevelBenchmark()
 		break
 	default:

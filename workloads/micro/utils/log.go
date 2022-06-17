@@ -113,6 +113,7 @@ type TagPool struct {
 	lock           *sync.Mutex
 	tags           []uint64
 	maxSeqnumByTag map[uint64]uint64
+	minSeqnumByTag map[uint64]uint64
 	limit          int
 }
 
@@ -124,11 +125,13 @@ func CreateTagPool(tags []uint64) TagPool {
 		&sync.Mutex{},
 		make([]uint64, 0),
 		make(map[uint64]uint64),
+		make(map[uint64]uint64),
 		len(tags),
 	}
 	p.tags = append(p.tags, tags...)
 	for i := 0; i < len(tags); i++ {
 		p.maxSeqnumByTag[tags[i]] = 0
+		p.minSeqnumByTag[tags[i]] = constants.MaxSeqnum
 	}
 	return p
 }
@@ -138,15 +141,19 @@ func CreateEmptyTagPool(limit int) TagPool {
 		&sync.Mutex{},
 		make([]uint64, 0),
 		make(map[uint64]uint64),
+		make(map[uint64]uint64),
 		limit,
 	}
 }
 
-func (p *TagPool) Update(tag uint64, seqNum uint64) {
+func (p *TagPool) Update(tag uint64, seqNum uint64) (uint64, uint64) {
 	defer p.lock.Unlock()
 	p.lock.Lock()
-	current := p.maxSeqnumByTag[tag]
-	p.maxSeqnumByTag[tag] = MaxUnsigned(current, seqNum)
+	seqnum_min := MinUnsigned(p.minSeqnumByTag[tag], seqNum)
+	p.minSeqnumByTag[tag] = seqnum_min
+	seqnum_max := MaxUnsigned(p.maxSeqnumByTag[tag], seqNum)
+	p.maxSeqnumByTag[tag] = seqnum_max
+	return seqnum_min, seqnum_max
 }
 
 // func (p *TagPool) Append(tag uint64, seqNum uint64) {
@@ -177,21 +184,12 @@ func (p *TagPool) PickRandomTag() uint64 {
 	return p.tags[i]
 }
 
-func (p *TagPool) PickRandomTagAndSeqnum() (uint64, uint64) {
-	defer p.lock.Unlock()
-	p.lock.Lock()
-	if len(p.tags) < 1 {
-		log.Printf("[WARNING] Read on empty pool")
-		return constants.TagEmpty, constants.InvalidSeqNum
-	}
-	i := rand.Int() % len(p.tags)
-	tag := p.tags[i]
-	return tag, p.maxSeqnumByTag[0]
-}
-
 func CreateEmptyTagOrRandomTag() uint64 {
-	if rand.Intn(2) == 0 {
+	t := rand.Intn(3)
+	if t == 0 {
 		return constants.TagEmpty
+	} else if t == 1 {
+		return constants.TagShared
 	} else {
 		tag := rand.Uint64()
 		for tag == constants.TagUnknown {

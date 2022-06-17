@@ -28,6 +28,7 @@ type OperationInput struct {
 	LatencyBucketGranularity     int64  `json:"latency_bucket_granularity"`
 	LatencyHeadSize              int    `json:"latency_head_size"`
 	LatencyTailSize              int    `json:"latency_tail_size"`
+	StatisticsAtContainer        bool   `json:"statistics_at_container"`
 	BenchmarkType                string `json:"benchmark_type"`
 	ConcurrentOperations         int    `json:"concurrent_operations"`
 	SuffixSeqnumsCapacity        int    `json:"suffix_seqnums_capacity"`
@@ -92,13 +93,17 @@ func parsePercentages(s string) []int {
 	return results
 }
 
+type StatisticsHandler struct {
+	activated                bool
+	operationBenchmarkMatrix *[]*[]*OperationBenchmark
+	snapshot                 int
+}
+
 type OperationHandler struct {
 	env                           types.Environment
-	operationBenchmarkMatrix      *[]*[]*OperationBenchmark
 	operationCalls                chan struct{}
 	concurrentOperations          chan struct{}
 	wg                            *sync.WaitGroup
-	snapshot                      int
 	suffixSeqnums                 utils.LogSuffix
 	popularSeqnums                utils.SeqnumPool
 	suffixTags                    utils.LogSuffix
@@ -108,12 +113,12 @@ type OperationHandler struct {
 	seqnumReadPercentages         []int
 	tagAppendPercentages          []int
 	tagReadPercentages            []int
+	statisticsHandler             *StatisticsHandler
 }
 
 func newOperationHandler(env types.Environment, input *OperationInput, operationBenchmarkMatrix *[]*[]*OperationBenchmark) *OperationHandler {
 	op := &OperationHandler{
 		env:                           env,
-		operationBenchmarkMatrix:      operationBenchmarkMatrix,
 		operationCalls:                make(chan struct{}),
 		concurrentOperations:          make(chan struct{}, input.ConcurrentOperations),
 		wg:                            &sync.WaitGroup{},
@@ -125,6 +130,11 @@ func newOperationHandler(env types.Environment, input *OperationInput, operation
 		seqnumReadPercentages:         parsePercentages(input.SeqnumReadPercentages),
 		tagAppendPercentages:          parsePercentages(input.TagAppendPercentages),
 		tagReadPercentages:            parsePercentages(input.TagReadPercentages),
+		statisticsHandler: &StatisticsHandler{
+			activated:                input.StatisticsAtContainer,
+			operationBenchmarkMatrix: operationBenchmarkMatrix,
+			snapshot:                 0,
+		},
 	}
 	for i := 0; i < input.ConcurrentOperations; i++ {
 		op.concurrentOperations <- struct{}{}
@@ -162,8 +172,8 @@ func NewAppendOperationHandler(env types.Environment, input *OperationInput) *Op
 }
 
 func (o *OperationHandler) NewSnapshot(operationBenchmarks *[]*OperationBenchmark) {
-	o.snapshot += 1
-	*o.operationBenchmarkMatrix = append(*o.operationBenchmarkMatrix, operationBenchmarks)
+	o.statisticsHandler.snapshot += 1
+	*o.statisticsHandler.operationBenchmarkMatrix = append(*o.statisticsHandler.operationBenchmarkMatrix, operationBenchmarks)
 }
 
 func (o *OperationHandler) WaitForFreeGoRoutine() {
@@ -179,7 +189,7 @@ func (o *OperationHandler) WaitForOperationsEnd() {
 }
 
 func (o *OperationHandler) GetOperationBenchmarks(i int) *[]*OperationBenchmark {
-	return (*o.operationBenchmarkMatrix)[i]
+	return (*o.statisticsHandler.operationBenchmarkMatrix)[i]
 }
 
 func (o *OperationHandler) CloseChannels() {
@@ -190,7 +200,6 @@ func (o *OperationHandler) CloseChannels() {
 func (o *OperationHandler) subOperationCall(opCall func() (*types.LogEntry, error), startTime time.Time) (*types.LogEntry, *OperationCallItem) {
 	opBegin := time.Now()
 	output, err := opCall()
-	_ = output
 	success := false
 	if err == nil {
 		success = true
@@ -202,16 +211,23 @@ func (o *OperationHandler) subOperationCall(opCall func() (*types.LogEntry, erro
 	}
 }
 
+func (s *StatisticsHandler) StoreResult(opItem *OperationCallItem, recordIndex int) {
+	if !s.activated {
+		return
+	}
+	if opItem == nil || !opItem.Success {
+		(*(*s.operationBenchmarkMatrix)[s.snapshot])[recordIndex].AddFailure()
+	} else {
+		(*(*s.operationBenchmarkMatrix)[s.snapshot])[recordIndex].AddSuccess(opItem)
+	}
+}
+
 func (o *OperationHandler) AppendCall(ctx context.Context, startTime time.Time, record []byte) {
 	_, opItem := o.subOperationCall(
 		func() (*types.LogEntry, error) {
 			return Append(ctx, o.env, &AppendInput{Record: record})
 		}, startTime)
-	if !opItem.Success {
-		(*(*o.operationBenchmarkMatrix)[o.snapshot])[0].AddFailure()
-	} else {
-		(*(*o.operationBenchmarkMatrix)[o.snapshot])[0].AddSuccess(opItem)
-	}
+	o.statisticsHandler.StoreResult(opItem, 0)
 	o.operationCalls <- struct{}{}
 }
 
@@ -229,16 +245,16 @@ func (o *OperationHandler) AppendAndReadCall(ctx context.Context, startTime time
 			return Append(ctx, o.env, &AppendInput{Record: record, Tags: tags})
 		}, startTime)
 	if !opItem.Success {
-		(*(*o.operationBenchmarkMatrix)[o.snapshot])[0].AddFailure()
+		o.statisticsHandler.StoreResult(nil, 0)
 		// skip reading calls
 		for i := 1; i <= readTimes; i++ {
-			(*(*o.operationBenchmarkMatrix)[o.snapshot])[i].AddFailure()
+			o.statisticsHandler.StoreResult(nil, i)
 		}
 		o.operationCalls <- struct{}{}
 		log.Print("[WARNING] Append to log failed")
 		return
 	}
-	(*(*o.operationBenchmarkMatrix)[o.snapshot])[0].AddSuccess(opItem)
+	o.statisticsHandler.StoreResult(opItem, 0)
 
 	//reads
 	for i := 1; i <= readTimes; i++ {
@@ -249,18 +265,18 @@ func (o *OperationHandler) AppendAndReadCall(ctx context.Context, startTime time
 		if !opItem.Success {
 			// skip remaining reading calls
 			for j := i; j <= readTimes; j++ {
-				(*(*o.operationBenchmarkMatrix)[o.snapshot])[j].AddFailure()
+				o.statisticsHandler.StoreResult(nil, j)
 			}
 			o.operationCalls <- struct{}{}
 			log.Printf("[WARNING] Read from log seqnum %d failed", logEntry.SeqNum)
 		}
 		opItem.EngineCacheHit = utils.IsUint64InSlice(constants.TagEngineCacheHit, logEntry.Tags)
-		(*(*o.operationBenchmarkMatrix)[o.snapshot])[i].AddSuccess(opItem)
+		o.statisticsHandler.StoreResult(opItem, i)
 	}
 	o.operationCalls <- struct{}{}
 }
 
-func (o *OperationHandler) appendRecord(ctx context.Context, startTime time.Time, record []byte, tag uint64, appendTime int) uint64 {
+func (o *OperationHandler) appendRecord(ctx context.Context, startTime time.Time, record []byte, tag uint64, appendTime int) (bool, uint64) {
 	tags := make([]uint64, 0)
 	if tag != constants.TagEmpty {
 		tags = append(tags, tag)
@@ -269,12 +285,15 @@ func (o *OperationHandler) appendRecord(ctx context.Context, startTime time.Time
 		func() (*types.LogEntry, error) {
 			return Append(ctx, o.env, &AppendInput{Record: record, Tags: tags})
 		}, startTime)
-	if !opItem.Success {
-		(*(*o.operationBenchmarkMatrix)[o.snapshot])[appendTime].AddFailure()
-	} else {
-		(*(*o.operationBenchmarkMatrix)[o.snapshot])[appendTime].AddSuccess(opItem)
+	if opItem.Success && logEntry.SeqNum == constants.InvalidSeqNum {
+		// no success for invalid seqnum
+		opItem.Success = false
 	}
-	return logEntry.SeqNum
+	o.statisticsHandler.StoreResult(opItem, appendTime)
+	if !opItem.Success {
+		logEntry.SeqNum = uint64(0)
+	}
+	return opItem.Success, logEntry.SeqNum
 }
 
 func (o *OperationHandler) readRecord(ctx context.Context, startTime time.Time, seqnum uint64, tag uint64, readDirection int, readTime int) {
@@ -282,13 +301,10 @@ func (o *OperationHandler) readRecord(ctx context.Context, startTime time.Time, 
 		func() (*types.LogEntry, error) {
 			return Read(ctx, o.env, tag, seqnum, readDirection)
 		}, startTime)
+	o.statisticsHandler.StoreResult(opItem, readTime)
 	if !opItem.Success {
-		(*(*o.operationBenchmarkMatrix)[o.snapshot])[readTime].AddFailure()
-		log.Printf("[WARNING] Read from log seqnum %d failed", seqnum)
 		return
 	}
-	//opItem.EngineCacheHit = utils.IsUint64InSlice(constants.TagEngineCacheHit, logEntry.Tags)
-	(*(*o.operationBenchmarkMatrix)[o.snapshot])[readTime].AddSuccess(opItem)
 }
 
 func (o *OperationHandler) RandomAppendAndReadCall(ctx context.Context, startTime time.Time, record []byte, appendTimes int, readTimes int) {
@@ -298,15 +314,20 @@ func (o *OperationHandler) RandomAppendAndReadCall(ctx context.Context, startTim
 	var seqnum uint64
 	var tag uint64
 	var tag_seqnum uint64
+	var success bool
 	for 0 < remaining_appends+remaining_reads {
 		semanticType := rand.Intn(100)
 		if semanticType < o.operationSemanticsPercentages[0] {
 			// ops without tags
 			if 0 < remaining_appends {
 				opCounter++
-				seqnum = o.appendRecord(ctx, startTime, record, constants.TagEmpty, opCounter)
-				o.suffixSeqnums.Append(constants.TagEmpty, seqnum)
-				o.popularSeqnums.Append(seqnum) // will be filled until full
+				success, seqnum = o.appendRecord(ctx, startTime, record, constants.TagEmpty, opCounter)
+				if success {
+					o.suffixSeqnums.Append(constants.TagEmpty, seqnum)
+					o.popularSeqnums.Append(seqnum) // will be filled until full
+				} else {
+					break
+				}
 			}
 			if 0 < remaining_reads {
 				opCounter++
@@ -330,31 +351,56 @@ func (o *OperationHandler) RandomAppendAndReadCall(ctx context.Context, startTim
 			}
 		} else {
 			// ops with tags
+			tag_seqnum_min := uint64(0)
+			tag_seqnum_max := uint64(0)
 			if 0 < remaining_appends {
 				opCounter++
 				appendOp := rand.Intn(100)
 				if appendOp < o.tagAppendPercentages[0] {
 					tag = o.env.GenerateUniqueID()
-					tag_seqnum = o.appendRecord(ctx, startTime, record, tag, opCounter)
+					success, tag_seqnum = o.appendRecord(ctx, startTime, record, tag, opCounter)
+					if success {
+						tag_seqnum_min = 0 //reset
+						tag_seqnum_max = 0 //reset
+					} else {
+						break
+					}
 				} else if appendOp < o.tagAppendPercentages[1] {
 					// append to own tag
 					tag = o.ownTags.PickRandomTag()
-					tag_seqnum = o.appendRecord(ctx, startTime, record, tag, opCounter)
-					o.ownTags.Update(tag, seqnum)
+					success, tag_seqnum = o.appendRecord(ctx, startTime, record, tag, opCounter)
+					if success {
+						tag_seqnum_min, tag_seqnum_max = o.ownTags.Update(tag, seqnum)
+					} else {
+						break
+					}
 				} else {
 					// append to shared tag
 					tag = o.sharedTags.PickRandomTag()
-					tag_seqnum = o.appendRecord(ctx, startTime, record, tag, opCounter)
-					o.sharedTags.Update(tag, seqnum)
+					success, tag_seqnum = o.appendRecord(ctx, startTime, record, tag, opCounter)
+					if success {
+						tag_seqnum_min, tag_seqnum_max = o.sharedTags.Update(tag, seqnum)
+					} else {
+						break
+					}
 				}
 			}
 			if 0 < remaining_reads {
 				opCounter++
 				readOp := rand.Intn(100)
-				if readOp < o.tagReadPercentages[0] {
+				if readOp < o.tagReadPercentages[0] && tag_seqnum_min != tag_seqnum_max {
+					// read gap
+					o.readRecord(ctx, startTime, tag_seqnum_min+1, tag, constants.ReadNext, opCounter)
+				} else if readOp < o.tagReadPercentages[1] {
 					// read tag directly
 					o.readRecord(ctx, startTime, tag_seqnum, tag, rand.Intn(2), opCounter)
-				} else if readOp < o.tagReadPercentages[1] {
+				} else if readOp < o.tagReadPercentages[2] {
+					// read tag from left (next)
+					o.readRecord(ctx, startTime, tag_seqnum-5, tag, constants.ReadNext, opCounter)
+				} else if readOp < o.tagReadPercentages[3] {
+					// read tag from right (prev)
+					o.readRecord(ctx, startTime, tag_seqnum+5, tag, constants.ReadPrev, opCounter)
+				} else if readOp < o.tagReadPercentages[4] {
 					// read tag from 0
 					o.readRecord(ctx, startTime, 0, tag, constants.ReadNext, opCounter)
 				} else {

@@ -1,13 +1,19 @@
-FROM zjia/boki:sosp-ae as boki
+FROM maxwie/boki-ws:latest as boki
 FROM golang:1.14-buster as builder
 
+RUN apt install -y ca-certificates
 COPY . /retwis
-COPY --from=boki /src/boki /src/boki
+RUN rm /retwis/go.mod && mv /retwis/go-container.mod /retwis/go.mod
+RUN mkdir -p /usr/local/share/ca-certificates && mv /retwis/certificates/* /usr/local/share/ca-certificates 
+
+RUN update-ca-certificates
+
+COPY --from=boki /src/slog /src/slog
 RUN cd /retwis && ./build.sh
 
 FROM ubuntu:focal
 
 COPY --from=builder  /retwis/bin     /retwisbench-bin
-COPY --from=boki     /boki/launcher  /boki/launcher
+COPY --from=boki     /slog/launcher  /slog/launcher
 
 WORKDIR /retwisbench-bin

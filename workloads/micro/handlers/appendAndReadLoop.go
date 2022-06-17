@@ -65,6 +65,10 @@ func (h *appendReadLoopHandler) Call(ctx context.Context, input []byte) ([]byte,
 
 	log.Printf("[INFO] Loop finished")
 
+	if !parsedInput.StatisticsAtContainer {
+		return json.Marshal(&operations.BenchmarkAsync{})
+	}
+
 	calls := uint(0)
 	success := uint(0)
 	operationBenchmarks := make([]*operations.OperationBenchmark, 0)

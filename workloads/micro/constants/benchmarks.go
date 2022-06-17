@@ -9,5 +9,6 @@ const (
 	BenchmarkLogbookVirtualization         string = "logbook-virtualization"
 	BenchmarkTestSystem                    string = "test-system"
 	BenchmarkThroughputVsLatency           string = "throughput-vs-latency"
+	BenchmarkScaling                       string = "scaling"
 	BenchmarkWarmup                        string = "warmup"
 )

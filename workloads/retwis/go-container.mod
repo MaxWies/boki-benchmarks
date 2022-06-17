@@ -9,7 +9,6 @@ require (
 	go.mongodb.org/mongo-driver v1.4.6
 )
 
-replace cs.utexas.edu/zjia/faas => ../../boki/worker/golang
-
-replace cs.utexas.edu/zjia/faas/slib => ../../boki/slib
-
+// for container
+replace cs.utexas.edu/zjia/faas => /src/slog/worker/golang
+replace cs.utexas.edu/zjia/faas/slib => /src/slog/slib

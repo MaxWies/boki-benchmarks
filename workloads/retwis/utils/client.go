@@ -60,6 +60,30 @@ func JsonPostRequest(client *http.Client, url string, request JSONValue) *HttpRe
 	}
 }
 
+func JsonPostRequestNoDecode(client *http.Client, url string, request JSONValue) *HttpResult {
+	encoded, err := json.Marshal(request)
+	if err != nil {
+		log.Fatalf("[FATAL] Failed to encode JSON request: %v", err)
+	}
+	start := time.Now()
+	resp, err := client.Post(url, "application/json", bytes.NewReader(encoded))
+	if err != nil {
+		log.Printf("[ERROR] HTTP Post failed: %v", err)
+		return &HttpResult{Err: err, Success: false}
+	}
+	elapsed := time.Since(start)
+	defer resp.Body.Close()
+	if resp.StatusCode != 200 {
+		log.Printf("[ERROR] Non-OK response: %d", resp.StatusCode)
+		return &HttpResult{Success: false, StatusCode: resp.StatusCode}
+	}
+	return &HttpResult{
+		Success:    true,
+		StatusCode: 200,
+		Duration:   elapsed,
+	}
+}
+
 func BuildFunctionUrl(gatewayAddr string, fnName string) string {
 	return fmt.Sprintf("http://%s/function/%s", gatewayAddr, fnName)
 }
@@ -145,4 +169,28 @@ func (c *FaasClient) WaitForResults() []*FaasCall {
 		results = append(results, worker.results...)
 	}
 	return results
+}
+
+type SimpleClient struct {
+	Gateway    string
+	HttpClient *http.Client
+}
+
+func NewSimpleClient(faasGateway string) *SimpleClient {
+	return &SimpleClient{
+		Gateway: faasGateway,
+		HttpClient: &http.Client{
+			Transport: &http.Transport{
+				MaxConnsPerHost: 1,
+				MaxIdleConns:    1,
+				IdleConnTimeout: 30 * time.Second,
+			},
+			Timeout: 30 * time.Second,
+		},
+	}
+}
+
+func (c *SimpleClient) Call(fnName string, input JSONValue) *HttpResult {
+	url := BuildFunctionUrl(c.Gateway, fnName)
+	return JsonPostRequestNoDecode(c.HttpClient, url, input)
 }

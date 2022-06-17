@@ -38,6 +38,10 @@ func NewTestSystemHandler(env types.Environment) types.FuncHandler {
 	}
 }
 
+func TestEngineIsPostponed(append_result *types.LogEntry) bool {
+	return append_result.SeqNum == constants.InvalidSeqNum
+}
+
 func TestReadResultExist(log_entry *types.LogEntry) bool {
 	if log_entry == nil {
 		return false
@@ -74,12 +78,22 @@ func (h *testSystemHandler) testSystem(ctx context.Context, env types.Environmen
 			Seqnum:  0,
 		}, err
 	}
+	if TestEngineIsPostponed(appendResult) {
+		return &TestSystemOutput{
+			Success: true,
+			Seqnum:  appendResult.SeqNum,
+			Message: fmt.Sprintf("Engine is postponed. append_seqnum=%s", utils.HexStr0x(appendResult.SeqNum)),
+		}, nil
+	}
 	// READ
 	for i := 0; i < input.ReadTimes; i++ {
 		var readResult *types.LogEntry
 		var err error
 		if input.Tag == constants.TagEmpty {
 			// read own seqnum directly
+			readResult, err = operations.Read(ctx, env, input.Tag, appendResult.SeqNum, rand.Intn(2))
+		} else if input.Tag == constants.TagShared {
+			// read shared tag directly
 			readResult, err = operations.Read(ctx, env, input.Tag, appendResult.SeqNum, rand.Intn(2))
 		} else {
 			readType := rand.Intn(100)
@@ -130,8 +144,8 @@ func (h *testSystemHandler) testSystem(ctx context.Context, env types.Environmen
 		}
 	}
 	// READ UNKNOWN TAG
-	var readResult *types.LogEntry
-	if rand.Intn(100) < 10 {
+	if input.Tag != constants.TagEmpty && rand.Intn(100) < 10 {
+		var readResult *types.LogEntry
 		readType := rand.Intn(100)
 		if readType < 30 {
 			readResult, err = operations.Read(ctx, env, constants.TagUnknown, 0, constants.ReadNext)
@@ -153,6 +167,65 @@ func (h *testSystemHandler) testSystem(ctx context.Context, env types.Environmen
 				Success: false,
 				Seqnum:  0,
 			}, err
+		}
+	}
+	// READ SHARED TAG AGAIN - BUT NOW WITH RANGE
+	if rand.Intn(100) < 30 && input.Tag == constants.TagShared {
+		var readResult *types.LogEntry
+		readType := rand.Intn(100)
+		distance := 5
+		var expected_seqnum_min uint64
+		var expected_seqnum_max uint64
+		if readType < 50 {
+			expected_seqnum_min = appendResult.SeqNum - uint64(distance)
+			expected_seqnum_max = appendResult.SeqNum
+			readResult, err = operations.Read(ctx, env, constants.TagShared, appendResult.SeqNum-uint64(distance), constants.ReadNext)
+		} else {
+			expected_seqnum_min = appendResult.SeqNum
+			expected_seqnum_max = appendResult.SeqNum + uint64(distance)
+			readResult, err = operations.Read(ctx, env, constants.TagShared, appendResult.SeqNum+uint64(distance), constants.ReadPrev)
+		}
+		if !(expected_seqnum_min <= readResult.SeqNum && readResult.SeqNum <= expected_seqnum_max) {
+			log.Printf("[ERROR] Seqnum of record for shared tag not in the assumed range of the record appended before. append_seqnum=%s, read_seqnum=%s, tag=%d",
+				utils.HexStr0x(appendResult.SeqNum), utils.HexStr0x(readResult.SeqNum), input.Tag)
+			return &TestSystemOutput{
+				Success: false,
+				Seqnum:  appendResult.SeqNum,
+				Message: fmt.Sprintf("[ERROR] Seqnum of record not identical to the one of the record appended before. append_seqnum=%s, read_seqnum=%s, tag=%d",
+					utils.HexStr0x(appendResult.SeqNum), utils.HexStr0x(readResult.SeqNum), input.Tag),
+			}, nil
+		}
+	}
+	// READ EMPTY TAG - BUT NOW WITH RANGE
+	if rand.Intn(100) < 30 && input.Tag == constants.TagEmpty {
+		var readResult *types.LogEntry
+		distance := 5
+		expected_seqnum_min := appendResult.SeqNum
+		expected_seqnum_max := appendResult.SeqNum + uint64(distance)
+		readResult, err = operations.Read(ctx, env, constants.TagEmpty, appendResult.SeqNum+uint64(distance), constants.ReadPrev)
+		if !(expected_seqnum_min <= readResult.SeqNum && readResult.SeqNum <= expected_seqnum_max) {
+			log.Printf("[ERROR] Seqnum of record for empty tag not in the assumed range of the record appended before. append_seqnum=%s, read_seqnum=%s, tag=%d",
+				utils.HexStr0x(appendResult.SeqNum), utils.HexStr0x(readResult.SeqNum), constants.TagEmpty)
+			return &TestSystemOutput{
+				Success: false,
+				Seqnum:  appendResult.SeqNum,
+				Message: fmt.Sprintf("[ERROR] Seqnum of record not identical to the one of the record appended before. append_seqnum=%s, read_seqnum=%s, tag=%d",
+					utils.HexStr0x(appendResult.SeqNum), utils.HexStr0x(readResult.SeqNum), constants.TagEmpty),
+			}, nil
+		}
+	}
+	// READ EMPTY TAG - FROM TAIL
+	if rand.Intn(100) < 10 && input.Tag == constants.TagEmpty {
+		_, err = operations.Read(ctx, env, constants.TagEmpty, constants.MaxSeqnum, constants.ReadPrev)
+		if err != nil {
+			log.Printf("[ERROR] Reading from tail not successful. append_seqnum=%s, read_seqnum=%s, tag=%d",
+				utils.HexStr0x(appendResult.SeqNum), utils.HexStr0x(constants.MaxSeqnum), constants.TagEmpty)
+			return &TestSystemOutput{
+				Success: false,
+				Seqnum:  appendResult.SeqNum,
+				Message: fmt.Sprintf("[ERROR] Reading from tail not successful. append_seqnum=%s, read_seqnum=%s, tag=%d",
+					utils.HexStr0x(appendResult.SeqNum), utils.HexStr0x(constants.MaxSeqnum), constants.TagEmpty),
+			}, nil
 		}
 	}
 

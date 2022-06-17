@@ -1,8 +1,15 @@
-FROM zjia/boki:sosp-ae as boki
+FROM maxwie/boki-ws:latest as boki
 FROM golang:1.14-buster as builder
 
 COPY . /workflow
-COPY --from=boki /src/boki /src/boki
+
+RUN apt install -y ca-certificates
+RUN mkdir -p /usr/local/share/ca-certificates && mv /workflow/certificates/* /usr/local/share/ca-certificates 
+RUN update-ca-certificates
+
+COPY --from=boki /src/slog /src/slog
+RUN rm /workflow/beldi/go.mod && mv /workflow/beldi/go-container.mod /workflow/beldi/go.mod
+RUN rm /workflow/boki/go.mod && mv /workflow/boki/go-container.mod /workflow/boki/go.mod
 
 RUN cd /workflow/beldi && make hotel-baseline
 RUN cd /workflow/beldi && make media-baseline
@@ -15,4 +22,4 @@ FROM ubuntu:focal
 
 COPY --from=builder  /workflow/beldi/bin  /beldi-bin
 COPY --from=builder  /workflow/boki/bin   /bokiflow-bin
-COPY --from=boki     /boki/launcher       /boki/launcher
+COPY --from=boki     /slog/launcher       /slog/launcher

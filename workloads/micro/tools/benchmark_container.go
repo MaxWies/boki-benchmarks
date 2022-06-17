@@ -74,7 +74,7 @@ func mergeSync(mergeFunction string, functionName string) {
 }
 
 func containerLoop(functionName string, requestInputBuilder func() utils.JSONValue) {
-	log.Printf("[INFO] Run loop function %s. Concurrency: %d. Duration: %d", functionName, FLAGS_concurrency_worker, FLAGS_duration)
+	log.Printf("[INFO] Run loop function %s. Concurrency: %d. Duration: %d", functionName, FLAGS_concurrency_worker*FLAGS_concurrency_operation, FLAGS_duration)
 	appendClient := client.NewSimpleClient(FLAGS_faas_gateway, &client.CallAsync{})
 	c := 0
 	for c < FLAGS_engine_nodes*FLAGS_concurrency_worker {

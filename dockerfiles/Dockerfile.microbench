@@ -1,6 +1,6 @@
 # run build in micro directory
 
-FROM maxwie/boki-ws:latest as boki
+FROM zjia/boki:sosp-ae as boki
 FROM golang:1.14-buster as builder
 
 RUN apt install -y ca-certificates
@@ -11,8 +11,8 @@ RUN mkdir -p /usr/local/share/ca-certificates && mv /micro/certificates/* /usr/l
 
 RUN update-ca-certificates
 
-# micro needs reference to boki source code for dependencies in main.go
-COPY --from=boki /src/boki /src/boki
+# micro needs reference to source code for dependencies in main.go
+COPY --from=boki /src/boki /src/slog
 
 # compiles workload and stores it in /micro/bin
 RUN cd /micro && ./build.sh
@@ -20,8 +20,8 @@ RUN cd /micro && ./build.sh
 FROM ubuntu:focal
 
 # copy compiled go files
-COPY --from=builder  /micro/bin     /microbench-bin
+COPY --from=builder  /micro/bin      /microbench-bin
 # copy launcher from boki
-COPY --from=boki     /boki/launcher  /boki/launcher
+COPY --from=boki  /boki/launcher  /slog/launcher
 
 WORKDIR /microbench-bin

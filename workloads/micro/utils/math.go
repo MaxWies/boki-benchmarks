@@ -20,3 +20,10 @@ func Min(x, y int64) int64 {
 	}
 	return x
 }
+
+func MinUnsigned(x, y uint64) uint64 {
+	if x < y {
+		return y
+	}
+	return x
+}

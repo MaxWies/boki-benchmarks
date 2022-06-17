@@ -65,6 +65,12 @@ func (h *appendLoopHandler) Call(ctx context.Context, input []byte) ([]byte, err
 	operationHandler.CloseChannels()
 	endTime := time.Now()
 
+	log.Printf("[INFO] Loop finished")
+
+	if !parsedInput.StatisticsAtContainer {
+		return json.Marshal(&operations.BenchmarkAsync{})
+	}
+
 	calls := uint(0)
 	success := uint(0)
 	operationBenchmarks := make([]*operations.OperationBenchmark, 0)
