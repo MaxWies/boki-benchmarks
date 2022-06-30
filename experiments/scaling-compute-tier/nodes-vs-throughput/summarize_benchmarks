@@ -1,0 +1,161 @@
+#!/usr/bin/python3
+from datetime import datetime, time
+from operator import itemgetter
+import os
+import sys
+import json
+import argparse
+import subprocess as sp
+import matplotlib.pyplot as plt
+import matplotlib.offsetbox as offsetbox
+import numpy as np
+import math
+import pandas as pd
+import csv
+
+def workload_info(workload):
+    if workload.lower() == 'empty-tag':
+        return 'empty tag only'
+    elif workload.lower() == 'one-tag-only':
+        return 'always the same tag'
+    elif workload.lower() == 'new-tags-always':
+        return 'always a new tag'
+
+def discard_csv_files(directory, ts, before = True):
+    csv_file_names = [file for file in os.listdir(directory) if file.endswith('.csv')]
+    csv_files_to_discard = []
+    for csv_file_name in csv_file_names:
+        chunks = csv_file_name.split('.')[0].split('-')
+        ts_file = int(chunks[3])
+        if before:
+            if ts_file < ts:
+                csv_files_to_discard.append(os.path.join(directory, csv_file_name))
+        else:
+            if ts < ts_file:
+                csv_files_to_discard.append(os.path.join(directory, csv_file_name))
+    s = "before"
+    if not before:
+        s = "after"
+    print("Remove {} files because they are {} {}".format(len(csv_files_to_discard), s, str(ts)))
+    for csv_file in csv_files_to_discard:
+        os.remove(csv_file)
+
+def count_csv_entries(csv_files):
+    return pd.concat([pd.read_csv(file) for file in csv_files]).shape[0]
+
+def count_csv_entries_in_directory(directory, filter):
+    csv_files = [file for file in os.listdir(directory) if file.endswith('.csv') and filter in file]
+    csv_entries = 0
+    for file in csv_files:
+        csv_entries += sum(1 for line in open(os.path.join(directory, file)))
+         #csv_entries += pd.read_csv(os.path.join(directory, file)).shape[0]
+    return csv_entries
+
+def compute_csv_percentile(csv_file, column_ix, percentile):
+    return pd.read_csv(csv_file).iloc[:, column_ix].quantile(q=percentile)
+
+def compute_throughput(directory, filter, exp_duration):
+    return round(count_csv_entries_in_directory(directory, filter) / exp_duration / 1000, 2)
+
+def find_lowest_ts_of_csv_files(directory, filter):
+    csv_file_names = [file for file in os.listdir(directory) if file.endswith('.csv') and filter in file]
+    ts = sys.maxsize
+    for csv_file_name in csv_file_names:
+        chunks = csv_file_name.split('.')[0].split('-')
+        ts_file = int(chunks[3])
+        ts = min(ts, ts_file)
+    return ts
+
+def find_highest_ts_of_csv_files(directory, filter):
+    csv_file_names = [file for file in os.listdir(directory) if file.endswith('.csv') and filter in file]
+    ts = 0
+    for csv_file_name in csv_file_names:
+        chunks = csv_file_name.split('.')[0].split('-')
+        ts_file = int(chunks[3])
+        ts = max(ts, ts_file)
+    return ts
+
+def add_row(directory, slog, nodes, interval, result_file):
+    ts_start = find_lowest_ts_of_csv_files(directory, '') - interval
+    ts_end = find_highest_ts_of_csv_files(directory, '')
+    write_header = not os.path.exists(result_file)
+    with open(result_file, 'a', encoding='UTF8', newline='') as f:
+        writer = csv.writer(f)
+        if write_header:
+            writer.writerow(['slog', 'nodes', 'throughput'])
+        data = [
+            slog,
+            nodes,
+            compute_throughput(directory, '', ts_end - ts_start)
+        ]
+        writer.writerow(data)
+
+def generate_plot(csv_file, workload, result_file):
+
+    df = pd.read_csv(csv_file)
+    df_boki = df.loc[df['slog'] == 'boki-hybrid']
+    df_indilog = df.loc[df['slog'] == 'indilog']
+
+    fig, ax = plt.subplots()
+
+    ax.plot(df_boki['nodes'], df_boki['throughput'], linestyle='solid', color='royalblue', marker='x', label='Boki', linewidth='2')
+    ax.plot(df_indilog['nodes'], df_indilog['throughput'], linestyle='solid', color='darkgreen', marker='o', label='Indilog', linewidth='2')
+
+    ax.set_xlabel('# Compute Nodes after Scaling', fontsize=14)
+    ax.set_ylabel('Throughput (kOp/s)', fontsize=14)
+
+    ax.set_xlim(left=0)
+    ax.set_ylim(bottom=0, top=700)
+
+    x_major_ticks = np.arange(0, 8, 2)
+    x_minor_ticks = np.arange(0, 8, 1)
+    ax.set_xticks(x_major_ticks)
+    ax.set_xticks(x_minor_ticks, minor=True)
+
+    # info_text = 'Scaling from one engine'
+    # ax.text(
+    #     0.17, 0.7, info_text, transform=ax.transAxes, verticalalignment='top', size=10,
+    #     bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.5)
+    # )
+
+    ax.legend(loc='upper left', prop={'size': 12})
+
+    plt.savefig(result_file, bbox_inches='tight')
+    plt.close
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('cmd', type=str)
+    parser.add_argument('--directory', type=str)
+    parser.add_argument('--file', type=str)
+    parser.add_argument('--slog', type=str)
+    parser.add_argument('--exp-duration', type=int)
+    parser.add_argument('--append-times', type=int)
+    parser.add_argument('--read-times', type=int)
+    parser.add_argument('--interval', type=int)
+    parser.add_argument('--ts', type=int)
+    parser.add_argument('--ts-start', type=int)
+    parser.add_argument('--ts-scale', type=int)
+    parser.add_argument('--nodes', type=int)
+    parser.add_argument('--filter', type=str)
+    parser.add_argument('--workload', type=str)
+    parser.add_argument('--result-file', type=str)
+    parser.add_argument('--result-directory', type=str)
+    args = parser.parse_args()
+    try:
+        if args.cmd == 'discard-csv-files-before':
+            discard_csv_files(args.directory, args.ts, before=True)
+        elif args.cmd == 'discard-csv-files-after':
+            discard_csv_files(args.directory, args.ts, before=False) # == after
+        elif args.cmd == 'add-row':
+            add_row(args.directory, args.slog, args.nodes, args.interval, args.result_file)
+        elif args.cmd == 'generate-plot':
+            generate_plot(args.file, args.workload, args.result_file)
+        else:
+            raise Exception('Unknown command: ' + args.cmd)
+    except Exception as e:
+        err_str = str(e)
+        if not err_str.endswith('\n'):
+            err_str += '\n'
+        sys.stderr.write(err_str)
+        sys.exit(1)

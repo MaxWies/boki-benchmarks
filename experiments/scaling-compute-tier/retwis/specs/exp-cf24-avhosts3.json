@@ -1,0 +1,28 @@
+{
+    "functions": {
+        "RetwisInit" : {
+            "concurrency": 24
+        },
+        "RetwisRegister" : {
+            "concurrency": 24
+        },
+        "RetwisLogin" : {
+            "concurrency": 24
+        },
+        "RetwisProfile" : {
+            "concurrency": 24
+        },
+        "RetwisFollow" : {
+            "concurrency": 24
+        },
+        "RetwisPost" : {
+            "concurrency": 24
+        },
+        "RetwisPostList" : {
+            "concurrency": 24
+        }
+    },
+    "exp_variables": {
+        "AVAILABLE_HOSTS": "bokiexp-engine-4"
+    }
+}

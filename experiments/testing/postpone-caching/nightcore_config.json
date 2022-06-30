@@ -1,8 +1,0 @@
-[
-  {
-    "funcName": "TestSystem",
-    "funcId": 1,
-    "minWorkers": 128,
-    "maxWorkers": 128
-  }
-]

@@ -1,0 +1,152 @@
+version: "3.8"
+services:   
+  zookeeper:
+    image: zookeeper:3.6.2
+    hostname: zookeeper
+    ports:
+      - 2181:2181
+    restart: always
+
+  zookeeper-setup:
+    image: zookeeper:3.6.2
+    command: /tmp/slog/zk_setup.sh
+    depends_on:
+       - zookeeper
+    volumes:
+      - /tmp/zk_setup.sh:/tmp/slog/zk_setup.sh
+    restart: always
+
+  slog-engine:
+    image: maxwie/boki:latest
+    hostname: faas-engine-{{.Task.Slot}}
+    entrypoint:
+      - /slog/engine
+      - --zookeeper_host=zookeeper:2181
+      - --listen_iface=eth0
+      - --root_path_for_ipc=/tmp/slog/ipc
+      - --func_config_file=/tmp/slog/func_config.json
+      - --num_io_workers=4
+      - --instant_rps_p_norm=0.8
+      - --io_uring_entries=2048
+      - --io_uring_fd_slots=4096
+      - --enable_shared_log
+      # - --slog_engine_enable_cache
+      - --slog_engine_cache_cap_mb=1024
+      - --slog_engine_propagate_auxdata
+      - --engine_node_type=engine
+      # - --v=1
+    depends_on:
+      - zookeeper-setup
+    volumes:
+      - /mnt/inmem/slog:/tmp/slog
+      - /sys/fs/cgroup:/tmp/root_cgroupfs
+    environment:
+      - FAAS_NODE_ID={{.Task.Slot}}
+      - FAAS_CGROUP_FS_ROOT=/tmp/root_cgroupfs
+    restart: always
+    ulimits:
+      memlock: -1
+
+  slog-index-engine:
+    image: maxwie/boki:latest
+    hostname: faas-engine-{{.Task.Slot}}
+    entrypoint:
+      - /slog/engine
+      - --zookeeper_host=zookeeper:2181
+      - --listen_iface=eth0
+      - --root_path_for_ipc=/tmp/slog/ipc
+      - --func_config_file=/tmp/slog/func_config_empty.json
+      - --num_io_workers=2
+      - --instant_rps_p_norm=0.8
+      - --io_uring_entries=2048
+      - --io_uring_fd_slots=4096
+      - --enable_shared_log
+      # - --slog_engine_enable_cache
+      - --slog_engine_cache_cap_mb=1024
+      - --slog_engine_propagate_auxdata
+      - --engine_node_type=index_engine
+      # - --v=1
+    depends_on:
+      - zookeeper-setup
+    volumes:
+      - /mnt/inmem/slog:/tmp/slog
+      - /sys/fs/cgroup:/tmp/root_cgroupfs
+    environment:
+      - FAAS_NODE_ID=100{{.Task.Slot}}
+      - FAAS_CGROUP_FS_ROOT=/tmp/root_cgroupfs
+    restart: always
+    ulimits:
+      memlock: -1
+
+  slog-gateway:
+    image: maxwie/boki:latest
+    hostname: faas-gateway
+    ports:
+      - 8080:8080
+    entrypoint:
+      - /slog/gateway
+      - --zookeeper_host=zookeeper:2181
+      - --listen_iface=eth0
+      - --http_port=8080
+      - --func_config_file=/tmp/slog/func_config.json
+      - --async_call_result_path=/tmp/store/async_results
+      - --num_io_workers=2
+      - --io_uring_entries=2048
+      - --io_uring_fd_slots=4096
+      - --lb_per_fn_round_robin
+      - --max_running_requests=0
+      # - --v=1
+    depends_on:
+      - zookeeper-setup
+    volumes:
+      - /tmp/nightcore_config.json:/tmp/slog/func_config.json
+      - /mnt/inmem/store:/tmp/store
+    restart: always
+    ulimits:
+      memlock: -1
+
+  slog-storage:
+    image: maxwie/boki:latest
+    hostname: faas-storage-{{.Task.Slot}}
+    entrypoint:
+      - /slog/storage
+      - --zookeeper_host=zookeeper:2181
+      - --listen_iface=eth0
+      - --db_path=/tmp/storage/logdata
+      - --num_io_workers=2
+      - --io_uring_entries=2048
+      - --io_uring_fd_slots=4096
+      - --slog_local_cut_interval_us=300
+      - --slog_storage_bgthread_interval_ms=1
+      - --slog_storage_backend=rocksdb
+      - --slog_storage_cache_cap_mb=4096
+      # - --v=1
+    depends_on:
+      - zookeeper-setup
+    volumes:
+      - /mnt/storage:/tmp/storage
+    environment:
+      - FAAS_NODE_ID={{.Task.Slot}}
+    restart: always
+    ulimits:
+      memlock: -1
+
+  slog-sequencer:
+    image: maxwie/boki:latest
+    hostname: faas-sequencer-{{.Task.Slot}}
+    entrypoint:
+      - /slog/sequencer
+      - --zookeeper_host=zookeeper:2181
+      - --listen_iface=eth0
+      - --num_io_workers=2
+      - --io_uring_entries=2048
+      - --io_uring_fd_slots=4096
+      - --slog_global_cut_interval_us=300
+      # - --v=1
+    depends_on:
+      - zookeeper-setup
+    environment:
+      - FAAS_NODE_ID={{.Task.Slot}}
+    restart: always
+    ulimits:
+      memlock: -1

@@ -211,11 +211,11 @@ def get_machine_with_label_main(base_dir, label):
             if label in labels or label+'=true' in labels:
                 print(machine_info['ip'] + '-' + USER_NAME)
 
-def get_machine_with_labels_main(base_dir, labels):
+def get_machine_with_labels_main(base_dir, provided_labels):
     for machine_info in load_machines_file(base_dir)['machines'].values():
         if 'labels' in machine_info:
             labels = machine_info['labels']
-            for label in labels:
+            for label in provided_labels:
                 if label in labels or label+'=true' in labels:
                     print(machine_info['ip'] + '-' + USER_NAME)
                     break

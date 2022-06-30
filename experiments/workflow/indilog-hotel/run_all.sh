@@ -1,44 +1,54 @@
 #!/bin/bash
 BASE_DIR=`realpath $(dirname $0)`
 ROOT_DIR=`realpath $BASE_DIR/../../..`
+MACHINE_SPEC_DIR=$ROOT_DIR/machine-spec
 CONTROLLER_SPEC_DIR=$ROOT_DIR/controller-spec
 
 HELPER_SCRIPT=$ROOT_DIR/scripts/exp_helper
 BENCHMARK_SCRIPT=$BASE_DIR/summarize_benchmarks
+BENCHMARK_HELPER_SCRIPT=$ROOT_DIR/scripts/benchmark_helper
 
-COLLECTION_DIR=$BASE_DIR/results/collection
-rm -rf $COLLECTION_DIR
+RESULT_DIR=$BASE_DIR/results
+# rm -rf $RESULT_DIR
 mkdir -p \
-    $COLLECTION_DIR \
-    $COLLECTION_DIR/boki-local \
-    $COLLECTION_DIR/boki-remote \
-    $COLLECTION_DIR/indilog
+    $RESULT_DIR \
+    $RESULT_DIR/boki \
+    $RESULT_DIR/indilog \
+    $RESULT_DIR/indilog-min-completion \
+    $RESULT_DIR/indilog-test
 
-# # Boki-Local
-# cp $BASE_DIR/machines_eng2-st2-seq3.json $BASE_DIR/machines.json
+# $HELPER_SCRIPT reboot-machines --base-dir=$MACHINE_SPEC_DIR
+# sleep 90
+
+# # # Boki-Local
+# cp $MACHINE_SPEC_DIR/boki/machines_eng4-st4-seq3-dy1.json $BASE_DIR/machines.json
 # $HELPER_SCRIPT start-machines --base-dir=$BASE_DIR
-# ./run_build.sh boki boki-local $CONTROLLER_SPEC_DIR/boki/eng2-st2-seq3-ir2-ur1-mr3.json $BASE_DIR/specs/exp-cf24.json
+# ./run_build.sh boki $CONTROLLER_SPEC_DIR/boki/eng4-st4-seq3-ir4-ur1-mr3.json $BASE_DIR/specs/exp-cf8.json
 
-# ssh -q $MANAGER_HOST -- docker stack rm boki-experiment
-# sleep 20
 
-# # Boki-Remote
-# cp $BASE_DIR/machines_eng2-ei1-st2-seq3.json $BASE_DIR/machines.json
+# $HELPER_SCRIPT reboot-machines --base-dir=$MACHINE_SPEC_DIR
+# sleep 90
+
+# # Indilog
+# cp $MACHINE_SPEC_DIR/indilog/machines_eng4-st4-seq3-ix2-agg1-dy1.json $BASE_DIR/machines.json
 # $HELPER_SCRIPT start-machines --base-dir=$BASE_DIR
-# ./run_build.sh boki boki-remote $CONTROLLER_SPEC_DIR/boki/eng2-ei1-st2-seq3-ir1-ur1-mr3.json $BASE_DIR/specs/exp-cf24.json
+# # ./run_build.sh indilog $CONTROLLER_SPEC_DIR/indilog/eng4-st4-seq3-ix2-agg1-dy1-is2-ir1-ur1-mr3-ssmx4.json $BASE_DIR/specs/exp-cf8.json
+# ./run_build.sh indilog-min-completion $CONTROLLER_SPEC_DIR/indilog/eng4-st4-seq3-ix2-agg1-dy1-is2-ir1-ur1-mr3-ssmx4.json $BASE_DIR/specs/exp-cf8.json
 
-# ssh -q $MANAGER_HOST -- docker stack rm boki-experiment
-# sleep 20
+$HELPER_SCRIPT reboot-machines --base-dir=$MACHINE_SPEC_DIR
+sleep 90
 
 # Indilog
-#cp $BASE_DIR/machines_eng2-st2-seq3-ix1-dy.json $BASE_DIR/machines.json
-#$HELPER_SCRIPT start-machines --base-dir=$BASE_DIR
-./run_build.sh indilog indilog $CONTROLLER_SPEC_DIR/indilog/eng2-st2-seq3-ix1-is1-ir1-ur1-mr3-ssmx4.json $BASE_DIR/specs/exp-cf8.json
+cp $MACHINE_SPEC_DIR/indilog/machines_eng4-st4-seq3-ix2-agg1-dy1.json $BASE_DIR/machines.json
+$HELPER_SCRIPT start-machines --base-dir=$BASE_DIR
+./run_build.sh indilog-test $CONTROLLER_SPEC_DIR/indilog/eng4-st4-seq3-ix2-agg1-dy1-is2-ir1-ur1-mr3-ssmx4.json $BASE_DIR/specs/exp-cf8.json
 
 # Plotting
-for SLOG_CONFIG in indilog; do
-    $BENCHMARK_SCRIPT generate-plot \
-        --op-stats-csv-file=$BASE_DIR/results/collection/$SLOG_CONFIG/op-stats.csv \
-        --client-csv-file=$BASE_DIR/results/collection/$SLOG_CONFIG/client-results.csv \
-        --result-file=$BASE_DIR/results/collection/$SLOG_CONFIG/op-stats.png
-done
+# for FILE_TYPE in "pdf" "png";
+# do
+#     for SLOG in boki indilog indilog-min-completion; do
+#         $BENCHMARK_HELPER_SCRIPT generate-operation-statistics-plot \
+#             --file=$RESULT_DIR/$SLOG/operations.csv \
+#             --result-file=$RESULT_DIR/$SLOG/operations.$FILE_TYPE
+#     done
+# done

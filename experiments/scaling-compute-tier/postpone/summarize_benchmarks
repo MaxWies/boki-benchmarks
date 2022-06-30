@@ -1,0 +1,419 @@
+#!/usr/bin/python3
+from datetime import datetime, time
+from operator import itemgetter
+import os
+import sys
+import json
+import argparse
+import subprocess as sp
+import matplotlib.pyplot as plt
+import matplotlib.offsetbox as offsetbox
+import numpy as np
+import math
+import pandas as pd
+import csv
+import itertools
+
+
+def workload_info(workload):
+    if workload.lower() == 'empty-tag':
+        return 'empty tag only'
+    elif workload.lower() == 'one-tag-only':
+        return 'always the same tag'
+    elif workload.lower() == 'new-tags-always':
+        return 'always a new tag'
+    elif workload.lower() == 'mix':
+        return 'mixed workload'
+    else:
+        return 'undefined'
+
+def discard_csv_files(directory, ts, before = True):
+    csv_file_names = [file for file in os.listdir(directory) if file.endswith('.csv')]
+    csv_files_to_discard = []
+    for csv_file_name in csv_file_names:
+        chunks = csv_file_name.split('.')[0].split('-')
+        ts_file = int(chunks[3])
+        if before:
+            if ts_file < ts:
+                csv_files_to_discard.append(os.path.join(directory, csv_file_name))
+        else:
+            if ts < ts_file:
+                csv_files_to_discard.append(os.path.join(directory, csv_file_name))
+    s = "before"
+    if not before:
+        s = "after"
+    print("Remove {} files because they are {} {}".format(len(csv_files_to_discard), s, str(ts)))
+    for csv_file in csv_files_to_discard:
+        os.remove(csv_file)
+
+def count_csv_entries(csv_files):
+    return pd.concat([pd.read_csv(file) for file in csv_files]).shape[0]
+
+def count_csv_entries_in_directory(directory, filter):
+    csv_files = [file for file in os.listdir(directory) if file.endswith('.csv') and filter in file]
+    print("Count entries of {}".format(', '.join(csv_files)))
+    return pd.concat([pd.read_csv(os.path.join(directory, file)) for file in csv_files]).shape[0]
+
+def compute_csv_percentile(csv_file, column_ix, percentile):
+    return pd.read_csv(csv_file).iloc[:, column_ix].quantile(q=percentile)
+
+def concatenate(directory, csv_file_names, filter, result_file):
+    csv_files = [os.path.join(directory, file) for file in csv_file_names if filter in file]
+    with open(result_file, 'w') as f:
+        for csv_file in csv_files:
+            with open(csv_file) as f_in:
+                for line in f_in:
+                    f.write(line)
+
+def add_rows(directory, slog, interval, result_file):
+    latency_append_files = sorted([os.path.join(directory, csv_file_name) for csv_file_name in os.listdir(directory) if 'combined-latencies-append' in csv_file_name])
+    for latency_append_file in latency_append_files:
+        print(latency_append_file)
+        latency_append_file_name = os.path.basename(latency_append_file)
+        name_chunks = latency_append_file_name.split('.')[0].split('-') # latencies-append-NODE_ID-TS.csv
+        latency_read_file = os.path.join(directory, "combined-latencies-read-{}.csv".format(name_chunks[3]))
+        if not os.path.isfile(latency_read_file):
+            raise Exception("csv file {} not exists".format(latency_read_file))
+        absolute_ts = int(name_chunks[3])
+        # Write to result file
+        write_header = not os.path.exists(result_file)
+        print("Add row for slog={}, ts={}".format(slog, absolute_ts))
+        with open(result_file, 'a', encoding='UTF8', newline='') as f:
+            writer = csv.writer(f)
+            if write_header:
+                writer.writerow(['slog', 'ts_absolute', 'throughput', 'latency_append_50','latency_append_99', 'latency_read_50','latency_read_99'])
+            data = [
+                slog,
+                absolute_ts,
+                round(count_csv_entries([latency_append_file, latency_read_file]) / interval / 1000, 2),
+                int(compute_csv_percentile(latency_append_file, 0, 0.5)),
+                int(compute_csv_percentile(latency_append_file, 0, 0.99)),
+                int(compute_csv_percentile(latency_read_file, 0, 0.5)),
+                int(compute_csv_percentile(latency_read_file, 0, 0.99))
+            ]
+            writer.writerow(data)
+
+def combine_csv_files_filtered(directory, csv_file_names, engine_ids):
+    ts_matrix = []
+    num_ts_per_engine = 0
+    print("Engine ids:")
+    print(engine_ids)
+    for id in engine_ids:
+        engine_id_csv_files = [file for file in csv_file_names if '-{}-'.format(id) in file]
+        ts_of_csv_files = [file.split('.')[0].split('-')[3] for file in engine_id_csv_files]
+        ts_matrix.append((id, sorted(ts_of_csv_files)))
+        if num_ts_per_engine != 0 and num_ts_per_engine != len(ts_of_csv_files):
+            print("Warning: All engines should have the same number of csv files")
+        num_ts_per_engine = max(num_ts_per_engine, len(ts_of_csv_files))
+
+    for i in range(num_ts_per_engine):
+        related_csv_file_names = []
+        for ts_row in ts_matrix:
+            id, ts_list = ts_row
+            if i < len(ts_list):
+                ts = ts_list[i]
+                related_csv_file_names.extend([file for file in csv_file_names if '-{}-{}'.format(id, ts) in file])
+
+        id, ts_list = ts_matrix[0]
+        ts = ts_list[i]
+        for op in ["append", "read"]:
+            combined_result_file = os.path.join(directory, "combined-latencies-{}-{}.csv".format(op, ts))
+            # now we concatenate the csv files that belong together
+            concatenate(directory, related_csv_file_names, op, combined_result_file)
+
+
+def combine_csv_files(directory, slog, interval, scale_ts, result_file):
+    csv_file_names = sorted([file for file in os.listdir(directory) if file.endswith('.csv')])
+    
+    engine_ids = set()
+    filtered_csv_file_names = []
+    for csv_file_name in csv_file_names:
+        chunks = csv_file_name.split('.')[0].split('-')
+        ts = int(chunks[3])
+        if scale_ts > ts:
+            filtered_csv_file_names.append(csv_file_name)
+            engine_ids.add(int(chunks[2]))
+    engine_ids = sorted(engine_ids)
+    combine_csv_files_filtered(directory, filtered_csv_file_names, engine_ids) # before scale ts
+
+    engine_ids = set()
+    filtered_csv_file_names = []
+    for csv_file_name in csv_file_names:
+        chunks = csv_file_name.split('.')[0].split('-')
+        ts = int(chunks[3])
+        if scale_ts <= ts:
+            filtered_csv_file_names.append(csv_file_name)
+            engine_ids.add(int(chunks[2]))
+    engine_ids = sorted(engine_ids)
+    combine_csv_files_filtered(directory, filtered_csv_file_names, engine_ids) # after scale ts
+
+    add_rows(directory, slog, interval, result_file)
+
+def make_time_relative(input_file, start_ts, end_ts, csv_result_file):
+    print('Make time relative {}'.format(input_file))
+    df = pd.read_csv(input_file)
+    df.drop(df[df.ts_absolute < start_ts].index, inplace=True)
+    df.drop(df[df.ts_absolute > end_ts].index, inplace=True)
+    relative_timestamps = []
+    for i in range(len(df)):
+        relative_timestamps.append(df.iloc[i]['ts_absolute'] - start_ts)
+    df.insert(2, 'ts_relative', relative_timestamps)
+    write_header = not os.path.isfile(csv_result_file)
+    df.to_csv(csv_result_file, mode='a', sep=',', index=False, header=write_header)
+
+def add_single_engine_row(directory, latency_append_file, slog, engine_type, interval, result_file):
+    # Get the corrsponding csv files for reads and index memory
+    assert 'append' in latency_append_file
+    latency_append_file_name = os.path.basename(latency_append_file)
+    name_chunks = latency_append_file_name.split('.')[0].split('-') # latencies-append-NODE_ID-TS.csv
+    latency_read_file = os.path.join(directory, "latencies-read-{}-{}.csv".format(name_chunks[2], name_chunks[3]))
+    if not os.path.isfile(latency_read_file):
+        raise Exception("csv file {} not exists".format(latency_read_file))
+    absolute_ts = int(name_chunks[3])
+    # Write to result file
+    write_header = not os.path.exists(result_file)
+    with open(result_file, 'a', encoding='UTF8', newline='') as f:
+        writer = csv.writer(f)
+        if write_header:
+            writer.writerow(['slog', 'engine_type', 'ts_absolute', 'throughput', 'throughput_append', 'throughput_read', 'latency_append_50','latency_append_99', 'latency_read_50','latency_read_99'])
+        data = [
+            slog,
+            engine_type,
+            absolute_ts,
+            round(count_csv_entries([latency_append_file, latency_read_file]) / interval / 1000, 2),
+            round(count_csv_entries([latency_append_file]) / interval / 1000, 2),
+            round(count_csv_entries([latency_read_file]) / interval / 1000, 2),
+            int(compute_csv_percentile(latency_append_file, 0, 0.5)),
+            int(compute_csv_percentile(latency_append_file, 0, 0.99)),
+            int(compute_csv_percentile(latency_read_file, 0, 0.5)),
+            int(compute_csv_percentile(latency_read_file, 0, 0.99))
+        ]
+        writer.writerow(data)
+
+def flip(items, ncol):
+    return itertools.chain(*[items[i::ncol] for i in range(ncol)])
+
+def generate_plot_boki_vs_indilog(csv_file, relative_scale_ts, engines_before, engines_after, workload, result_file):
+    df = pd.read_csv(csv_file)
+    df_boki = df.loc[df['slog'] == 'boki-hybrid']
+    df_indilog_postpone_caching = df.loc[df['slog'] == 'indilog-postpone-caching']
+
+    fig, ax1 = plt.subplots()
+
+    ax2 = ax1.twinx()
+
+    p1, = ax1.plot(df_boki['ts_relative'], df_boki['latency_read_50'], linestyle='dotted', color='royalblue', label='Boki-Hybrid Read 0.5')
+    p2, = ax1.plot(df_boki['ts_relative'], df_boki['latency_read_99'], linestyle='dashed', color='royalblue', label='Boki-Hybrid Read 0.99')
+    p3, = ax2.plot(df_boki['ts_relative'], df_boki['throughput'], linestyle='solid', color='royalblue', label='Boki-Hybrid Throughput')
+
+    p4, = ax1.plot(df_indilog_postpone_caching['ts_relative'], df_indilog_postpone_caching['latency_read_50'], linestyle='dotted', color='darkgreen', label='Indilog Read 0.5')
+    p5, = ax1.plot(df_indilog_postpone_caching['ts_relative'], df_indilog_postpone_caching['latency_read_99'], linestyle='dashed', color='darkgreen', label='Indilog Read 0.99')
+    p6, = ax2.plot(df_indilog_postpone_caching['ts_relative'], df_indilog_postpone_caching['throughput'], linestyle='solid', color='darkgreen', label='Indilog Throughput')
+
+    p7 = ax1.axvline(x=relative_scale_ts, color='grey', linestyle='dotted', label='Scale')
+
+    ax1.set_ylim(bottom=0)
+    ax2.set_ylim(bottom=0)
+
+    ax1.set_xlabel('Time (s)')
+    ax1.set_ylabel('Latency (\u03BCs)')
+    ax2.set_ylabel('Throughput (kOp/s)')
+
+    ax1.legend(handles=[p1, p2, p3, p4, p5, p6, p7])
+
+    plt.title('Scaling from {} to {} engines (Workload: {})'.format(engines_before, engines_after, workload_info(workload)))
+    plt.savefig(result_file)
+    plt.close
+
+def generate_plot_boki_vs_indilog_append_latency(csv_file, relative_scale_ts, engines_before, engines_after, workload, result_file):
+    df = pd.read_csv(csv_file)
+    df_boki_index_less = df.loc[df['engine_type'] == 'index_less']
+    df_boki_hybrid = df.loc[df['engine_type'] == 'hybrid']
+    df_indilog = df.loc[df['engine_type'] == 'indilog-postpone-caching-new-node']
+
+    ax = plt.subplot(111)
+
+    ax.plot(df_boki_index_less['ts_relative'], df_boki_index_less['latency_append_50'], linestyle='dotted', color='royalblue', marker='x', label='Boki no index: Append 0.5', linewidth='2')
+    ax.plot(df_boki_index_less['ts_relative'], df_boki_index_less['latency_append_99'], linestyle='dashed', color='royalblue', marker='x', label='Boki no index: Append 0.99', linewidth='2')
+
+    ax.plot(df_boki_hybrid['ts_relative'], df_boki_hybrid['latency_append_50'], linestyle='dotted', color='slategrey', marker='v', label='Boki hybrid: Append 0.5', linewidth='2')
+    ax.plot(df_boki_hybrid['ts_relative'], df_boki_hybrid['latency_append_99'], linestyle='dashed', color='slategrey', marker='v', label='Boki hybrid: Append 0.99', linewidth='2')
+
+    ax.plot(df_indilog['ts_relative'], df_indilog['latency_append_50'], linestyle='dotted', color='darkgreen', marker='o', label='Indilog: Append 0.5', linewidth='2')
+    ax.plot(df_indilog['ts_relative'], df_indilog['latency_append_99'], linestyle='dashed', color='darkgreen', marker='o', label='Indilog: Append 0.99', linewidth='2')
+
+    ax.set_xlabel('Time (s)', fontsize=14)
+    ax.set_ylabel('Latency (\u03BCs)', fontsize=14)
+
+    # info_text = 'Scaling from {} to {} engines'.format(engines_before, engines_after)
+    # ax.text(
+    #     0.17, 0.7, info_text, transform=ax.transAxes, verticalalignment='top', size=10,
+    #     bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.5)
+    # )
+
+    plt.subplots_adjust(top=0.8)
+
+    handles, labels = ax.get_legend_handles_labels()
+
+    plt.legend(flip(handles, 2), flip(labels, 2), 
+               bbox_to_anchor=(0,1.02,1,0.2), loc="lower left",
+               mode="expand", borderaxespad=0, ncol=2)
+
+    plt.axvline(x=relative_scale_ts, color='grey', linestyle='dotted', label='Scale')
+
+    plt.savefig(result_file, bbox_inches='tight')
+    plt.close
+
+def generate_plot_boki_vs_indilog_read_latency(csv_file, relative_scale_ts, engines_before, engines_after, workload, result_file):
+    df = pd.read_csv(csv_file)
+    df_boki_index_less = df.loc[df['engine_type'] == 'index_less']
+    df_boki_hybrid = df.loc[df['engine_type'] == 'hybrid']
+    df_indilog = df.loc[df['engine_type'] == 'indilog-postpone-caching-new-node']
+
+    ax = plt.subplot(111)
+
+    ax.plot(df_boki_index_less['ts_relative'], df_boki_index_less['latency_read_50'], linestyle='dotted', color='royalblue', marker='x', label='Boki no index: Read 0.5', linewidth='2')
+    ax.plot(df_boki_index_less['ts_relative'], df_boki_index_less['latency_read_99'], linestyle='dashed', color='royalblue', marker='x', label='Boki no index: Read 0.99', linewidth='2')
+
+    ax.plot(df_boki_hybrid['ts_relative'], df_boki_hybrid['latency_read_50'], linestyle='dotted', color='slategrey', marker='v', label='Boki hybrid: Read 0.5', linewidth='2')
+    ax.plot(df_boki_hybrid['ts_relative'], df_boki_hybrid['latency_read_99'], linestyle='dashed', color='slategrey', marker='v', label='Boki hybrid: Read 0.99', linewidth='2')
+
+    ax.plot(df_indilog['ts_relative'], df_indilog['latency_read_50'], linestyle='dotted', color='darkgreen', marker='o', label='Indilog: Read 0.5', linewidth='2')
+    ax.plot(df_indilog['ts_relative'], df_indilog['latency_read_99'], linestyle='dashed', color='darkgreen', marker='o', label='Indilog: Read 0.99', linewidth='2')
+
+    ax.set_xlabel('Time (s)', fontsize=14)
+    ax.set_ylabel('Latency (\u03BCs)', fontsize=14)
+
+    # info_text = 'Scaling from {} to {} engines'.format(engines_before, engines_after)
+    # ax.text(
+    #     0.17, 0.7, info_text, transform=ax.transAxes, verticalalignment='top', size=10,
+    #     bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.5)
+    # )
+
+    plt.subplots_adjust(top=0.8)
+
+    handles, labels = ax.get_legend_handles_labels()
+
+    plt.legend(flip(handles, 2), flip(labels, 2), 
+               bbox_to_anchor=(0,1.02,1,0.2), loc="lower left",
+               mode="expand", borderaxespad=0, ncol=2)
+
+    plt.axvline(x=relative_scale_ts, color='grey', linestyle='dotted', label='Scale')
+
+    plt.savefig(result_file, bbox_inches='tight')
+    plt.close
+
+def generate_plot_boki_vs_indilog_throughput(csv_file, relative_scale_ts, engines_before, engines_after, workload, result_file):
+    df = pd.read_csv(csv_file)
+    df_boki = df.loc[df['slog'] == 'boki-hybrid']
+    df_indilog = df.loc[df['slog'] == 'indilog-postpone-caching']
+
+    ax = plt.subplot(111)
+
+    ax.plot(df_boki['ts_relative'], df_boki['throughput'], linestyle='solid', color='royalblue', marker='x', label='Boki', linewidth='2')
+    ax.plot(df_indilog['ts_relative'], df_indilog['throughput'], linestyle='solid', color='darkgreen', marker='o', label='Indilog', linewidth='2')
+
+    ax.set_ylim(bottom=0)
+    ax.set_ylim(bottom=0)
+    ax.set_xlabel('Time (s)', fontsize=14)
+    ax.set_ylabel('Throughput (kOp/s)', fontsize=14)
+
+    plt.legend(loc='lower right', prop={'size': 12})
+    plt.axvline(x=relative_scale_ts, color='grey', linestyle='dotted', label='Scale')
+    plt.savefig(result_file, bbox_inches='tight')
+    plt.close
+
+def generate_plot_indilog_postpone_caching_vs_postpone_registration_throughput(csv_file, relative_scale_ts, result_file):
+    df = pd.read_csv(csv_file)
+    df_indilog_postpone_caching = df.loc[df['slog'] == 'indilog-postpone-caching']
+    df_indilog_postpone_registration = df.loc[df['slog'] == 'indilog-postpone-registration']
+
+    ax = plt.subplot(111)
+
+    ax.plot(df_indilog_postpone_caching['ts_relative'], df_indilog_postpone_caching['throughput'], linestyle='solid', color='darkgreen', marker='o', label='Indilog', linewidth='2')
+    ax.plot(df_indilog_postpone_registration['ts_relative'], df_indilog_postpone_registration['throughput'], linestyle='solid', color='darkorange', marker='v', label='Indilog with Registration', linewidth='2')
+
+    ax.set_ylim(bottom=0)
+    ax.set_ylim(bottom=0)
+    ax.set_xlabel('Time (s)', fontsize=14)
+    ax.set_ylabel('Throughput (kOp/s)', fontsize=14)
+
+    plt.legend(loc='lower right', prop={'size': 12})
+    plt.axvline(x=relative_scale_ts, color='grey', linestyle='dotted', label='Scale')
+    plt.savefig(result_file, bbox_inches='tight')
+    plt.close
+
+def generate_plot_indilog_postpone_caching_vs_postpone_registration_old_node_throughput(csv_file, relative_scale_ts, result_file):
+    df = pd.read_csv(csv_file)
+    df_indilog_postpone_caching = df.loc[df['engine_type'] == 'indilog-postpone-caching-old-node']
+    df_indilog_postpone_registration = df.loc[df['engine_type'] == 'indilog-postpone-registration-old-node']
+
+    ax = plt.subplot(111)
+
+    ax.plot(df_indilog_postpone_caching['ts_relative'], df_indilog_postpone_caching['throughput'], linestyle='solid', color='darkgreen', marker='o', label='Indilog', linewidth='2')
+    ax.plot(df_indilog_postpone_registration['ts_relative'], df_indilog_postpone_registration['throughput'], linestyle='solid', color='darkorange', marker='v', label='Indilog with Registration', linewidth='2')
+
+    ax.set_ylim(bottom=0)
+    ax.set_ylim(bottom=0)
+    ax.set_xlabel('Time (s)', fontsize=14)
+    ax.set_ylabel('Throughput (kOp/s)', fontsize=14)
+
+    plt.legend(loc='lower right', prop={'size': 12})
+    plt.axvline(x=relative_scale_ts, color='grey', linestyle='dotted', label='Scale')
+    plt.savefig(result_file, bbox_inches='tight')
+    plt.close
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('cmd', type=str)
+    parser.add_argument('--directory', type=str)
+    parser.add_argument('--file', type=str)
+    parser.add_argument('--slog', type=str)
+    parser.add_argument('--engine-type', type=str)
+    parser.add_argument('--exp-duration', type=int)
+    parser.add_argument('--append-times', type=int)
+    parser.add_argument('--read-times', type=int)
+    parser.add_argument('--interval', type=int)
+    parser.add_argument('--ts', type=int)
+    parser.add_argument('--start-ts', type=int)
+    parser.add_argument('--end-ts', type=int)
+    parser.add_argument('--scale-ts', type=int)
+    parser.add_argument('--engines-before', type=int)
+    parser.add_argument('--engines-after', type=int)
+    parser.add_argument('--workload', type=str)
+    parser.add_argument('--relative-scale-ts', type=int)
+    parser.add_argument('--filter', type=str)
+    parser.add_argument('--result-file', type=str)
+    parser.add_argument('--result-directory', type=str)
+    args = parser.parse_args()
+    try:
+        if args.cmd == 'discard-csv-files-before':
+            discard_csv_files(args.directory, args.ts, before=True)
+        elif args.cmd == 'discard-csv-files-after':
+            discard_csv_files(args.directory, args.ts, before=False) # == after
+        elif args.cmd == 'combine-csv-files':
+            combine_csv_files(args.directory, args.slog, args.interval, args.scale_ts, args.result_file)
+        elif args.cmd == 'make-time-relative':
+            make_time_relative(args.file, args.start_ts, args.end_ts, args.result_file)
+        elif args.cmd == 'add-single-engine-row':
+            add_single_engine_row(args.directory, args.file, args.slog, args.engine_type, args.interval, args.result_file)
+        elif args.cmd == 'generate-plot-boki-vs-indilog':
+            generate_plot_boki_vs_indilog(args.file, args.relative_scale_ts, args.engines_before, args.engines_after, args.workload, args.result_file)
+        elif args.cmd == 'generate-plot-boki-vs-indilog-throughput':
+            generate_plot_boki_vs_indilog_throughput(args.file, args.relative_scale_ts, args.engines_before, args.engines_after, args.workload, args.result_file)
+        elif args.cmd == 'generate-plot-boki-vs-indilog-append-latency':
+            generate_plot_boki_vs_indilog_append_latency(args.file, args.relative_scale_ts, args.engines_before, args.engines_after, args.workload, args.result_file)
+        elif args.cmd == 'generate-plot-boki-vs-indilog-read-latency':
+            generate_plot_boki_vs_indilog_read_latency(args.file, args.relative_scale_ts, args.engines_before, args.engines_after, args.workload, args.result_file)
+        elif args.cmd == 'generate-plot-postpone-caching-vs-postpone-registration-throughput':
+            generate_plot_indilog_postpone_caching_vs_postpone_registration_throughput(args.file, args.relative_scale_ts, args.result_file)
+        elif args.cmd == 'generate-plot-postpone-caching-vs-postpone-registration-old-node-throughput':
+            generate_plot_indilog_postpone_caching_vs_postpone_registration_old_node_throughput(args.file, args.relative_scale_ts, args.result_file)
+        else:
+            raise Exception('Unknown command: ' + args.cmd)
+    except Exception as e:
+        err_str = str(e)
+        if not err_str.endswith('\n'):
+            err_str += '\n'
+        sys.stderr.write(err_str)
+        sys.exit(1)

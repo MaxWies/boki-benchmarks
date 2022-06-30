@@ -1,0 +1,13 @@
+{
+    "functions": {
+        "TestSystem" : {
+            "concurrency": 24
+        }
+    },
+    "exp_variables": {
+        "CONCURRENCY_CLIENT": "24",
+        "DURATION": "60",
+        "APPEND_TIMES": "1",
+        "READ_TIMES": "1"
+    }
+}

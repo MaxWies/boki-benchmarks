@@ -186,6 +186,7 @@ def generate_operation_statistics_plot(op_stat_csv_file, result_file):
     op_stat_header_row = op_stat_header_row[:-1]
     op_stat_data_row = op_stat_data_row[:-1]
 
+    op_stat_pretty_header_row = ['Appends', 'Reads', 'Index hits', 'Index misses', 'Record cache hits', 'Record cache misses']
     op_stat_display_row = [0] * len(op_stat_data_row)
     # as multiplied by 10**3
     for i in range(len(op_stat_data_row)):
@@ -198,6 +199,12 @@ def generate_operation_statistics_plot(op_stat_csv_file, result_file):
         color = 'darkgreen'
     if 'indilog-remote' in slog.lower():
         color = 'orange'
+    if 'indilog-small-index' in slog.lower():
+        color = 'forestgreen'
+    if 'indilog-min-completion' in slog.lower():
+        color = 'darkorange'
+    if 'boki' in slog.lower():
+        color = 'royalblue'
     if 'boki-local' in slog.lower():
         color = 'royalblue'
     if 'boki-remote' in slog.lower():
@@ -209,29 +216,30 @@ def generate_operation_statistics_plot(op_stat_csv_file, result_file):
     # scale_y = 1e3
     # ticks_y = ticker.FuncFormatter(lambda x, pos: '{0:g}'.format(x/scale_y))
     # ax.yaxis.set_major_formatter(ticks_y)
-    ax.set_ylabel('Counts in Thousands')
-    ind = np.arange(len(op_stat_header_row))
-    ax.set_xticks(ind, labels=op_stat_header_row, fontsize=6, rotation=15)
+    ax.set_ylabel('Counts in thousands', fontsize=12)
+    ind = np.arange(len(op_stat_pretty_header_row))
+    ax.set_xticks(ind, labels=op_stat_pretty_header_row, fontsize=12, rotation=22)
+    ax.set_ylim(top=500)
 
     bars = ax.bar(range(len(op_stat_display_row)), op_stat_display_row, color=color)
     for bars in ax.containers:
-        ax.bar_label(bars, fontsize=10)
+        ax.bar_label(bars, fontsize=12)
 
-    local_index_hit_ratio = round(int(op_stat_data_row[2]) / int(op_stat_data_row[1]), 2)
-    log_cache_hit_ratio = round(int(op_stat_data_row[4]) / int(op_stat_data_row[1]), 2)
+    # local_index_hit_ratio = round(int(op_stat_data_row[2]) / int(op_stat_data_row[1]), 2)
+    # log_cache_hit_ratio = round(int(op_stat_data_row[4]) / int(op_stat_data_row[1]), 2)
 
-    info_text = '\n'.join((
-        r'Local Index Hit Ratio: {}'.format(str(local_index_hit_ratio)),
-        r'Log Cache Hit Ratio: {}'.format(str(log_cache_hit_ratio))
-    ))
-    ax.text(
-        0.80, 1.15, info_text,
-        transform=ax.transAxes, verticalalignment='top', size=8,
-        bbox=dict(
-            boxstyle='round', facecolor='wheat', alpha=0.5
-        )
-    )
-    plt.savefig(result_file)
+    # info_text = '\n'.join((
+    #     r'Local Index Hit Ratio: {}'.format(str(local_index_hit_ratio)),
+    #     r'Log Cache Hit Ratio: {}'.format(str(log_cache_hit_ratio))
+    # ))
+    # ax.text(
+    #     0.80, 1.15, info_text,
+    #     transform=ax.transAxes, verticalalignment='top', size=8,
+    #     bbox=dict(
+    #         boxstyle='round', facecolor='wheat', alpha=0.5
+    #     )
+    # )
+    plt.savefig(result_file, bbox_inches='tight')
     plt.close
 
 if __name__ == '__main__':

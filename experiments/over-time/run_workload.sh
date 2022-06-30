@@ -43,13 +43,13 @@ RESULT_DIR=$BASE_DIR/results/$WORKLOAD
 # rm -rf $RESULT_DIR
 # mkdir -p $RESULT_DIR
 
-# $HELPER_SCRIPT reboot-machines --base-dir=$MACHINE_SPEC_DIR
-# sleep 90
+$HELPER_SCRIPT reboot-machines --base-dir=$MACHINE_SPEC_DIR
+sleep 90
 
 # Boki-local
-# cp $MACHINE_SPEC_DIR/boki/machines_eng4-st4-seq3.json $BASE_DIR/machines.json
-# $HELPER_SCRIPT start-machines --base-dir=$BASE_DIR
-# ./run_build.sh boki-local $CONTROLLER_SPEC_DIR/boki/eng4-st4-seq3-ir4-ur1-mr3.json $BASE_DIR/specs/exp-cf3.json
+cp $MACHINE_SPEC_DIR/boki/machines_eng4-st4-seq3.json $BASE_DIR/machines.json
+$HELPER_SCRIPT start-machines --base-dir=$BASE_DIR
+./run_build.sh boki-local $CONTROLLER_SPEC_DIR/boki/eng4-st4-seq3-ir4-ur1-mr3.json $BASE_DIR/specs/exp-cf15.json 
 
 # $HELPER_SCRIPT reboot-machines --base-dir=$MACHINE_SPEC_DIR
 # sleep 90
@@ -68,13 +68,21 @@ RESULT_DIR=$BASE_DIR/results/$WORKLOAD
 #$HELPER_SCRIPT start-machines --base-dir=$BASE_DIR
 #./run_build.sh boki-hybrid $CONTROLLER_SPEC_DIR/boki/eng3-eh1-st4-seq3-ir1-ur1-mr3.json $BASE_DIR/specs/exp-cf3.json
 
-$HELPER_SCRIPT reboot-machines --base-dir=$MACHINE_SPEC_DIR
-sleep 90
+# $HELPER_SCRIPT reboot-machines --base-dir=$MACHINE_SPEC_DIR
+# sleep 90
 
 # Indilog-local
-cp $MACHINE_SPEC_DIR/indilog/machines_eng4-st4-seq3-ix2.json $BASE_DIR/machines.json
-$HELPER_SCRIPT start-machines --base-dir=$BASE_DIR
-./run_build.sh indilog-local $CONTROLLER_SPEC_DIR/indilog/eng4-st4-seq3-ix2-is2-ir1-ur1-mr3-ssmx4.json $BASE_DIR/specs/exp-cf3.json 
+# cp $MACHINE_SPEC_DIR/indilog/machines_eng4-st4-seq3-ix2.json $BASE_DIR/machines.json
+# $HELPER_SCRIPT start-machines --base-dir=$BASE_DIR
+# ./run_build.sh indilog-local $CONTROLLER_SPEC_DIR/indilog/eng4-st4-seq3-ix2-is2-ir1-ur1-mr3-ssmx4.json $BASE_DIR/specs/exp-cf3.json 
+
+# $HELPER_SCRIPT reboot-machines --base-dir=$MACHINE_SPEC_DIR
+# sleep 90
+
+# Indilog-local
+# cp $MACHINE_SPEC_DIR/indilog/machines_eng4-st4-seq3-ix2-agg1.json $BASE_DIR/machines.json
+# $HELPER_SCRIPT start-machines --base-dir=$BASE_DIR
+# ./run_build.sh indilog-local $CONTROLLER_SPEC_DIR/indilog/eng4-st4-seq3-ix2-agg1-is2-ir1-ur1-mr3-ssmx4.json $BASE_DIR/specs/exp-cf15.json 
 
 # # Indilog-remote
 # cp $MACHINE_SPEC_DIR/indilog/machines_eng2-st2-seq3-ix2.json $BASE_DIR/machines.json
@@ -82,8 +90,11 @@ $HELPER_SCRIPT start-machines --base-dir=$BASE_DIR
 # ./run_build.sh indilog-remote $CONTROLLER_SPEC_DIR/indilog/eng2-st2-seq3-ix2-is2-ir1-ur1-mr3-ssmx4.json $BASE_DIR/specs/exp-cf3.json 
 
 # Benchmark collected csv file
-$BENCHMARK_SCRIPT generate-plot-time-vs-throughput --file=$RESULT_DIR/time-latency-index-memory.csv --workload=$WORKLOAD --result-file=$RESULT_DIR/time-vs-throughput.png
-$BENCHMARK_SCRIPT generate-plot-time-vs-latency-append --file=$RESULT_DIR/time-latency-index-memory.csv --workload=$WORKLOAD --result-file=$RESULT_DIR/time-vs-latency-append.png
-$BENCHMARK_SCRIPT generate-plot-time-vs-latency-read --file=$RESULT_DIR/time-latency-index-memory.csv --workload=$WORKLOAD --result-file=$RESULT_DIR/time-vs-latency-read.png
+# $BENCHMARK_SCRIPT generate-plot-time-vs-throughput --file=$RESULT_DIR/time-latency-index-memory.csv --workload=$WORKLOAD --result-file=$RESULT_DIR/time-vs-throughput.png
+# $BENCHMARK_SCRIPT generate-plot-time-vs-latency-append --file=$RESULT_DIR/time-latency-index-memory.csv --workload=$WORKLOAD --result-file=$RESULT_DIR/time-vs-latency-append.png
+# $BENCHMARK_SCRIPT generate-plot-time-vs-latency-read --file=$RESULT_DIR/time-latency-index-memory.csv --workload=$WORKLOAD --result-file=$RESULT_DIR/time-vs-latency-read.png
 # $BENCHMARK_SCRIPT generate-plot-time-vs-latency-throughput --directory=$RESULT_DIR --workload=$WORKLOAD --result-file=$RESULT_DIR/time-vs-latency-throughput.png
-$BENCHMARK_SCRIPT generate-plot-time-vs-cpu-memory --directory=$RESULT_DIR --workload=$WORKLOAD --result-file=$RESULT_DIR/time-vs-cpu-memory.png
+# $BENCHMARK_SCRIPT generate-plot-time-vs-cpu-memory --directory=$RESULT_DIR --workload=$WORKLOAD --result-file=$RESULT_DIR/time-vs-cpu-memory.png
+
+$BENCHMARK_SCRIPT generate-plot-time-vs-throughput --file=$RESULT_DIR/time-vs-throughput-latency.csv --result-file=$RESULT_DIR/time-vs-throughput.png
+$BENCHMARK_SCRIPT generate-plot-time-vs-memory --files=$RESULT_DIR/single-time-vs-throughput-latency-index-memory.csv,$RESULT_DIR/single-time-vs-cpu-memory.csv --result-file=$RESULT_DIR/time-vs-cpu-memory.png

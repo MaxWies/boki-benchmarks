@@ -56,6 +56,14 @@ def merge_csv_files(directory, filter, result_file):
     combined_csv = pd.concat([pd.read_csv(os.path.join(directory, file)) for file in csv_files])
     combined_csv.to_csv(result_file, index=False)
 
+def concatenate(directory, csv_file_names, filter, result_file):
+    csv_files = [os.path.join(directory, file) for file in csv_file_names if filter in file]
+    with open(result_file, 'w') as f:
+        for csv_file in csv_files:
+            with open(csv_file) as f_in:
+                for line in f_in:
+                    f.write(line)
+
 def count_csv_entries(csv_files):
     return pd.concat([pd.read_csv(file) for file in csv_files]).shape[0]
 
@@ -103,6 +111,77 @@ def add_row(directory, latency_append_file, slog, interval, result_file):
         ]
         writer.writerow(data)
 
+def add_rows(directory, slog, interval, result_file):
+    latency_append_files = sorted([os.path.join(directory, csv_file_name) for csv_file_name in os.listdir(directory) if 'combined-latencies-append' in csv_file_name])
+    for latency_append_file in latency_append_files:
+        print(latency_append_file)
+        latency_append_file_name = os.path.basename(latency_append_file)
+        name_chunks = latency_append_file_name.split('.')[0].split('-') # latencies-append-NODE_ID-TS.csv
+        latency_read_file = os.path.join(directory, "combined-latencies-read-{}.csv".format(name_chunks[3]))
+        if not os.path.isfile(latency_read_file):
+            raise Exception("csv file {} not exists".format(latency_read_file))
+        absolute_ts = int(name_chunks[3])
+        # Write to result file
+        write_header = not os.path.exists(result_file)
+        print("Add row for slog={}, ts={}".format(slog, absolute_ts))
+        with open(result_file, 'a', encoding='UTF8', newline='') as f:
+            writer = csv.writer(f)
+            if write_header:
+                writer.writerow(['slog', 'ts_absolute', 'throughput', 'latency_append_50','latency_append_99', 'latency_read_50','latency_read_99'])
+            data = [
+                slog,
+                absolute_ts,
+                round(count_csv_entries([latency_append_file, latency_read_file]) / interval / 1000, 2),
+                int(compute_csv_percentile(latency_append_file, 0, 0.5)),
+                int(compute_csv_percentile(latency_append_file, 0, 0.99)),
+                int(compute_csv_percentile(latency_read_file, 0, 0.5)),
+                int(compute_csv_percentile(latency_read_file, 0, 0.99))
+            ]
+            writer.writerow(data)
+
+def combine_csv_files_filtered(directory, csv_file_names, engine_ids):
+    ts_matrix = []
+    num_ts_per_engine = 0
+    print("Engine ids:")
+    print(engine_ids)
+    for id in engine_ids:
+        engine_id_csv_files = [file for file in csv_file_names if '-{}-'.format(id) in file]
+        ts_of_csv_files = [file.split('.')[0].split('-')[3] for file in engine_id_csv_files]
+        ts_matrix.append((id, sorted(ts_of_csv_files)))
+        if num_ts_per_engine != 0 and num_ts_per_engine != len(ts_of_csv_files):
+            print("Warning: All engines should have the same number of csv files")
+        num_ts_per_engine = max(num_ts_per_engine, len(ts_of_csv_files))
+
+    for i in range(num_ts_per_engine):
+        related_csv_file_names = []
+        for ts_row in ts_matrix:
+            id, ts_list = ts_row
+            if i < len(ts_list):
+                ts = ts_list[i]
+                related_csv_file_names.extend([file for file in csv_file_names if '-{}-{}'.format(id, ts) in file])
+
+        id, ts_list = ts_matrix[0]
+        ts = ts_list[i]
+        for op in ["append", "read"]:
+            combined_result_file = os.path.join(directory, "combined-latencies-{}-{}.csv".format(op, ts))
+            # now we concatenate the csv files that belong together
+            concatenate(directory, related_csv_file_names, op, combined_result_file)
+
+def combine_csv_files(directory, slog, interval, result_file):
+    csv_file_names = sorted([file for file in os.listdir(directory) if file.endswith('.csv')])
+    
+    engine_ids = set()
+    filtered_csv_file_names = []
+    for csv_file_name in csv_file_names:
+        chunks = csv_file_name.split('.')[0].split('-')
+        ts = int(chunks[3])
+        filtered_csv_file_names.append(csv_file_name)
+        engine_ids.add(int(chunks[2]))
+    engine_ids = sorted(engine_ids)
+    combine_csv_files_filtered(directory, filtered_csv_file_names, engine_ids)
+
+    add_rows(directory, slog, interval, result_file)
+
 def add_column(csv_file, loc, column_name, value):
     print('Add column {}'.format(column_name))
     df = pd.read_csv(csv_file)
@@ -115,49 +194,43 @@ def update_column_by_division(csv_file, column, divisor, round_decimals):
         df.at[i, column] = round(df.iloc[i][column] / divisor, round_decimals)
     df.to_csv(csv_file, mode='w', sep=',', index=False, header=True)
 
-def make_time_relative(csv_file, reference_ts, result_directory):
+def make_time_relative(csv_file, reference_ts, csv_result_file):
     print('Make time relative {}'.format(csv_file))
     df = pd.read_csv(csv_file)
     df.drop(df[df.ts_absolute < reference_ts].index, inplace=True)
-    print('Dropped lower stuff')
     relative_timestamps = []
     for i in range(len(df)):
         relative_timestamps.append(df.iloc[i]['ts_absolute'] - reference_ts)
     df.insert(2, 'ts_relative', relative_timestamps)
-    result_file = os.path.join(result_directory, os.path.basename(csv_file))
-    write_header = not os.path.isfile(result_file)
-    df.to_csv(os.path.join(result_directory, os.path.basename(csv_file)), mode='a', sep=',', index=False, header=write_header)
+    write_header = not os.path.isfile(csv_result_file)
+    df.to_csv(csv_result_file, mode='a', sep=',', index=False, header=write_header)
 
-def make_time_relative_all(directory, reference_ts, result_directory):
-    csv_files = [file for file in os.listdir(directory) if file.endswith('.csv')]
-    for csv_file in csv_files:
-        make_time_relative(os.path.join(directory, csv_file), reference_ts, result_directory)
+# def make_time_relative_all(directory, reference_ts, result_directory):
+#     csv_files = [file for file in os.listdir(directory) if file.endswith('.csv')]
+#     for csv_file in csv_files:
+#         make_time_relative(os.path.join(directory, csv_file), reference_ts, result_directory)
 
-def generate_plot_time_vs_throughput(csv_file, workload, result_file):
+def generate_plot_time_vs_throughput(csv_file, result_file):
     df = pd.read_csv(csv_file)
 
     df_boki = df.loc[df['slog'] == 'boki-local']
-    df_boki_remote = df.loc[df['slog'] == 'boki-remote']
     df_boki_hybrid = df.loc[df['slog'] == 'boki-hybrid']
     df_indilog = df.loc[df['slog'] == 'indilog-local']
-    df_indilog_remote = df.loc[df['slog'] == 'indilog-remote']
 
-    fig, ax = plt.subplots()
+    plt.plot(df_boki['ts_relative'], df_boki['throughput'], '-', color='royalblue', label='Boki-Complete Throughput')
+    plt.plot(df_boki_hybrid['ts_relative'], df_boki_hybrid['throughput'], '-', color='slategrey', label='Boki-Hybrid Throughput')
+    plt.plot(df_indilog['ts_relative'], df_indilog['throughput'], '-', color='darkgreen', label='Indilog Throughput')
 
-    ax.plot(df_boki['ts_relative'], df_boki['throughput'], '-', color='royalblue', label='Boki-Local Throughput')
+    plt.xlabel('Time (s)', fontsize=12)
+    plt.ylabel('Throughput (kOp/s)', fontsize=12)
 
-    ax.plot(df_boki_hybrid['ts_relative'], df_boki_hybrid['throughput'], '-', color='darkorange', label='Boki-Hybrid Throughput')
+    throughput_max = df['throughput'].max()
 
-    ax.plot(df_indilog['ts_relative'], df_indilog['throughput'], '-', color='darkgreen', label='Indilog Throughput')
+    plt.ylim(bottom=0, top=throughput_max+50)
 
-    ax.set_ylim(0, 120)
-    ax.set_xlabel('Time (s)')
-    ax.set_ylabel('Throughput (kOp/s)')
-    ax.set_title('Throughput at engine using {}'.format(workload_info(workload)))
+    plt.legend()
 
-    ax.legend()
-
-    plt.savefig(result_file)
+    plt.savefig(result_file, bbox_inches='tight')
     plt.close
 
 def generate_plot_time_vs_latency_append(csv_file, workload, result_file):
@@ -319,11 +392,43 @@ def generate_plot_time_vs_cpu_memory(directory, workload, result_file):
     plt.savefig(result_file)
     plt.close
 
+def generate_plot_time_vs_memory(index_memory_csv_file, cpu_memory_csv_file, result_file):
+    df_index_memory = pd.read_csv(index_memory_csv_file)
+    df_ram_memory = pd.read_csv(cpu_memory_csv_file)
+
+    df_index_memory_boki = df_index_memory.loc[df_index_memory['slog'] == 'boki-local']
+    df_index_memory_boki_hybrid = df_index_memory.loc[df_index_memory['slog'] == 'boki-hybrid']
+    df_index_memory_indilog = df_index_memory.loc[df_index_memory['slog'] == 'indilog-local']
+
+    df_ram_memory_boki = df_ram_memory.loc[df_ram_memory['slog'] == 'boki-local']
+    df_ram_memory_boki_hybrid = df_ram_memory.loc[df_ram_memory['slog'] == 'boki-hybrid']
+    df_ram_memory_indilog = df_ram_memory.loc[df_ram_memory['slog'] == 'indilog-local']
+
+    plt.plot(df_index_memory_boki['ts_relative'], df_index_memory_boki['index_memory'], '--', color='royalblue', label='Boki Complete Index Memory')
+    plt.plot(df_ram_memory_boki['ts_relative'], df_ram_memory_boki['mem_tot'], '-', color='royalblue', label='Boki Complete RAM')
+
+    plt.plot(df_index_memory_boki_hybrid['ts_relative'], df_index_memory_boki_hybrid['index_memory'], '--', color='slategrey', label='Boki Hybrid Index Memory')
+    plt.plot(df_ram_memory_boki_hybrid['ts_relative'], df_ram_memory_boki_hybrid['mem_tot'], '-', color='slategrey', label='Boki Hybrid RAM')
+
+    plt.plot(df_index_memory_indilog['ts_relative'], df_index_memory_indilog['index_memory'], '--', color='darkgreen', label='Indilog Index Memory')
+    plt.plot(df_ram_memory_indilog['ts_relative'], df_ram_memory_indilog['mem_tot'], '-', color='darkgreen', label='Indilog')
+
+    plt.xlabel('Time (s)', fontsize=12)
+    plt.ylabel('Memory (MB)', fontsize=12)
+
+    plt.ylim(bottom=0)
+
+    plt.legend()
+
+    plt.savefig(result_file, bbox_inches='tight')
+    plt.close
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('cmd', type=str)
     parser.add_argument('--directory', type=str)
     parser.add_argument('--file', type=str)
+    parser.add_argument('--files', type=str)
     parser.add_argument('--slog', type=str)
     parser.add_argument('--exp-duration', type=int)
     parser.add_argument('--interval', type=int)
@@ -354,14 +459,19 @@ if __name__ == '__main__':
             add_column(args.file, 0, 'slog', args.slog)
         elif args.cmd == 'update-column-by-division':
             update_column_by_division(args.file, args.column, args.divisor, args.round_decimals)
+        elif args.cmd == 'combine-csv-files':
+            combine_csv_files(args.directory, args.slog, args.interval, args.result_file)
         elif args.cmd == 'make-time-relative':
-            make_time_relative_all(args.directory, args.reference_ts, args.result_directory)
+            make_time_relative(args.file, args.reference_ts, args.result_file)
         elif args.cmd == 'generate-plot-time-vs-latency-append':
             generate_plot_time_vs_latency_append(args.file, args.workload, args.result_file)
         elif args.cmd == 'generate-plot-time-vs-latency-read':
             generate_plot_time_vs_latency_read(args.file, args.workload, args.result_file)
         elif args.cmd == 'generate-plot-time-vs-throughput':
-            generate_plot_time_vs_throughput(args.file, args.workload, args.result_file)
+            generate_plot_time_vs_throughput(args.file, args.result_file)
+        elif args.cmd == 'generate-plot-time-vs-memory':
+            files = args.files.split(',')
+            generate_plot_time_vs_memory(files[0], files[1], args.result_file)
         elif args.cmd == 'generate-plot-time-vs-latency-throughput':
             generate_plot_time_vs_latency_throughput(args.directory, args.workload, args.result_file)
         elif args.cmd == 'generate-plot-time-vs-cpu-memory':

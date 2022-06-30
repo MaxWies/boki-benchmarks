@@ -11,8 +11,8 @@ BENCHMARK_SCRIPT=$BASE_DIR/summarize_benchmarks
 
 export BENCHMARK_TYPE=throughput-vs-latency
 export RECORD_LENGTH=1024
-export ENGINE_STAT_THREAD_INTERVAL=5
-export DURATION=60
+export ENGINE_STAT_THREAD_INTERVAL=20
+export DURATION=900
 export APPEND_TIMES=1
 export READ_TIMES=1
 
@@ -69,6 +69,9 @@ ssh -q $CLIENT_HOST -- /tmp/benchmark \
 EXP_ENGINE_START_TS=$(ssh -q $EXP_HOST -- date +%s)
 EXP_ENGINE_END_TS=$((EXP_ENGINE_START_TS+DURATION-ENGINE_STAT_THREAD_INTERVAL))
 
+echo $EXP_ENGINE_START_TS
+echo $EXP_ENGINE_END_TS
+
 # activiate resource usage script on engine running in background
 ssh -q $EXP_HOST -- sudo rm /tmp/resource_usage.sh /tmp/resource_usage
 scp -q $ROOT_DIR/scripts/resource_usage $ROOT_DIR/scripts/resource_usage.sh $EXP_HOST:/tmp
@@ -79,7 +82,7 @@ ssh -q -f $EXP_HOST -- "nohup /tmp/resource_usage monitor-resource-usage-by-name
     --process-name=engine \
     > /dev/null 2>&1"
 
-# activiate statistic thread on engine
+# activiate statistic thread on engines
 $ROOT_DIR/../zookeeper/bin/zkCli.sh -server $MANAGER_IP:2181 \
     create /faas/stat/start $ENGINE_STAT_THREAD_INTERVAL \
     >/dev/null
@@ -103,48 +106,79 @@ ssh -q $CLIENT_HOST -- /tmp/benchmark \
     --shared_tags_capacity=$SHARED_TAGS_CAPACITY \
     >$EXP_DIR/results.log
 
-# get latency and index memory records from engine
-mkdir -p $EXP_DIR/stats
-scp -r -q $EXP_HOST:/mnt/inmem/slog/stats/latencies-*-*.csv $EXP_DIR/stats
-scp -r -q $EXP_HOST:/mnt/inmem/slog/stats/index-memory-*-*.csv $EXP_DIR/stats
-scp -r -q $EXP_HOST:/mnt/inmem/slog/stats/op-stat-*-*.csv $EXP_DIR/stats
+# get latency and index memory records from SINGLE engine
+EXP_DIR_SINGLE=$EXP_DIR/stats/single
+mkdir -p $EXP_DIR_SINGLE
+scp -r -q $EXP_HOST:/mnt/inmem/slog/stats/latencies-*-*.csv $EXP_DIR_SINGLE
+scp -r -q $EXP_HOST:/mnt/inmem/slog/stats/index-memory-*-*.csv $EXP_DIR_SINGLE
+scp -r -q $EXP_HOST:/mnt/inmem/slog/stats/op-stat-*.csv $EXP_DIR_SINGLE
 
 # discard
 $BENCHMARK_SCRIPT discard-csv-files-after \
-    --directory=$EXP_DIR/stats \
+    --directory=$EXP_DIR_SINGLE \
     --ts=$EXP_ENGINE_END_TS
 
-for file in $EXP_DIR/stats/latencies-append-*-*.csv; do
+for file in $EXP_DIR_SINGLE/latencies-append-*-*.csv; do
     $BENCHMARK_SCRIPT add-row \
-    --directory=$EXP_DIR/stats \
+    --directory=$EXP_DIR_SINGLE \
     --file=$file \
     --slog=$SLOG \
     --interval=$ENGINE_STAT_THREAD_INTERVAL \
-    --result-file=$BASE_DIR/results/$WORKLOAD/$SLOG/time-latency-index-memory.csv
+    --result-file=$EXP_DIR/single-time-vs-throughput-latency-index-memory.csv
 done
 
 # convert index-memory from B to MiB
 $BENCHMARK_SCRIPT update-column-by-division \
-    --file=$BASE_DIR/results/$WORKLOAD/$SLOG/time-latency-index-memory.csv \
+    --file=$EXP_DIR/single-time-vs-throughput-latency-index-memory.csv \
     --column=index_memory \
     --divisor=1048576 \
     --round-decimals=4
 
 # get resource usage from engine
-scp -q $EXP_HOST:/tmp/resource_usage_engine.csv $BASE_DIR/results/$WORKLOAD/$SLOG/time-cpu-memory.csv
+scp -q $EXP_HOST:/tmp/resource_usage_engine.csv $EXP_DIR/single-time-vs-cpu-memory.csv
 
 # discard
 $BENCHMARK_SCRIPT discard-csv-entries-after \
-    --file=$BASE_DIR/results/$WORKLOAD/$SLOG/time-cpu-memory.csv \
+    --file=$EXP_DIR/single-time-vs-cpu-memory.csv \
     --ts=$EXP_ENGINE_END_TS
 
 # add slog info
 $BENCHMARK_SCRIPT add-slog-info \
-    --file=$BASE_DIR/results/$WORKLOAD/$SLOG/time-cpu-memory.csv \
+    --file=$EXP_DIR/single-time-vs-cpu-memory.csv \
     --slog=$SLOG
 
 # make time in csv data relative and finally store data in main folder
 $BENCHMARK_SCRIPT make-time-relative \
-    --directory=$BASE_DIR/results/$WORKLOAD/$SLOG \
+    --file=$EXP_DIR/single-time-vs-throughput-latency-index-memory.csv \
     --reference-ts=$EXP_ENGINE_START_TS \
-    --result-directory=$BASE_DIR/results/$WORKLOAD
+    --result-file=$BASE_DIR/results/$WORKLOAD/single-time-vs-throughput-latency-index-memory.csv
+$BENCHMARK_SCRIPT make-time-relative \
+    --file=$EXP_DIR/single-time-vs-cpu-memory.csv \
+    --reference-ts=$EXP_ENGINE_START_TS \
+    --result-file=$BASE_DIR/results/$WORKLOAD/single-time-vs-cpu-memory.csv
+
+# get latencies from ALL engines
+EXP_DIR_ALL=$EXP_DIR/stats/all
+mkdir -p $EXP_DIR_ALL
+for HOST in $ALL_ENGINE_HOSTS; do
+    echo "Get latency files from $HOST"
+    scp -r -q $HOST:/mnt/inmem/slog/stats/latencies*.csv $EXP_DIR_ALL
+done
+
+# discard
+$BENCHMARK_SCRIPT discard-csv-files-after \
+    --directory=$EXP_DIR_ALL \
+    --ts=$EXP_ENGINE_END_TS
+
+# combine
+$BENCHMARK_SCRIPT combine-csv-files \
+    --directory=$EXP_DIR_ALL \
+    --slog=$SLOG \
+    --interval=$ENGINE_STAT_THREAD_INTERVAL \
+    --result-file=$EXP_DIR/time-vs-throughput-latency.csv
+
+# make time in csv data relative and finally store data in main collection folder
+$BENCHMARK_SCRIPT make-time-relative \
+    --file=$EXP_DIR/time-vs-throughput-latency.csv \
+    --reference-ts=$EXP_ENGINE_START_TS \
+    --result-file=$BASE_DIR/results/$WORKLOAD/time-vs-throughput-latency.csv

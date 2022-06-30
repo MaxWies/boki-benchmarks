@@ -7,18 +7,21 @@ AWS_ACCESS_KEY_ID=DUMMYIDEXAMPLE
 AWS_SECRET_ACCESS_KEY=DUMMYEXAMPLEKEY
 
 SLOG=$1
-SLOG_CONFIG=$2
-SLOG_SPEC_FILE=$3
-EXP_SPEC_FILE=$4
+CONTROLLER_SPEC_FILE=$2
+EXP_SPEC_FILE=$3
 
 HELPER_SCRIPT=$ROOT_DIR/scripts/exp_helper
 CONFIG_MAKER_SCRIPT=$ROOT_DIR/scripts/config_maker
 
-SLOG_SPEC_FILE_NAME=$(basename $SLOG_SPEC_FILE .json)
+CONTROLLER_SPEC_FILE_NAME=$(basename $CONTROLLER_SPEC_FILE .json)
 EXP_SPEC_FILE_NAME=$(basename $EXP_SPEC_FILE .json)
-EXP_DIR=$BASE_DIR/results/$SLOG_SPEC_FILE_NAME/$EXP_SPEC_FILE_NAME
+EXP_DIR=$BASE_DIR/results/$SLOG/$CONTROLLER_SPEC_FILE_NAME/$EXP_SPEC_FILE_NAME
 
-$CONFIG_MAKER_SCRIPT generate-runtime-config --base-dir=$BASE_DIR --slog=$SLOG --slog-spec-file=$SLOG_SPEC_FILE --exp-spec-file=$EXP_SPEC_FILE
+$CONFIG_MAKER_SCRIPT generate-runtime-config \
+    --base-dir=$BASE_DIR \
+    --slog=$SLOG \
+    --controller-spec-file=$CONTROLLER_SPEC_FILE \
+    --exp-spec-file=$EXP_SPEC_FILE
 
 MANAGER_HOST=`$HELPER_SCRIPT get-docker-manager-host --base-dir=$BASE_DIR`
 CLIENT_HOST=`$HELPER_SCRIPT get-client-host --base-dir=$BASE_DIR`
@@ -49,33 +52,13 @@ for HOST in $ALL_ENGINE_HOSTS; do
     ssh -q $HOST -- sudo cp /tmp/nightcore_config.json /mnt/inmem/slog/func_config.json
 done
 
-if [[ $SLOG_CONFIG == boki-remote ]]; then
-    ALL_INDEX_ENGINE_HOSTS=`$HELPER_SCRIPT get-machine-with-label --base-dir=$BASE_DIR --machine-label=index_engine_node`
-    for HOST in $ALL_INDEX_ENGINE_HOSTS; do
-        scp -q $BASE_DIR/run_launcher $HOST:/tmp/run_launcher
-        ssh -q $HOST -- sudo rm -rf /mnt/inmem/slog
-        ssh -q $HOST -- sudo mkdir -p /mnt/inmem/slog
-        ssh -q $HOST -- sudo mkdir -p /mnt/inmem/slog/output /mnt/inmem/slog/ipc /mnt/inmem/slog/stats
-        ssh -q $HOST -- sudo rm /tmp/nightcore_config.json
-        ssh -q $HOST -- sudo cp /tmp/run_launcher /mnt/inmem/slog/run_launcher
-        ssh -q $HOST -- sudo cp /tmp/nightcore_config_empty.json /mnt/inmem/slog/func_config_empty.json
-    done
-fi
-
 ALL_STORAGE_HOSTS=`$HELPER_SCRIPT get-machine-with-label --base-dir=$BASE_DIR --machine-label=storage_node`
 for HOST in $ALL_STORAGE_HOSTS; do
     ssh -q $HOST -- sudo rm -rf   /mnt/storage/logdata
     ssh -q $HOST -- sudo mkdir -p /mnt/storage/logdata
 done
 
-ALL_DYNAMODB_HOSTS=`$HELPER_SCRIPT get-machine-with-label --base-dir=$BASE_DIR --machine-label=dynamodb_node`
-for HOST in $ALL_DYNAMODB_HOSTS; do
-    echo $HOST
-    ssh -q $HOST -- sudo rm -rf   /mnt/dynamodb
-    ssh -q $HOST -- sudo mkdir -p /mnt/dynamodb
-done
-
-DYNAMODB_ENDPOINT=`$HELPER_SCRIPT get-machine-ip-with-label --base-dir=$BASE_DIR --machine-label=dynamodb_node`:8000
+DYNAMODB_ENDPOINT=http://`$HELPER_SCRIPT get-machine-ip-with-label --base-dir=$BASE_DIR --machine-label=dynamodb_node`:8000
 echo $DYNAMODB_ENDPOINT
 #DYNAMODB_ENDPOINT=dynamodb:8000
 TABLE_PREFIX=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 8 | head -n 1)
@@ -109,4 +92,4 @@ done
 
 sleep 10
 
-$BASE_DIR/run_client.sh $SLOG $SLOG_CONFIG $EXP_SPEC_FILE $EXP_DIR
+$BASE_DIR/run_client.sh $SLOG $EXP_SPEC_FILE $EXP_DIR

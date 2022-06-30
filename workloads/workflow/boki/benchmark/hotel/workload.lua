@@ -256,6 +256,6 @@ request = function()
     end
 end
 
-function init(rand_seed)
-    math.randomseed(rand_seed)
+function init()
+    math.randomseed(2333)
 end

@@ -8,10 +8,11 @@ EXP_DIR=$3
 
 HELPER_SCRIPT=$ROOT_DIR/scripts/exp_helper
 BENCHMARK_SCRIPT=$BASE_DIR/summarize_benchmarks
+BENCHMARK_HELPER_SCRIPT=$ROOT_DIR/scripts/benchmark_helper
 
 export DURATION=30
-export CONCURRENCY_CLIENT=10
-export NUM_USERS=1000
+export CONCURRENCY_CLIENT=192
+export NUM_USERS=10000
 export ENGINE_STAT_THREAD_INTERVAL=10
 
 for s in $(echo $values | jq -r ".exp_variables | to_entries | map(\"\(.key)=\(.value|tostring)\") | .[]" $EXP_SPEC_FILE); do
@@ -46,6 +47,11 @@ ssh -q $CLIENT_HOST -- /tmp/benchmark \
     --benchmark_type=warmup \
     >$EXP_DIR/results.log
 
+# activiate statistic thread on engines
+$ROOT_DIR/../zookeeper/bin/zkCli.sh -server $MANAGER_IP:2181 \
+    create /faas/stat/start $ENGINE_STAT_THREAD_INTERVAL \
+    >/dev/null
+
 # init
 ssh -q $CLIENT_HOST -- docker run \
     --pull always \
@@ -67,11 +73,6 @@ ssh -q $CLIENT_HOST -- /tmp/create_users \
     --num_users=$NUM_USERS \
     --concurrency=16
 
-# activiate statistic thread on engines
-$ROOT_DIR/../zookeeper/bin/zkCli.sh -server $MANAGER_IP:2181 \
-    create /faas/stat/start $ENGINE_STAT_THREAD_INTERVAL \
-    >/dev/null
-
 # run benchmark
 ssh -q $CLIENT_HOST -- docker run \
     -v /tmp:/tmp \
@@ -87,27 +88,34 @@ ssh -q $CLIENT_HOST -- /tmp/benchmark \
     --csv_result_file=/tmp/client-results.csv \
     >$EXP_DIR/results.log
 
-sleep 15
+sleep $((ENGINE_STAT_THREAD_INTERVAL+10))
 
-# get operation stats
-mkdir -p $EXP_DIR/stats/op
-for HOST in $ALL_ENGINE_HOSTS; do
-    scp -r -q $HOST:/mnt/inmem/slog/stats/op-stat-* $EXP_DIR/stats/op
-done
-if [[ $SLOG_CONFIG == boki-remote ]]; then
-    ALL_INDEX_ENGINE_HOSTS=`$HELPER_SCRIPT get-machine-with-label --base-dir=$BASE_DIR --machine-label=index_engine_node`
-    for HOST in $ALL_INDEX_ENGINE_HOSTS; do
-        scp -r -q $HOST:/mnt/inmem/slog/stats/op-stat-* $EXP_DIR/stats/op
-    done
-fi
+RESULT_DIR=$BASE_DIR/results/$SLOG
 
 # get client stats
-scp -q $CLIENT_HOST:/tmp/client-results.csv $BASE_DIR/results/$SLOG/client-results.csv 
+scp -q $CLIENT_HOST:/tmp/client-results.csv $RESULT_DIR/client-results.csv 
 
-# merge operation stats of all engines and of all timestamps
-$BENCHMARK_SCRIPT merge-csv \
+# engines and index engine for boki remote
+ENGINE_AND_INDEX_ENGINE_HOSTS=`$HELPER_SCRIPT get-machine-with-labels --base-dir=$BASE_DIR --machine-labels=engine_node,index_engine_node`
+
+# operations stat
+i=0
+mkdir -p $EXP_DIR/stats/op
+for HOST in $ENGINE_AND_INDEX_ENGINE_HOSTS; do
+    scp -r -q $HOST:/mnt/inmem/slog/stats/op-stat-*.csv $EXP_DIR/stats/op
+    # single engine result
+    SINGLE_HOST_RESULT_DIR=$EXP_DIR/stats/op/host$i
+    mkdir -p $SINGLE_HOST_RESULT_DIR
+    scp -r -q $HOST:/mnt/inmem/slog/stats/op-stat-*.csv $SINGLE_HOST_RESULT_DIR
+    $BENCHMARK_HELPER_SCRIPT create-operation-statistics \
+        --directory=$SINGLE_HOST_RESULT_DIR \
+        --slog=$SLOG \
+        --result-directory=$SINGLE_HOST_RESULT_DIR
+    ((i=i+1))
+done
+# sum up operations across nodes
+$BENCHMARK_HELPER_SCRIPT create-operation-statistics \
     --directory=$EXP_DIR/stats/op \
-    --filter="" \
     --slog=$SLOG \
-    --result-file=$BASE_DIR/results/$SLOG/op-stats.csv
+    --result-directory=$RESULT_DIR
 

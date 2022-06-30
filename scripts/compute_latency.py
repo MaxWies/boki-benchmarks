@@ -36,24 +36,23 @@ if __name__ == '__main__':
     parser.add_argument('--async-result-file', type=str, default=None)
     parser.add_argument('--warmup-ratio', type=float, default=1.0/6)
     parser.add_argument('--outlier-factor', type=int, default=30)
-    parser.add_argument('--csv-output-file', type=str)
+    parser.add_argument('--csv-output-file', type=str, default='')
+    parser.add_argument('--slog', type=str, default='indilog')
     args = parser.parse_args()
 
     p50, p99 = compute_latency(args.async_result_file,
                                warmup_ratio=args.warmup_ratio,
                                outlier_ratio=args.outlier_factor)
+    print('p50 latency: %.2f ms' % p50)
+    print('p99 latency: %.2f ms' % p99)
     
-    if args.csv_output_file == '':
-        print('p50 latency: %.2f ms' % p50)
-        print('p99 latency: %.2f ms' % p99)
-    else:
-        with open(result_file, 'a', encoding='UTF8', newline='') as f:
+    if args.csv_output_file != '':
+        with open(args.csv_output_file, 'a', encoding='UTF8', newline='') as f:
             writer = csv.writer(f)
             if write_header:
-                writer.writerow(['slog','slog_config','latency_50', 'latency_99'])
+                writer.writerow(['slog','latency_50', 'latency_99'])
             data = [
-                slog,
-                slog_config,
+                args.slog,
                 "%.2f" % p50,
                 "%.2f" % p99,
             ]
