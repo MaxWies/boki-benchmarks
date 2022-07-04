@@ -1,0 +1,17 @@
+{
+    "machines": {
+        "slogexp-client": {"role": "client", "ip": "1.2.3.4"},
+        "slogexp-gateway": { "role": "manager", "ip": "1.2.3.4"},
+        "slogexp-sequencer-1": { "role": "worker", "ip": "1.2.3.4", "labels": ["sequencer_node=true"] },
+        "slogexp-sequencer-2": { "role": "worker", "ip": "1.2.3.4", "labels": ["sequencer_node=true"] },
+        "slogexp-sequencer-3": { "role": "worker", "ip": "1.2.3.4", "labels": ["sequencer_node=true"] },
+        "slogexp-engine-1": { "role": "worker", "ip": "1.2.3.4", "labels": [ "engine_node=true" ] },
+        "slogexp-engine-2": { "role": "worker", "ip": "1.2.3.4", "labels": [ "engine_node=true" ] },
+        "slogexp-engine-3": { "role": "worker", "ip": "1.2.3.4", "labels": [ "engine_node=true" ] },
+        "slogexp-hybrid-engine-1": { "role": "worker", "ip": "1.2.3.4", "labels": ["engine_node=true", "hybrid_engine_node=true"] },
+        "slogexp-storage-1": { "role": "worker", "ip": "1.2.3.4", "mount_instance_storage": "vdb", "labels": ["storage_node=true"]},
+        "slogexp-storage-2": { "role": "worker", "ip": "1.2.3.4", "mount_instance_storage": "vdb", "labels": ["storage_node=true"]},
+        "slogexp-storage-3": { "role": "worker", "ip": "1.2.3.4", "mount_instance_storage": "vdb", "labels": ["storage_node=true"]},
+        "slogexp-storage-4": { "role": "worker", "ip": "1.2.3.4", "mount_instance_storage": "vdb", "labels": ["storage_node=true"]}
+    }
+}
