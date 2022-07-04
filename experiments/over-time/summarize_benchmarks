@@ -13,16 +13,6 @@ import math
 import pandas as pd
 import csv
 
-def workload_info(workload):
-    if workload.lower() == 'empty-tag':
-        return 'only the empty tag'
-    elif workload.lower() == 'one-tag-only':
-        return 'always the same tag'
-    elif workload.lower() == 'new-tags-always':
-        return 'always a new tag'
-    elif workload.lower() == 'mix':
-        return 'mixed workload'
-
 def discard_csv_files(directory, ts, before = True):
     csv_file_names = [file for file in os.listdir(directory) if file.endswith('.csv')]
     csv_files_to_discard = []
@@ -205,21 +195,14 @@ def make_time_relative(csv_file, reference_ts, csv_result_file):
     write_header = not os.path.isfile(csv_result_file)
     df.to_csv(csv_result_file, mode='a', sep=',', index=False, header=write_header)
 
-# def make_time_relative_all(directory, reference_ts, result_directory):
-#     csv_files = [file for file in os.listdir(directory) if file.endswith('.csv')]
-#     for csv_file in csv_files:
-#         make_time_relative(os.path.join(directory, csv_file), reference_ts, result_directory)
-
 def generate_plot_time_vs_throughput(csv_file, result_file):
     df = pd.read_csv(csv_file)
 
     df_boki = df.loc[df['slog'] == 'boki-local']
-    df_boki_hybrid = df.loc[df['slog'] == 'boki-hybrid']
     df_indilog = df.loc[df['slog'] == 'indilog-local']
 
-    plt.plot(df_boki['ts_relative'], df_boki['throughput'], '-', color='royalblue', label='Boki-Complete Throughput')
-    plt.plot(df_boki_hybrid['ts_relative'], df_boki_hybrid['throughput'], '-', color='slategrey', label='Boki-Hybrid Throughput')
-    plt.plot(df_indilog['ts_relative'], df_indilog['throughput'], '-', color='darkgreen', label='Indilog Throughput')
+    plt.plot(df_boki['ts_relative'], df_boki['throughput'], '-', color='royalblue', marker='x', label='Boki Throughput', linewidth='2')
+    plt.plot(df_indilog['ts_relative'], df_indilog['throughput'], '-', color='darkgreen', marker='o', label='Indilog Throughput', linewidth='2')
 
     plt.xlabel('Time (s)', fontsize=12)
     plt.ylabel('Throughput (kOp/s)', fontsize=12)
@@ -228,168 +211,49 @@ def generate_plot_time_vs_throughput(csv_file, result_file):
 
     plt.ylim(bottom=0, top=throughput_max+50)
 
-    plt.legend()
+    plt.legend(loc='lower right', prop={'size': 12})
 
     plt.savefig(result_file, bbox_inches='tight')
     plt.close
 
-def generate_plot_time_vs_latency_append(csv_file, workload, result_file):
+def generate_plot_time_vs_latency_append(csv_file, result_file):
     df = pd.read_csv(csv_file)
 
     df_boki = df.loc[df['slog'] == 'boki-local']
-    df_boki_remote = df.loc[df['slog'] == 'boki-remote']
-    df_boki_hybrid = df.loc[df['slog'] == 'boki-hybrid']
     df_indilog = df.loc[df['slog'] == 'indilog-local']
-    df_indilog_remote = df.loc[df['slog'] == 'indilog-remote']
 
-    fig, ax = plt.subplots()
+    plt.plot(df_boki['ts_relative'], df_boki['latency_append_50'], '--', color='royalblue', marker='x', label='Boki Append 0,5', linewidth='2')
+    plt.plot(df_boki['ts_relative'], df_boki['latency_append_99'], '-', color='royalblue', marker='x', label='Boki Append 0,99', linewidth='2')
 
-    ax.plot(df_boki['ts_relative'], df_boki['latency_append_50'], '--', color='royalblue', label='Boki-Local Append 0,5')
-    ax.plot(df_boki['ts_relative'], df_boki['latency_append_99'], '-', color='royalblue', label='Boki-Local Append 0,99')
-    
-    ax.plot(df_boki_hybrid['ts_relative'], df_boki_hybrid['latency_append_50'], '--', color='darkorange', label='Boki-Hybrid Append 0,5')
-    ax.plot(df_boki_hybrid['ts_relative'], df_boki_hybrid['latency_append_99'], '-', color='darkorange', label='Boki-Hybrid Append 0,99')
+    plt.plot(df_indilog['ts_relative'], df_indilog['latency_append_50'], '--', color='darkgreen', marker='o', label='Indilog Append 0,5', linewidth='2')
+    plt.plot(df_indilog['ts_relative'], df_indilog['latency_append_99'], '-', color='darkgreen', marker='o', label='Indilog Append 0,99', linewidth='2')
 
-    ax.plot(df_indilog['ts_relative'], df_indilog['latency_append_50'], '--', color='darkgreen', label='Indilog Append 0,5')
-    ax.plot(df_indilog['ts_relative'], df_indilog['latency_append_99'], '-', color='darkgreen', label='Indilog Append 0,99')
+    plt.xlabel('Time (s)', fontsize=12)
+    plt.ylabel('Latency (\u03BCs)', fontsize=12)
 
-    ax.set_ylim(bottom=0)
-    ax.set_xlabel('Time (s)')
-    ax.set_ylabel('Latency (\u03BCs)')
-    ax.set_title('Append latency at engine using {}'.format(workload_info(workload)))
+    plt.legend(prop={'size': 12})
 
-    ax.legend()
-
-    plt.savefig(result_file)
+    plt.savefig(result_file, bbox_inches='tight')
     plt.close
 
-def generate_plot_time_vs_latency_read(csv_file, workload, result_file):
+def generate_plot_time_vs_latency_read(csv_file, result_file):
     df = pd.read_csv(csv_file)
 
     df_boki = df.loc[df['slog'] == 'boki-local']
-    df_boki_remote = df.loc[df['slog'] == 'boki-remote']
-    df_boki_hybrid = df.loc[df['slog'] == 'boki-hybrid']
     df_indilog = df.loc[df['slog'] == 'indilog-local']
-    df_indilog_remote = df.loc[df['slog'] == 'indilog-remote']
 
-    fig, ax = plt.subplots()
+    plt.plot(df_boki['ts_relative'], df_boki['latency_read_50'], '--', color='royalblue', marker='x', label='Boki Read 0,5', linewidth='2')
+    plt.plot(df_boki['ts_relative'], df_boki['latency_read_99'], '-', color='royalblue', marker='x', label='Boki Read 0,99', linewidth='2')
 
-    ax.plot(df_boki['ts_relative'], df_boki['latency_read_50'], '--', color='royalblue', label='Boki-Local Read 0,5')
-    ax.plot(df_boki['ts_relative'], df_boki['latency_read_99'], '-', color='royalblue', label='Boki-Local Read 0,99')
+    plt.plot(df_indilog['ts_relative'], df_indilog['latency_read_50'], '--', color='darkgreen', marker='o', label='Indilog Read 0,5', linewidth='2')
+    plt.plot(df_indilog['ts_relative'], df_indilog['latency_read_99'], '-', color='darkgreen', marker='o', label='Indilog Read 0,99', linewidth='2')
 
-    ax.plot(df_boki_hybrid['ts_relative'], df_boki_hybrid['latency_read_50'], '--', color='darkorange', label='Boki-Hybrid Read 0,5')
-    ax.plot(df_boki_hybrid['ts_relative'], df_boki_hybrid['latency_read_99'], '-', color='darkorange', label='Boki-Hybrid Read 0,99')
+    plt.xlabel('Time (s)', fontsize=12)
+    plt.ylabel('Latency (\u03BCs)', fontsize=12)
 
-    ax.plot(df_indilog['ts_relative'], df_indilog['latency_read_50'], '--', color='darkgreen', label='Indilog Read 0,5')
-    ax.plot(df_indilog['ts_relative'], df_indilog['latency_read_99'], '-', color='darkgreen', label='Indilog Read 0,99')
+    plt.legend(prop={'size': 12})
 
-    ax.set_ylim(bottom=0)
-    ax.set_xlabel('Time (s)')
-    ax.set_ylabel('Latency (\u03BCs)')
-    ax.set_title('Read latency at engine using {}'.format(workload_info(workload)))
-
-    ax.legend()
-
-    plt.savefig(result_file)
-    plt.close
-
-
-def generate_plot_time_vs_latency_throughput(directory, workload, result_file):
-    latency_index_memory_csv_file = os.path.join(directory, 'time-latency-index-memory.csv')
-    cpu_memory_csv_file = os.path.join(directory, 'time-cpu-memory.csv')
-
-    df = pd.read_csv(latency_index_memory_csv_file)
-    df_boki = df.loc[df['slog'] == 'boki-local']
-    df_boki_remote = df.loc[df['slog'] == 'boki-remote']
-    df_indilog = df.loc[df['slog'] == 'indilog-local']
-    df_indilog_remote = df.loc[df['slog'] == 'indilog-remote']
-
-    fig, ax = plt.subplots()
-    fig.subplots_adjust()
-
-    twin1_tp = ax.twinx()
-
-    p1, = ax.plot(df_boki['ts_relative'], df_boki['latency_append_50'], '--', marker='x', color='blue', label='Boki Append 0,5')
-    p2, = ax.plot(df_boki['ts_relative'], df_boki['latency_read_50'], '--', marker='x', color='darkred', label='Boki Read 0,5')
-    p3, = ax.plot(df_boki['ts_relative'], df_boki['latency_read_99'], '--', color='darkred', label='Boki Read 0,99')
-    p4, = twin1_tp.plot(df_boki['ts_relative'], df_boki['throughput'], '--', color='darkgreen', label='Boki Throughput')
-    p5, = ax.plot(df_boki['ts_relative'], df_boki['latency_append_99'], '--', marker='', color='blue', label='Boki Append 0,99')
-
-    # p4, = ax.plot(df_boki_remote['ts_relative'], df_boki_remote['latency_append_50'], '--', marker='x', color='darkred', label='Boki Append 0,5')
-    # p5, = ax.plot(df_boki_remote['ts_relative'], df_boki_remote['latency_read_50'], '--', color='darkred', label='Boki Read 0,5')
-    # p6, = twin1_tp.plot(df_boki_remote['ts_relative'], df_boki_remote['throughput'], '--', color='darkgreen', label='Boki Throughput')
-
-    p7, = ax.plot(df_indilog['ts_relative'], df_indilog['latency_append_50'], '-', marker='x', color='blue', label='Indilog Append 0,5')
-    p8, = ax.plot(df_indilog['ts_relative'], df_indilog['latency_read_50'], '-', marker='x', color='darkred', label='Indilog Read 0,5')
-    p9, = ax.plot(df_indilog['ts_relative'], df_indilog['latency_read_99'], '-', color='darkred', label='Indilog Read 0,99')
-    p10, = twin1_tp.plot(df_indilog['ts_relative'], df_indilog['throughput'], '-', color='darkgreen', label='Indilog Throughput')
-    p11, = ax.plot(df_indilog['ts_relative'], df_indilog['latency_append_99'], '-', marker='', color='blue', label='Indilog Append 0,99')
-
-    # p10, = ax.plot(df_indilog_remote['ts_relative'], df_indilog_remote['latency_append_50'], '-', marker='x', color='darkred', label='Indilog Append 0,5')
-    # p11, = ax.plot(df_indilog_remote['ts_relative'], df_indilog_remote['latency_read_50'], '-', color='darkred', label='Indilog Read 0,5')
-    # p12, = twin1_tp.plot(df_indilog_remote['ts_relative'], df_indilog_remote['throughput'], '-', color='darkgreen', label='Indilog Throughput')
-
-    twin1_tp.set_ylim(0, 100)
-
-    ax.set_xlabel('Time (s)')
-    ax.set_ylabel('Latency (\u03BCs)')
-    twin1_tp.set_ylabel('Throughput (kOp/s)')
-
-    ax.yaxis.label.set_color(p1.get_color())
-    twin1_tp.yaxis.label.set_color(p3.get_color())
-
-    ax.legend(loc='upper center', bbox_to_anchor=(0.5, 1.12),
-          ncol=6, fancybox=True, shadow=True, handles=[p1, p2, p3, p4, p5, p7, p8, p9, p10, p11],
-          prop={'size':5})
-    plt.savefig(result_file)
-    plt.close
-
-def generate_plot_time_vs_cpu_memory(directory, workload, result_file):
-    latency_index_memory_csv_file = os.path.join(directory, 'time-latency-index-memory.csv')
-    cpu_memory_csv_file = os.path.join(directory, 'time-cpu-memory.csv')
-
-    df_lim = pd.read_csv(latency_index_memory_csv_file)
-    df_lim_boki = df_lim.loc[df_lim['slog'] == 'boki-local']
-    df_lim_boki_remote = df_lim.loc[df_lim['slog'] == 'boki-remote']
-    df_lim_boki_hybrid = df_lim.loc[df_lim['slog'] == 'boki-hybrid']
-    df_lim_indilog = df_lim.loc[df_lim['slog'] == 'indilog-local']
-    df_lim_indilog_remote = df_lim.loc[df_lim['slog'] == 'indilog-remote']
-
-    df_cm = pd.read_csv(cpu_memory_csv_file)
-    df_cm_boki = df_cm.loc[df_cm['slog'] == 'boki-local']
-    df_cm_boki_remote = df_cm.loc[df_cm['slog'] == 'boki-remote']
-    df_cm_boki_hybrid = df_cm.loc[df_cm['slog'] == 'boki-hybrid']
-    df_cm_indilog = df_cm.loc[df_cm['slog'] == 'indilog-local']
-    df_cm_indilog_remote = df_cm.loc[df_cm['slog'] == 'indilog-remote']
-
-    fig, ax1 = plt.subplots()
-    fig.subplots_adjust()
-
-    ax2 = ax1.twinx()
-
-    p1, = ax1.plot(df_cm_boki['ts_relative'], df_cm_boki['cpu_avg'], '-', color='royalblue', label='Boki CPU average')
-    p2, = ax2.plot(df_lim_boki['ts_relative'], df_lim_boki['index_memory'], '--', color='royalblue', label='Boki Index Memory')
-
-    p5, = ax1.plot(df_cm_indilog['ts_relative'], df_cm_indilog['cpu_avg'], '-', color='darkgreen', label='Indilog CPU average')
-    p6, = ax2.plot(df_lim_indilog['ts_relative'], df_lim_indilog['index_memory'], '-', color='darkgreen', label='Indilog Index Memory')
-
-    ax1.set_xlabel('Time (s)')
-    ax1.set_ylabel('CPU (%)')
-    ax2.set_ylabel('Memory (MiB)')
-
-    ax1.set_ylim(bottom=0)
-    ax2.set_ylim(bottom=0)
-
-    ax1.yaxis.label.set_color(p1.get_color())
-    ax2.yaxis.label.set_color(p2.get_color())
-
-    ax1.set_title('CPU and index memory at engine using {}'.format(workload_info(workload)))
-
-    # ax1.legend(loc='upper center', bbox_to_anchor=(0.5, 1.12),
-    #       ncol=6, fancybox=True, shadow=True, handles=[p1, p2, p3, p4],
-    #       prop={'size':6})
-    #ax1.legend(handles=[p1, p2, p3, p4, p5, p6])
-    plt.savefig(result_file)
+    plt.savefig(result_file, bbox_inches='tight')
     plt.close
 
 def generate_plot_time_vs_memory(index_memory_csv_file, cpu_memory_csv_file, result_file):
@@ -397,28 +261,23 @@ def generate_plot_time_vs_memory(index_memory_csv_file, cpu_memory_csv_file, res
     df_ram_memory = pd.read_csv(cpu_memory_csv_file)
 
     df_index_memory_boki = df_index_memory.loc[df_index_memory['slog'] == 'boki-local']
-    df_index_memory_boki_hybrid = df_index_memory.loc[df_index_memory['slog'] == 'boki-hybrid']
     df_index_memory_indilog = df_index_memory.loc[df_index_memory['slog'] == 'indilog-local']
 
     df_ram_memory_boki = df_ram_memory.loc[df_ram_memory['slog'] == 'boki-local']
-    df_ram_memory_boki_hybrid = df_ram_memory.loc[df_ram_memory['slog'] == 'boki-hybrid']
     df_ram_memory_indilog = df_ram_memory.loc[df_ram_memory['slog'] == 'indilog-local']
 
-    plt.plot(df_index_memory_boki['ts_relative'], df_index_memory_boki['index_memory'], '--', color='royalblue', label='Boki Complete Index Memory')
-    plt.plot(df_ram_memory_boki['ts_relative'], df_ram_memory_boki['mem_tot'], '-', color='royalblue', label='Boki Complete RAM')
+    plt.plot(df_index_memory_boki['ts_relative'], df_index_memory_boki['index_memory'], linestyle='dashed', color='royalblue', label='Boki Index Memory', linewidth='2')
+    plt.plot(df_ram_memory_boki['ts_relative'], df_ram_memory_boki['mem_tot'], linestyle='solid', color='royalblue', label='Boki RAM of VM', linewidth='2')
 
-    plt.plot(df_index_memory_boki_hybrid['ts_relative'], df_index_memory_boki_hybrid['index_memory'], '--', color='slategrey', label='Boki Hybrid Index Memory')
-    plt.plot(df_ram_memory_boki_hybrid['ts_relative'], df_ram_memory_boki_hybrid['mem_tot'], '-', color='slategrey', label='Boki Hybrid RAM')
-
-    plt.plot(df_index_memory_indilog['ts_relative'], df_index_memory_indilog['index_memory'], '--', color='darkgreen', label='Indilog Index Memory')
-    plt.plot(df_ram_memory_indilog['ts_relative'], df_ram_memory_indilog['mem_tot'], '-', color='darkgreen', label='Indilog')
+    plt.plot(df_index_memory_indilog['ts_relative'], df_index_memory_indilog['index_memory'], linestyle='dotted', color='darkgreen', label='Indilog Index Memory', linewidth='3')
+    plt.plot(df_ram_memory_indilog['ts_relative'], df_ram_memory_indilog['mem_tot'], linestyle='dashdot', color='darkgreen', label='Indilog RAM of VM', linewidth='2')
 
     plt.xlabel('Time (s)', fontsize=12)
     plt.ylabel('Memory (MB)', fontsize=12)
 
     plt.ylim(bottom=0)
 
-    plt.legend()
+    plt.legend(prop={'size': 12})
 
     plt.savefig(result_file, bbox_inches='tight')
     plt.close
@@ -438,7 +297,6 @@ if __name__ == '__main__':
     parser.add_argument('--column', type=str)
     parser.add_argument('--divisor', type=int)
     parser.add_argument('--round-decimals', type=int)
-    parser.add_argument('--workload', type=str)
     parser.add_argument('--result-file', type=str)
     parser.add_argument('--result-directory', type=str)
     args = parser.parse_args()
@@ -464,18 +322,14 @@ if __name__ == '__main__':
         elif args.cmd == 'make-time-relative':
             make_time_relative(args.file, args.reference_ts, args.result_file)
         elif args.cmd == 'generate-plot-time-vs-latency-append':
-            generate_plot_time_vs_latency_append(args.file, args.workload, args.result_file)
+            generate_plot_time_vs_latency_append(args.file, args.result_file)
         elif args.cmd == 'generate-plot-time-vs-latency-read':
-            generate_plot_time_vs_latency_read(args.file, args.workload, args.result_file)
+            generate_plot_time_vs_latency_read(args.file, args.result_file)
         elif args.cmd == 'generate-plot-time-vs-throughput':
             generate_plot_time_vs_throughput(args.file, args.result_file)
         elif args.cmd == 'generate-plot-time-vs-memory':
             files = args.files.split(',')
             generate_plot_time_vs_memory(files[0], files[1], args.result_file)
-        elif args.cmd == 'generate-plot-time-vs-latency-throughput':
-            generate_plot_time_vs_latency_throughput(args.directory, args.workload, args.result_file)
-        elif args.cmd == 'generate-plot-time-vs-cpu-memory':
-            generate_plot_time_vs_cpu_memory(args.directory, args.workload, args.result_file)
         else:
             raise Exception('Unknown command: ' + args.cmd)
     except Exception as e:

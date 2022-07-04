@@ -30,7 +30,7 @@ services:
       - --io_uring_entries=2048
       - --io_uring_fd_slots=4096
       - --enable_shared_log
-      - --slog_engine_enable_cache
+      # - --slog_engine_enable_cache
       - --slog_engine_cache_cap_mb=1024
       - --slog_engine_propagate_auxdata
       - --engine_node_type=engine
@@ -56,12 +56,12 @@ services:
       - --listen_iface=eth0
       - --root_path_for_ipc=/tmp/slog/ipc
       - --func_config_file=/tmp/slog/func_config_empty.json
-      - --num_io_workers=4
+      - --num_io_workers=2
       - --instant_rps_p_norm=0.8
       - --io_uring_entries=2048
       - --io_uring_fd_slots=4096
       - --enable_shared_log
-      - --slog_engine_enable_cache
+      # - --slog_engine_enable_cache
       - --slog_engine_cache_cap_mb=1024
       - --slog_engine_propagate_auxdata
       - --engine_node_type=index_engine

@@ -11,8 +11,7 @@ BENCHMARK_SCRIPT=$BASE_DIR/summarize_benchmarks
 
 export BENCHMARK_TYPE=throughput-vs-latency
 export RECORD_LENGTH=1024
-export ENGINE_STAT_THREAD_INTERVAL=20
-export DURATION=900
+export ENGINE_STAT_THREAD_INTERVAL=30
 export APPEND_TIMES=1
 export READ_TIMES=1
 
@@ -43,11 +42,6 @@ elif [[ $SLOG == boki-hybrid ]]; then
 else
     exit 1
 fi
-
-for HOST in $ALL_ENGINE_HOSTS; do
-    ssh -q $HOST -- sudo rm -rf /mnt/inmem/slog/output/benchmark/$BENCHMARK_TYPE
-    ssh -q $HOST -- sudo mkdir -p /mnt/inmem/slog/output/benchmark/$BENCHMARK_TYPE
-done
 
 ssh -q $MANAGER_HOST -- cat /proc/cmdline >>$EXP_DIR/kernel_cmdline
 ssh -q $MANAGER_HOST -- uname -a >>$EXP_DIR/kernel_version
@@ -156,6 +150,9 @@ $BENCHMARK_SCRIPT make-time-relative \
     --file=$EXP_DIR/single-time-vs-cpu-memory.csv \
     --reference-ts=$EXP_ENGINE_START_TS \
     --result-file=$BASE_DIR/results/$WORKLOAD/single-time-vs-cpu-memory.csv
+
+# free some storage
+rm -rf $EXP_DIR_SINGLE
 
 # get latencies from ALL engines
 EXP_DIR_ALL=$EXP_DIR/stats/all
