@@ -18,28 +18,13 @@ def load_json_file(file):
 def create_name_with_id(func_name, func_id):
     return '{}-{}'.format(func_name, str(func_id))
 
-# def create_service_name(func_dic, func_id):
-#     if func_dic["instances"] <= 1:
-#         return func_dic["service_name"]
-#     else :
-#         return '{}-{}'.format(func_dic["service_name"], str(func_id))
-
-# def create_function_name(func_dic, func_id):
-#     if func_dic["instances"] <= 1:
-#         return func_dic["function_name"]
-#     else :
-#         return '{}-{}'.format(func_dic["function_name"], str(func_id))
-
 def create_service_from_function_spec(func_dic, func_id):
     service_name = create_service_name(func_dic, func_id)
     service_desc = copy.deepcopy(func_dic["docker"])
     service_desc["entrypoint"].append(str(func_id))
     return service_name, service_desc
 
-def generate_docker_compose_with_applications():
-    pass
-
-def generate_docker_compose_application_less(base_dir, compose_file):
+def generate_docker_compose(base_dir, compose_file):
     function_definitions = load_json_file(os.path.join(base_dir, 'functions.json'))
     func_id = 0
     for _, function_value in function_definitions['functions'].items():
@@ -52,24 +37,11 @@ def generate_docker_compose_file(base_dir, slog, controller_spec, exp_spec):
     with open(os.path.join(base_dir, 'compose/docker-compose-main-{}.yml'.format(slog))) as f:
         compose_file = yaml.safe_load(f)
     compose_file['services']['slog-controller'] = controller_spec['slog_controller']
-    if 'applications' in exp_spec.keys():
-        generate_docker_compose_with_applications()
-    else:
-        generate_docker_compose_application_less(base_dir, compose_file)
-    # id_counter = 0
-    # for application in spec['applications']:
-    #     for _ in range(application['instances']):
-    #         for f in application["functions"]:
-    #             id_counter += 1
-    #             service_name, service_desc = create_service_from_function_spec(f ,id_counter)
-    #             compose_file['services'][service_name] = service_desc
+    generate_docker_compose(base_dir, compose_file)
     with open(os.path.join(base_dir, "docker-compose.yml"), 'w') as f:
         yaml.dump(compose_file, f, default_flow_style=False, sort_keys=False)
 
-def generate_nightcore_config_with_applications():
-    pass
-
-def generate_nightcore_config_application_less(base_dir, exp_spec):
+def generate_nightcore_config(base_dir, exp_spec):
     func_id = 0
     nc_config = []
     for key, value in exp_spec['functions'].items():
@@ -84,44 +56,7 @@ def generate_nightcore_config_application_less(base_dir, exp_spec):
     with open(os.path.join(base_dir, "nightcore_config.json"), 'w') as f:
         f.write(nc_config)
 
-def generate_nightcore_config(base_dir, exp_spec):
-    if 'applications' in exp_spec.keys():
-        generate_nightcore_config_with_applications()
-    else:
-        generate_nightcore_config_application_less(base_dir, exp_spec)
-    # nc_config = []
-    # id_counter = 0
-    # slogspace_counter = 0
-    # for application in exp_file['applications']:
-    #     if application['instances'] == 1:
-    #         for function in application['functions']:
-    #             nc_config.append({
-    #                 "funcName": create_function_name(f, id_counter),
-    #                 "funcId": id_counter,
-    #                 "defaultLogSpace": slogspace_counter,
-    #                 "minWorkers": f["min_workers"],
-    #                 "maxWorkers": f["max_workers"]
-    #             })
-    #     #unique
-    #     for i in range(application['instances']):
-    #         slogspace_counter += 1
-    #         for f in application["functions"]:
-    #             id_counter += 1
-    #             nc_config.append({
-    #                 "funcName": create_function_name(f, id_counter),
-    #                 "funcId": id_counter,
-    #                 "defaultLogSpace": slogspace_counter,
-    #                 "minWorkers": f["min_workers"],
-    #                 "maxWorkers": f["max_workers"]
-    #             })
-    # nc_config = json.dumps(nc_config, indent=2)
-    # with open(os.path.join(base_dir, "nightcore_config.json"), 'w') as f:
-    #     f.write(nc_config)
-
-def generate_swarm_with_applications():
-    pass
-
-def generate_swarm_application_less(base_dir, config, slog, controller_spec, exp_spec):
+def generate_swarm_config_functions(base_dir, config, slog, controller_spec, exp_spec):
     function_definitions = load_json_file(os.path.join(base_dir, 'functions.json'))
     if slog.lower().startswith('indilog'):
         replicas = controller_spec['slog_engine_replicas_init']
@@ -178,7 +113,6 @@ def generate_swarm_config_engines(config, slog, controller_spec):
 
 def generate_swarm_config(base_dir, slog, controller_spec, exp_spec):
     config = {}
-    #config["services"] = spec["services"]
     config["services"] = {
         "zookeeper": { "placement": "slogexp-gateway" },
         "zookeeper-setup": { "placement": "slogexp-gateway" },
@@ -200,35 +134,7 @@ def generate_swarm_config(base_dir, slog, controller_spec, exp_spec):
     else:
         raise Exception("Unknown shared log")
     generate_swarm_config_engines(config, slog, controller_spec)
-    if 'applications' in exp_spec.keys():
-        generate_swarm_with_applications()
-    else:
-        generate_swarm_application_less(base_dir, config, slog, controller_spec, exp_spec)
-
-    # for application in exp_file['applications']:
-    #     id_counter = 0
-    #     if application['instances'] == 1:
-    #         # unique
-    #         for function in application['functions']:
-    #             config["services"][function] = {
-    #                 "placement_label": f["placement_label"],
-    #                 "replicas": f["replicas"]
-    #             }
-    #     else:
-    #         for i in range(application['instances']):
-    #             id_counter += 1
-    #             for function in application['functions']:
-    #                 config["services"][create_name_with_id(function, id_counter)] = {
-    #                     "placement_label": f["placement_label"],
-    #                     "replicas": f["replicas"]
-    # for application in spec['applications']:
-    #     for i in range(application['instances']):
-    #         for f in application["functions"]:
-    #             id_counter += 1
-    #             config["services"][create_service_name(f, id_counter)] = {
-    #                 "placement_label": f["placement_label"],
-    #                 "replicas": f["replicas"]
-                # }
+    generate_swarm_config_functions(base_dir, config, slog, controller_spec, exp_spec)
     config = json.dumps(config, indent=2)
     with open(os.path.join(base_dir, "config.json"), 'w') as f:
         f.write(config)
