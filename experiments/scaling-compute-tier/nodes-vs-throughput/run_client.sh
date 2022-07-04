@@ -35,11 +35,6 @@ ENGINE_NODES=$(wc -w <<< $ALL_ENGINE_HOSTS)
 
 EXP_ENGINE_HOST=`$HELPER_SCRIPT get-single-machine-with-label --base-dir=$BASE_DIR --machine-label=engine_node`
 
-for HOST in $ALL_ENGINE_HOSTS; do
-    ssh -q $HOST -- sudo rm -rf /mnt/inmem/slog/output/benchmark/$BENCHMARK_TYPE
-    ssh -q $HOST -- sudo mkdir -p /mnt/inmem/slog/output/benchmark/$BENCHMARK_TYPE
-done
-
 ssh -q $MANAGER_HOST -- cat /proc/cmdline >>$EXP_DIR/kernel_cmdline
 ssh -q $MANAGER_HOST -- uname -a >>$EXP_DIR/kernel_version
 

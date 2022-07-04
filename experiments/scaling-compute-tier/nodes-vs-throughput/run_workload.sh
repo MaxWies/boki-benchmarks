@@ -50,54 +50,54 @@ else
 fi
 
 RESULT_DIR=$BASE_DIR/results/$WORKLOAD-$APPEND_TIMES-$READ_TIMES
-# rm -rf $RESULT_DIR
-# mkdir -p $RESULT_DIR
+rm -rf $RESULT_DIR
+mkdir -p $RESULT_DIR
 
-# $HELPER_SCRIPT prune-docker --base-dir=$MACHINE_SPEC_DIR
+$HELPER_SCRIPT prune-docker --base-dir=$MACHINE_SPEC_DIR
 
 
-# $HELPER_SCRIPT reboot-machines --base-dir=$MACHINE_SPEC_DIR
-# sleep 90
+$HELPER_SCRIPT reboot-machines --base-dir=$MACHINE_SPEC_DIR
+sleep 90
 
-# # Boki (hybrid because index replication is 1)
-# cp $MACHINE_SPEC_DIR/boki/machines_eng2-st2-seq3.json $BASE_DIR/machines.json
-# $HELPER_SCRIPT start-machines --base-dir=$BASE_DIR
-# ./run_build.sh boki-hybrid $CONTROLLER_SPEC_DIR/boki/eng2-st2-seq3-ir1-ur1-mr3.json $BASE_DIR/specs/exp-cf15.json
+# Boki (hybrid because index replication is 1)
+cp $MACHINE_SPEC_DIR/boki/machines_eng2-st2-seq3.json $BASE_DIR/machines.json
+$HELPER_SCRIPT start-machines --base-dir=$BASE_DIR
+./run_build.sh boki-hybrid $CONTROLLER_SPEC_DIR/boki/eng2-st2-seq3-ir1-ur1-mr3.json $BASE_DIR/specs/exp-cf15.json
 
-# $HELPER_SCRIPT reboot-machines --base-dir=$MACHINE_SPEC_DIR
-# sleep 90
+$HELPER_SCRIPT reboot-machines --base-dir=$MACHINE_SPEC_DIR
+sleep 90
 
-# cp $MACHINE_SPEC_DIR/boki/machines_eng4-st4-seq3.json $BASE_DIR/machines.json
-# $HELPER_SCRIPT start-machines --base-dir=$BASE_DIR
-# ./run_build.sh boki-hybrid $CONTROLLER_SPEC_DIR/boki/eng4-st4-seq3-ir1-ur1-mr3.json $BASE_DIR/specs/exp-cf15.json
+cp $MACHINE_SPEC_DIR/boki/machines_eng4-st4-seq3.json $BASE_DIR/machines.json
+$HELPER_SCRIPT start-machines --base-dir=$BASE_DIR
+./run_build.sh boki-hybrid $CONTROLLER_SPEC_DIR/boki/eng4-st4-seq3-ir1-ur1-mr3.json $BASE_DIR/specs/exp-cf15.json
 
-# $HELPER_SCRIPT reboot-machines --base-dir=$MACHINE_SPEC_DIR
-# sleep 90
+$HELPER_SCRIPT reboot-machines --base-dir=$MACHINE_SPEC_DIR
+sleep 90
 
-# cp $MACHINE_SPEC_DIR/boki/machines_eng6-st6-seq3.json $BASE_DIR/machines.json
-# $HELPER_SCRIPT start-machines --base-dir=$BASE_DIR
-# ./run_build.sh boki-hybrid $CONTROLLER_SPEC_DIR/boki/eng6-st6-seq3-ir1-ur1-mr3.json $BASE_DIR/specs/exp-cf15.json
+cp $MACHINE_SPEC_DIR/boki/machines_eng6-st6-seq3.json $BASE_DIR/machines.json
+$HELPER_SCRIPT start-machines --base-dir=$BASE_DIR
+./run_build.sh boki-hybrid $CONTROLLER_SPEC_DIR/boki/eng6-st6-seq3-ir1-ur1-mr3.json $BASE_DIR/specs/exp-cf15.json
 
-# $HELPER_SCRIPT reboot-machines --base-dir=$MACHINE_SPEC_DIR
-# sleep 90
+$HELPER_SCRIPT reboot-machines --base-dir=$MACHINE_SPEC_DIR
+sleep 90
 
-# # Indilog (docker compose: postpone caching flag is 2,3,4,5,6 --> only node 1 exists at beginning)
-# cp $MACHINE_SPEC_DIR/indilog/machines_eng2-st2-seq3-ix2-agg1.json $BASE_DIR/machines.json
-# $HELPER_SCRIPT start-machines --base-dir=$BASE_DIR
-# ./run_build.sh indilog $CONTROLLER_SPEC_DIR/indilog/eng2-st2-seq3-ix2-agg1-is2-ir1-ur1-mr3-ssmx4.json $BASE_DIR/specs/exp-cf15.json
+# Indilog (docker compose: postpone caching flag is 2,3,4,5,6 --> only node 1 exists at beginning)
+cp $MACHINE_SPEC_DIR/indilog/machines_eng2-st2-seq3-ix2-agg1.json $BASE_DIR/machines.json
+$HELPER_SCRIPT start-machines --base-dir=$BASE_DIR
+./run_build.sh indilog $CONTROLLER_SPEC_DIR/indilog/eng2-st2-seq3-ix2-agg1-is2-ir1-ur1-mr3-ssmx4.json $BASE_DIR/specs/exp-cf15.json
 
-# $HELPER_SCRIPT reboot-machines --base-dir=$MACHINE_SPEC_DIR
-# sleep 90
+$HELPER_SCRIPT reboot-machines --base-dir=$MACHINE_SPEC_DIR
+sleep 90
 
-# cp $MACHINE_SPEC_DIR/indilog/machines_eng4-st4-seq3-ix2-agg1.json $BASE_DIR/machines.json
-# $HELPER_SCRIPT start-machines --base-dir=$BASE_DIR
-# ./run_build.sh indilog $CONTROLLER_SPEC_DIR/indilog/eng4-st4-seq3-ix2-agg1-is2-ir1-ur1-mr3-ssmx4.json $BASE_DIR/specs/exp-cf15.json
+cp $MACHINE_SPEC_DIR/indilog/machines_eng4-st4-seq3-ix2-agg1.json $BASE_DIR/machines.json
+$HELPER_SCRIPT start-machines --base-dir=$BASE_DIR
+./run_build.sh indilog $CONTROLLER_SPEC_DIR/indilog/eng4-st4-seq3-ix2-agg1-is2-ir1-ur1-mr3-ssmx4.json $BASE_DIR/specs/exp-cf15.json
 
-# $HELPER_SCRIPT reboot-machines --base-dir=$MACHINE_SPEC_DIR
-# sleep 90
+$HELPER_SCRIPT reboot-machines --base-dir=$MACHINE_SPEC_DIR
+sleep 90
 
-# cp $MACHINE_SPEC_DIR/indilog/machines_eng6-st6-seq3-ix2-agg1.json $BASE_DIR/machines.json
-# $HELPER_SCRIPT start-machines --base-dir=$BASE_DIR
+cp $MACHINE_SPEC_DIR/indilog/machines_eng6-st6-seq3-ix2-agg1.json $BASE_DIR/machines.json
+$HELPER_SCRIPT start-machines --base-dir=$BASE_DIR
 ./run_build.sh indilog $CONTROLLER_SPEC_DIR/indilog/eng6-st6-seq3-ix2-agg1-is2-ir1-ur1-mr3-ssmx6.json $BASE_DIR/specs/exp-cf15.json
 
 for FILE_TYPE in "pdf" "png";
