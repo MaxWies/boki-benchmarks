@@ -9,4 +9,4 @@ HELPER_SCRIPT=$ROOT_DIR/scripts/exp_helper
 
 cp $BASE_DIR/machines_eng1-st1-seq3.json $BASE_DIR/machines.json
 $HELPER_SCRIPT start-machines --base-dir=$BASE_DIR
-./run_once.sh $BASE_DIR/specs/eng1-st1-seq3.json $BASE_DIR/specs/exp.json
+./run_once.sh $ROOT_DIR/controller-spec/eng1-st1-seq3-ir1-ur1-mr3.json $BASE_DIR/specs/exp.json

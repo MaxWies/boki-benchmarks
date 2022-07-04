@@ -22,7 +22,6 @@ RESULT_DIR=$BASE_DIR/results/$WORKLOAD
 rm -rf $RESULT_DIR
 mkdir -p $RESULT_DIR
 
-
 $HELPER_SCRIPT reboot-machines --base-dir=$MACHINE_SPEC_DIR
 sleep 90
 
