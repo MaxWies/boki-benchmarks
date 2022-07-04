@@ -22,6 +22,7 @@ function build_boki {
     docker build -t maxwie/boki:thesis-sub \
         -f $ROOT_DIR/dockerfiles/Dockerfile.boki \
         $ROOT_DIR/boki
+    rm $ROOT_DIR/boki/config.mk
 }
 
 function build_indilog {
@@ -29,6 +30,7 @@ function build_indilog {
     docker build -t maxwie/indilog:thesis-sub \
         -f $ROOT_DIR/dockerfiles/Dockerfile.indilog \
         $ROOT_DIR/indilog
+    rm $ROOT_DIR/indilog/config.mk
 }
 
 function build_boki_worker {
