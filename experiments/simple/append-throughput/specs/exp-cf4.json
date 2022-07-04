@@ -1,0 +1,15 @@
+{
+    "functions": {
+        "AppendLoopAsync" : {
+            "concurrency": 4
+        },
+        "MergeResults": {
+            "concurrency": 1
+        }
+    },
+    "exp_variables": {
+        "BENCHMARK_TYPE": "append-throughput",
+        "CONCURRENCY_WORKER": "4",
+        "CONCURRENCY_OPERATION": "4"
+    }
+}

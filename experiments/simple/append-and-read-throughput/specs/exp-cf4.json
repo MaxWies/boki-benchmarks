@@ -1,0 +1,14 @@
+{
+    "functions": {
+        "AppendAndReadLoopAsync" : {
+            "concurrency": 4
+        },
+        "MergeResults": {
+            "concurrency": 1
+        }
+    },
+    "exp_variables": {
+        "CONCURRENCY_WORKER": "4",
+        "CONCURRENCY_OPERATION": "4"
+    }
+}

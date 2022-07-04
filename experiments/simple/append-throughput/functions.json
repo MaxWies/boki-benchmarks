@@ -1,0 +1,24 @@
+{
+    "functions": {
+        "AppendLoopAsync": {
+            "service_name": "append-service",
+            "docker": {
+                "image": "maxwie/indilog-microbench:latest",
+                "entrypoint" : ["/tmp/slog/run_launcher", "/microbench-bin/main"],
+                "volumes": ["/mnt/inmem/slog:/tmp/slog"],
+                "environment": ["FAAS_GO_MAX_PROC_FACTOR=1", "GOGC=1000"],
+                "depends_on": ["slog-engine"]
+            }
+        },
+        "MergeResults" : {
+            "service_name": "merge-service",
+            "docker": {
+                "image": "maxwie/indilog-microbench:latest",
+                "entrypoint" : ["/tmp/slog/run_launcher", "/microbench-bin/main"],
+                "volumes": ["/mnt/inmem/slog:/tmp/slog"],
+                "environment": ["FAAS_GO_MAX_PROC_FACTOR=1", "GOGC=1000"],
+                "depends_on": ["slog-engine"]
+            }
+        }
+    }
+}
