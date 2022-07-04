@@ -179,16 +179,6 @@ func printFnResult(fnName string, duration time.Duration, results []*utils.FaasC
 	}
 }
 
-// func scaleClients(time.Time* startTime, time.Time* scaleTime, *[]*utils.FaasClient clients) {
-// 	if time.Since(*scaleTime) > time.Duration(FLAGS_concurrency_client_step_interval*steps)*time.Second {
-// 		client := utils.NewFaasClient(FLAGS_faas_gateway, FLAGS_concurrency_client+steps*FLAGS_concurrency_client_step_size)
-// 		clients = append(clients, client)
-// 		steps++
-// 		log.Printf("[INFO] Increase load by adding %d concurrency", FLAGS_concurrency_client_step_size)
-// 		*scaleTime = time.Now()
-// 	}
-// }
-
 func main() {
 	flag.Parse()
 
@@ -207,23 +197,12 @@ func main() {
 		FLAGS_concurrency_client_step_size,
 		FLAGS_concurrency_client_step_interval,
 	)
-
-	// clients := make([]*utils.FaasClient, 0)
 	client := utils.NewFaasClient(FLAGS_faas_gateway, FLAGS_concurrency_client)
-	// clients = append(clients, client)
-	// steps := 1
 	startTime := time.Now()
 	for {
 		if time.Since(startTime) > time.Duration(FLAGS_duration)*time.Second {
 			break
 		}
-		// if time.Since(scaleTime) > time.Duration(FLAGS_concurrency_client_step_interval*steps)*time.Second {
-		// 	client := utils.NewFaasClient(FLAGS_faas_gateway, FLAGS_concurrency_client+steps*FLAGS_concurrency_client_step_size)
-		// 	clients = append(clients, client)
-		// 	steps++
-		// 	log.Printf("[INFO] Increase load by adding %d concurrency", FLAGS_concurrency_client_step_size)
-		// 	scaleTime = time.Now()
-		// }
 		k := rand.Intn(100)
 		if k < percentages[0] {
 			client.AddJsonFnCall(FLAGS_fn_prefix+"RetwisLogin", buildLoginRequest())
@@ -235,9 +214,6 @@ func main() {
 			client.AddJsonFnCall(FLAGS_fn_prefix+"RetwisPost", buildPostRequest())
 		}
 	}
-	// log.Printf("[INFO] Created %d clients", len(clients))
-	// for i := 0; i < len(clients); i++ {
-	// 	client = clients[i]
 	results := client.WaitForResults()
 	elapsed := time.Since(startTime)
 	fmt.Printf("Benchmark runs for %v, %.1f request per sec\n", elapsed, float64(len(results))/elapsed.Seconds())
@@ -246,5 +222,4 @@ func main() {
 	printFnResult("RetwisProfile", elapsed, results)
 	printFnResult("RetwisPostList", elapsed, results)
 	printFnResult("RetwisPost", elapsed, results)
-	// /	}
 }

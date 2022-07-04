@@ -8,6 +8,6 @@ require (
 	github.com/montanaflynn/stats v0.6.6
 )
 
-replace cs.utexas.edu/zjia/faas => ../../boki/worker/golang
+replace cs.utexas.edu/zjia/faas => ../../indilog/worker/golang
 
-replace cs.utexas.edu/zjia/faas/slib => ../../boki/slib
+replace cs.utexas.edu/zjia/faas/slib => ../../indilog/slib

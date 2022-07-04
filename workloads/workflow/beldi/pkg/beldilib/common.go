@@ -1,16 +1,24 @@
 package beldilib
 
 import (
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
+
 	// "github.com/aws/aws-sdk-go/service/lambda"
-	"strconv"
 	"os"
+	"strconv"
 )
 
 var sess = session.Must(session.NewSessionWithOptions(session.Options{
 	SharedConfigState: session.SharedConfigEnable,
 }))
+
+var DBClient = dynamodb.New(sess, &aws.Config{
+	Endpoint:                      aws.String("DYNAMODB_ENDPOINT"),
+	Region:                        aws.String("eu-west-1"),
+	CredentialsChainVerboseErrors: aws.Bool(true),
+})
 
 // var LambdaClient = lambda.New(sess)
 
@@ -18,8 +26,6 @@ var sess = session.Must(session.NewSessionWithOptions(session.Options{
 //var DBClient = dynamodb.New(sess, &aws.Config{Endpoint: aws.String(url),
 //	Region:                        aws.String("us-east-1"),
 //	CredentialsChainVerboseErrors: aws.Bool(true)})
-
-var DBClient = dynamodb.New(sess)
 
 var DLOGSIZE = "1000"
 

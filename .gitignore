@@ -17,15 +17,9 @@
 *.code-workspace
 /.vscode/*
 
-#certificates
+# certificates
 /workloads/micro/certificates*
-
-/experiments/micro/logbook-virtualization/docker-compose.yaml
-/experiments/micro/logbook-virtualization/nightcore_config.json
-/experiments/micro/logbook-virtualization/config.json
-
-/experiments/micro/append-and-read-throughput/docker-compose.yaml
-/experiments/micro/append-and-read-throughput/nightcore_config.json
-/experiments/micro/append-and-read-throughput/config.json
+/workloads/retwis/certificates*
+/workloads/workflow/certificates*
 
 /experiment-results

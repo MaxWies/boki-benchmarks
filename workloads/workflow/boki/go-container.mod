@@ -15,4 +15,5 @@ require (
 	github.com/golang/snappy v0.0.2
 )
 
-replace cs.utexas.edu/zjia/faas => ../../../boki/worker/golang
+// for container
+replace cs.utexas.edu/zjia/faas => /src/slog/worker/golang

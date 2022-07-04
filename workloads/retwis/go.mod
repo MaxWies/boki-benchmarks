@@ -10,6 +10,4 @@ require (
 )
 
 replace cs.utexas.edu/zjia/faas => ../../boki/worker/golang
-
 replace cs.utexas.edu/zjia/faas/slib => ../../boki/slib
-

@@ -1,4 +1,4 @@
-FROM maxwie/boki-deps:thesis-sub as builder
+FROM maxwie/indilog-deps:thesis-sub as builder
 
 WORKDIR /slog
 
@@ -13,9 +13,13 @@ RUN CXX=clang++ make -j $(nproc)
 
 FROM ubuntu:focal as release
 
+COPY --from=builder /slog/deps/out/lib/libtbb* /lib/x86_64-linux-gnu/
+
 COPY --from=builder /slog/bin/release/launcher   /slog/launcher
 COPY --from=builder /slog/bin/release/gateway    /slog/gateway
 COPY --from=builder /slog/bin/release/engine     /slog/engine
 COPY --from=builder /slog/bin/release/sequencer  /slog/sequencer
 COPY --from=builder /slog/bin/release/storage    /slog/storage
 COPY --from=builder /slog/bin/release/controller /slog/controller
+COPY --from=builder /slog/bin/release/index      /slog/index
+COPY --from=builder /slog/bin/release/aggregator /slog/aggregator

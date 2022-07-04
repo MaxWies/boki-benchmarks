@@ -1,15 +1,16 @@
-FROM maxwie/boki-ws:latest as boki
+FROM maxwie/boki-worker:thesis-sub as boki
 FROM golang:1.14-buster as builder
 
 COPY . /workflow
 
-RUN apt install -y ca-certificates
-RUN mkdir -p /usr/local/share/ca-certificates && mv /workflow/certificates/* /usr/local/share/ca-certificates 
-RUN update-ca-certificates
-
 COPY --from=boki /src/slog /src/slog
 RUN rm /workflow/beldi/go.mod && mv /workflow/beldi/go-container.mod /workflow/beldi/go.mod
 RUN rm /workflow/boki/go.mod && mv /workflow/boki/go-container.mod /workflow/boki/go.mod
+
+# use certificates
+RUN apt install -y ca-certificates
+RUN mkdir -p /usr/local/share/ca-certificates && mv /workflow/certificates/* /usr/local/share/ca-certificates 
+RUN update-ca-certificates
 
 RUN cd /workflow/beldi && make hotel-baseline
 RUN cd /workflow/beldi && make media-baseline
@@ -17,6 +18,11 @@ RUN cd /workflow/beldi && make hotel
 RUN cd /workflow/beldi && make media
 RUN cd /workflow/boki && make hotel
 RUN cd /workflow/boki && make media
+
+# remove certificates
+RUN rm -rf /workflow/certificates
+RUN rm -rf /usr/local/share/ca-certificates
+RUN update-ca-certificates
 
 FROM ubuntu:focal
 

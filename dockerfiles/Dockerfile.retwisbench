@@ -1,15 +1,23 @@
-FROM maxwie/boki-ws:latest as boki
+FROM maxwie/boki-worker:thesis-sub as boki
 FROM golang:1.14-buster as builder
 
 RUN apt install -y ca-certificates
 COPY . /retwis
 RUN rm /retwis/go.mod && mv /retwis/go-container.mod /retwis/go.mod
-RUN mkdir -p /usr/local/share/ca-certificates && mv /retwis/certificates/* /usr/local/share/ca-certificates 
-
-RUN update-ca-certificates
 
 COPY --from=boki /src/slog /src/slog
+
+# use certificates
+RUN mkdir -p /usr/local/share/ca-certificates && mv /retwis/certificates/* /usr/local/share/ca-certificates 
+RUN apt install -y ca-certificates
+RUN update-ca-certificates
+
 RUN cd /retwis && ./build.sh
+
+# remove certificates
+RUN rm -rf /retwis/certificates
+RUN rm -rf /usr/local/share/ca-certificates
+RUN update-ca-certificates
 
 FROM ubuntu:focal
 
