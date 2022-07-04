@@ -2,8 +2,8 @@
 BASE_DIR=`realpath $(dirname $0)`
 ROOT_DIR=`realpath $BASE_DIR/../../..`
 
-#./run_workload.sh empty-tag
-#./run_workload.sh new-tags-always
+./run_workload.sh empty-tag
+./run_workload.sh new-tags-always
 
 BENCHMARK_SCRIPT=$BASE_DIR/summarize_benchmarks
 RESULT_DIR=$BASE_DIR/results
