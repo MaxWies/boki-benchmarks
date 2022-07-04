@@ -27,3 +27,5 @@
 /experiments/micro/append-and-read-throughput/docker-compose.yaml
 /experiments/micro/append-and-read-throughput/nightcore_config.json
 /experiments/micro/append-and-read-throughput/config.json
+
+/experiment-results

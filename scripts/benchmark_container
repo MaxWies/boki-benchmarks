@@ -45,15 +45,13 @@ def present_operation_latencies_on_cdf(directory, benchmark, counter):
     operation = benchmark['operations'][counter]
     bucket = operation['bucket']
     _, ax = plt.subplots()
-    #probability = 0
-    #granularity = 0.001
 
     for i in range(len(bucket['slots'])):
         if 0.999 < calls_success_until / operation['calls_success']:
             break
         for j in range(bucket['slots'][i]):
             latencies.append(bucket['lower'] + i * bucket['interval'])
-            calls_success_until += 1 #bucket['slots'][i]
+            calls_success_until += 1 
             cdf.append(calls_success_until/operation['calls_success'])
         if 0 < bucket['slots'][i]:
             highest_slot_with_entry = i
@@ -65,7 +63,6 @@ def present_operation_latencies_on_cdf(directory, benchmark, counter):
     for i, v in enumerate(latencies_percentiles):
         plt.annotate('  ' + str(v) + '\u03BCs' + ' ({})'.format(str(percentiles[i])), (latencies_percentiles[i], percentiles[i]*0.97))
 
-    #plt.text(0.95, 0.01, 'latency min: %{}'.format(operation['latency_min']), verticalalignment='bottom', horizontalalignment='right', color='green', fontsize=15)
     at = offsetbox.AnchoredText('calls: {}\ncalls success: {}\nlatency min: {}\u03BCs\nlatency max: {}\u03BCs'.format(operation['calls'], operation['calls_success'], operation['latency_min'], operation['latency_max']), loc='lower right')
     ax.add_artist(at)
 
@@ -76,14 +73,12 @@ def present_operation_latencies_on_cdf(directory, benchmark, counter):
     plt.ylim([0,1.05])
 
     plt.legend(loc='upper left')
-    plt.title('Cumulative latency (\u03BCs)')# of {} operation'.format(operation['description']))
+    plt.title('Cumulative latency (\u03BCs)')
     plt.subplots_adjust(bottom=0.25)
     plt.figtext(0.5, 0.05,
-    'Duration: {}s\nSetup: Eng{}-St{}-Seq{}\nConcurrency per engine:{}'
+    'Duration: {}s\nEngines: {}\Workers per engine:{}'
     .format(benchmark['time_log']['loop_duration'],
     benchmark['description']['engine_nodes'], 
-    benchmark['description']['storage_nodes'], 
-    benchmark['description']['sequencer_nodes'],
     benchmark['description']['concurrency_workers']),
     ha="center", va="center")
 
