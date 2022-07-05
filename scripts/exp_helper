@@ -11,8 +11,7 @@ import string
 import argparse
 import subprocess as sp
 
-# TODO: improve
-USER_NAME = 'mrc'
+USER_NAME = os.environ.get('SSH_REMOTE_USER_NAME', 'mrc')
 IP_HOSTNAME_MAP = {}
 
 def random_string(length):
@@ -20,7 +19,7 @@ def random_string(length):
     return ''.join(random.choice(letters) for _ in range(length))
 
 def run_remote_command(ssh_ip, cmd):
-    # TODO: improve - do not print to stderr
+    # print to stderr because stdout is used by variables
     print(cmd, file=sys.stderr)
     ret = sp.run(['ssh', '-q', ssh_ip + '-' + USER_NAME, '--'] + cmd,
                  stdout=sp.PIPE, stderr=sp.PIPE, encoding='utf8')
@@ -53,7 +52,6 @@ def setup_instance_storage(machine_configs):
             ip = machine_configs[name]['ip']
             device = '/dev/' + machine_config['mount_instance_storage']
             directory = '/mnt/storage'
-            # TODO: improve mounting code
             if not is_mounted(ip, directory):
                 try:
                     run_remote_command(ip, ['sudo', 'mkfs', '-t', 'ext4', device])

@@ -39,7 +39,7 @@ ssh -q $MANAGER_HOST -- uname -a >>$EXP_DIR/kernel_version
 ssh -q $CLIENT_HOST -- docker run \
     --pull always \
     -v /tmp:/tmp \
-    maxwie/indilog-microbench:latest \
+    maxwie/indilog-microbench:thesis-sub \
     cp /microbench-bin/benchmark /tmp/benchmark
 
 # run warmup

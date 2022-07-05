@@ -9,7 +9,6 @@ EXP_DIR=$3
 HELPER_SCRIPT=$ROOT_DIR/scripts/exp_helper
 BENCHMARK_SCRIPT=$ROOT_DIR/scripts/benchmark_container
 
-export BENCHMARK_TYPE=append-throughput
 export RECORD_LENGTH=1024
 export DURATION=30
 export APPEND_TIMES=1
@@ -43,7 +42,7 @@ ssh -q $MANAGER_HOST -- uname -a >>$EXP_DIR/kernel_version
 ssh -q $CLIENT_HOST -- docker run \
     --pull always \
     -v /tmp:/tmp \
-    maxwie/indilog-microbench:latest \
+    maxwie/indilog-microbench:thesis-sub \
     cp /microbench-bin/benchmark /tmp/benchmark
 
 ssh -q $CLIENT_HOST -- /tmp/benchmark \

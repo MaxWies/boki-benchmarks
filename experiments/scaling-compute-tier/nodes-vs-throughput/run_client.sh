@@ -9,7 +9,7 @@ EXP_DIR=$3
 HELPER_SCRIPT=$ROOT_DIR/scripts/exp_helper
 BENCHMARK_SCRIPT=$BASE_DIR/summarize_benchmarks
 
-export BENCHMARK_TYPE=scaling
+export BENCHMARK_TYPE=engine-random-load
 export RECORD_LENGTH=1024
 export DURATION=90
 export RELATIVE_SCALE_TS=30
@@ -41,7 +41,7 @@ ssh -q $MANAGER_HOST -- uname -a >>$EXP_DIR/kernel_version
 ssh -q $CLIENT_HOST -- docker run \
     --pull always \
     -v /tmp:/tmp \
-    maxwie/indilog-microbench:latest \
+    maxwie/indilog-microbench:thesis-sub \
     cp /microbench-bin/benchmark /tmp/benchmark
 
 # run warmup
@@ -73,6 +73,7 @@ then
     --faas_gateway=$ENTRY_HOST:8080 \
     --benchmark_description=$BENCHMARK_DESCRIPTION \
     --benchmark_type=$BENCHMARK_TYPE \
+    --wait_until_load_end=False \
     --engine_nodes=$ENGINE_NODES \
     --duration=$DURATION \
     --record_length=$RECORD_LENGTH \
@@ -103,6 +104,7 @@ else
     --faas_gateway=$ENTRY_HOST:8080 \
     --benchmark_description=$BENCHMARK_DESCRIPTION \
     --benchmark_type=$BENCHMARK_TYPE \
+    --wait_until_load_end=False \
     --engine_nodes=$ENGINE_NODES \
     --duration=$DURATION \
     --record_length=$RECORD_LENGTH \

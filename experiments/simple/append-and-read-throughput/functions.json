@@ -3,7 +3,7 @@
         "AppendAndReadLoopAsync": {
             "service_name": "append-read-service",
             "docker": {
-                "image": "maxwie/indilog-microbench:latest",
+                "image": "maxwie/indilog-microbench:thesis-sub",
                 "entrypoint" : ["/tmp/slog/run_launcher", "/microbench-bin/main"],
                 "volumes": ["/mnt/inmem/slog:/tmp/slog"],
                 "environment": ["FAAS_GO_MAX_PROC_FACTOR=1", "GOGC=1000"],
@@ -13,7 +13,7 @@
         "MergeResults" : {
             "service_name": "merge-service",
             "docker": {
-                "image": "maxwie/indilog-microbench:latest",
+                "image": "maxwie/indilog-microbench:thesis-sub",
                 "entrypoint" : ["/tmp/slog/run_launcher", "/microbench-bin/main"],
                 "volumes": ["/mnt/inmem/slog:/tmp/slog"],
                 "environment": ["FAAS_GO_MAX_PROC_FACTOR=1", "GOGC=1000"],

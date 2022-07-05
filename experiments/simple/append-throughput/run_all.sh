@@ -6,7 +6,7 @@ CONTROLLER_SPEC_DIR=$ROOT_DIR/controller-spec
 
 HELPER_SCRIPT=$ROOT_DIR/scripts/exp_helper
 
-export BENCHMARK_TYPE=append-throughput
+export BENCHMARK_TYPE=container-append-load
 
 RESULT_DIR=$BASE_DIR/results
 rm -rf $RESULT_DIR

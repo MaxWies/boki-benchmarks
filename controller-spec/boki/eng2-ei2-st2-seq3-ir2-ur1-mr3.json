@@ -4,7 +4,7 @@
     "slog_sequencers_replicas": 3,
     "slog_index_engine_replicas": 2,
     "slog_controller": {
-        "image": "maxwie/boki:latest",
+        "image": "maxwie/boki:thesis-sub",
         "entrypoint" : [
             "/slog/controller", 
             "--zookeeper_host=zookeeper:2181", 

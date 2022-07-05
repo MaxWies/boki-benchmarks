@@ -47,7 +47,7 @@ $ROOT_DIR/../zookeeper/bin/zkCli.sh -server $MANAGER_IP:2181 \
 ssh -q $CLIENT_HOST -- docker run \
     --pull always \
     -v /tmp:/tmp \
-    maxwie/indilog-microbench:latest \
+    maxwie/indilog-microbench:thesis-sub \
     cp /microbench-bin/benchmark /tmp/benchmark
 
 ACTIVE_ENGINE_NODES=`$HELPER_SCRIPT get-num-active-service-replicas --base-dir=$BASE_DIR --service=slog-engine`

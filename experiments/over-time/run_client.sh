@@ -9,7 +9,7 @@ EXP_DIR=$3
 HELPER_SCRIPT=$ROOT_DIR/scripts/exp_helper
 BENCHMARK_SCRIPT=$BASE_DIR/summarize_benchmarks
 
-export BENCHMARK_TYPE=throughput-vs-latency
+export BENCHMARK_TYPE=engine-random-load
 export RECORD_LENGTH=1024
 export ENGINE_STAT_THREAD_INTERVAL=30
 export APPEND_TIMES=1
@@ -49,7 +49,7 @@ ssh -q $MANAGER_HOST -- uname -a >>$EXP_DIR/kernel_version
 ssh -q $CLIENT_HOST -- docker run \
     --pull always \
     -v /tmp:/tmp \
-    maxwie/indilog-microbench:latest \
+    maxwie/indilog-microbench:thesis-sub \
     cp /microbench-bin/benchmark /tmp/benchmark
 
 # run warmup

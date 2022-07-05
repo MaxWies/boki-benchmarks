@@ -10,7 +10,7 @@ HELPER_SCRIPT=$ROOT_DIR/scripts/exp_helper
 BENCHMARK_SCRIPT=$BASE_DIR/summarize_benchmarks
 BENCHMARK_HELPER_SCRIPT=$ROOT_DIR/scripts/benchmark_helper
 
-export BENCHMARK_TYPE=throughput-vs-latency
+export BENCHMARK_TYPE=engine-random-load
 export RECORD_LENGTH=1024
 
 # Overwrite environment with spec file
@@ -34,18 +34,13 @@ ENTRY_HOST=`$HELPER_SCRIPT get-service-host --base-dir=$BASE_DIR --service=slog-
 ALL_ENGINE_HOSTS=`$HELPER_SCRIPT get-machine-with-label --base-dir=$BASE_DIR --machine-label=engine_node`
 ENGINE_NODES=$(wc -w <<< $ALL_ENGINE_HOSTS)
 
-for HOST in $ALL_ENGINE_HOSTS; do
-    ssh -q $HOST -- sudo rm -rf /mnt/inmem/slog/output/benchmark/$BENCHMARK_TYPE
-    ssh -q $HOST -- sudo mkdir -p /mnt/inmem/slog/output/benchmark/$BENCHMARK_TYPE
-done
-
 ssh -q $MANAGER_HOST -- cat /proc/cmdline >>$EXP_DIR/kernel_cmdline
 ssh -q $MANAGER_HOST -- uname -a >>$EXP_DIR/kernel_version
 
 ssh -q $CLIENT_HOST -- docker run \
     --pull always \
     -v /tmp:/tmp \
-    maxwie/indilog-microbench:latest \
+    maxwie/indilog-microbench:thesis-sub \
     cp /microbench-bin/benchmark /tmp/benchmark
 
 # run warmup

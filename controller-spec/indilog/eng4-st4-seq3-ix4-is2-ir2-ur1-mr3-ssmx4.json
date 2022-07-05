@@ -5,7 +5,7 @@
     "slog_index_shards": 2,
     "slog_index_replicas": 2,
     "slog_controller": {
-        "image": "maxwie/indilog:latest",
+        "image": "maxwie/indilog:thesis-sub",
         "entrypoint" : [
             "/slog/controller", 
             "--zookeeper_host=zookeeper:2181", 

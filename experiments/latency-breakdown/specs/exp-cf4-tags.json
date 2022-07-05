@@ -8,7 +8,7 @@
         }
     },
     "exp_variables": {
-        "BENCHMARK_TYPE": "throughput-vs-latency",
+        "BENCHMARK_TYPE": "engine-random-load",
         "CONCURRENCY_WORKER": "4",
         "OPERATION_SEMANTICS_PERCENTAGES": "0,100",
         "SEQNUM_READ_PERCENTAGES":"0,34,33,0,33",

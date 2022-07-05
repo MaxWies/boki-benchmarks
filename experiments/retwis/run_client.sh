@@ -38,7 +38,7 @@ ssh -q $CLIENT_HOST -- rm -f /tmp/client-results.csv
 ssh -q $CLIENT_HOST -- docker run \
     --pull always \
     -v /tmp:/tmp \
-    maxwie/indilog-microbench:latest \
+    maxwie/indilog-microbench:thesis-sub \
     cp /microbench-bin/benchmark /tmp/benchmark
 
 ssh -q $CLIENT_HOST -- /tmp/benchmark \
@@ -56,7 +56,7 @@ $ROOT_DIR/../zookeeper/bin/zkCli.sh -server $MANAGER_IP:2181 \
 ssh -q $CLIENT_HOST -- docker run \
     --pull always \
     -v /tmp:/tmp \
-    maxwie/boki-retwisbench:latest \
+    maxwie/boki-retwisbench:thesis-sub \
     cp /retwisbench-bin/init /tmp/init
 
 ssh -q $CLIENT_HOST -- /tmp/init \
@@ -65,7 +65,7 @@ ssh -q $CLIENT_HOST -- /tmp/init \
 # create users
 ssh -q $CLIENT_HOST -- docker run \
     -v /tmp:/tmp \
-    maxwie/boki-retwisbench:latest \
+    maxwie/boki-retwisbench:thesis-sub \
     cp /retwisbench-bin/create_users /tmp/create_users
 
 ssh -q $CLIENT_HOST -- /tmp/create_users \
@@ -76,7 +76,7 @@ ssh -q $CLIENT_HOST -- /tmp/create_users \
 # run benchmark
 ssh -q $CLIENT_HOST -- docker run \
     -v /tmp:/tmp \
-    maxwie/boki-retwisbench:latest \
+    maxwie/boki-retwisbench:thesis-sub \
     cp /retwisbench-bin/benchmark /tmp/benchmark
 
 ssh -q $CLIENT_HOST -- /tmp/benchmark \

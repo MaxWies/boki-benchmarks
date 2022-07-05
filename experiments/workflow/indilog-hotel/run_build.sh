@@ -75,7 +75,7 @@ ssh -q $CLIENT_HOST -- docker run \
     -e REGION=$AWS_REGION \
     -e AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID \
     -e AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY \
-    maxwie/boki-beldibench:latest \
+    maxwie/boki-beldibench:thesis-sub \
     cp -r /bokiflow-bin/hotel /tmp/
 
 echo "Create Cayon"

@@ -17,7 +17,7 @@ services:
     restart: always
 
   slog-engine:
-    image: maxwie/indilog:latest
+    image: maxwie/indilog:thesis-sub
     hostname: faas-engine-{{.Task.Slot}}
     entrypoint:
       - /slog/engine
@@ -51,7 +51,7 @@ services:
       memlock: -1
 
   slog-gateway:
-    image: maxwie/indilog:latest
+    image: maxwie/indilog:thesis-sub
     hostname: faas-gateway
     ports:
       - 8080:8080
@@ -80,7 +80,7 @@ services:
       memlock: -1
 
   slog-storage:
-    image: maxwie/indilog:latest
+    image: maxwie/indilog:thesis-sub
     hostname: faas-storage-{{.Task.Slot}}
     entrypoint:
       - /slog/storage
@@ -107,7 +107,7 @@ services:
       memlock: -1
 
   slog-sequencer:
-    image: maxwie/indilog:latest
+    image: maxwie/indilog:thesis-sub
     hostname: faas-sequencer-{{.Task.Slot}}
     entrypoint:
       - /slog/sequencer
@@ -127,7 +127,7 @@ services:
       memlock: -1
 
   slog-index:
-    image: maxwie/indilog:latest
+    image: maxwie/indilog:thesis-sub
     hostname: faas-index-{{.Task.Slot}}
     entrypoint:
       - /slog/index
