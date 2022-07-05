@@ -1,14 +1,12 @@
 package constants
 
 const (
-	BenchmarkAppend                        string = "append"
-	BenchmarkRead                          string = "read"
-	BenchmarkAppendThroughput              string = "append-throughput"
-	BenchmarkAppendAndReadThroughput       string = "append-and-read-throughput"
-	BenchmarkRandomAppendAndReadThroughput string = "random-append-and-read-throughput"
-	BenchmarkLogbookVirtualization         string = "logbook-virtualization"
-	BenchmarkTestSystem                    string = "test-system"
-	BenchmarkThroughputVsLatency           string = "throughput-vs-latency"
-	BenchmarkScaling                       string = "scaling"
-	BenchmarkWarmup                        string = "warmup"
+	BenchmarkAppend                     string = "append"
+	BenchmarkRead                       string = "read"
+	BenchmarkContainerAppendLoad        string = "container-append-load"
+	BenchmarkContainerAppendAndReadLoad string = "container-append-and-read-load"
+	BenchmarkContainerRandomLoad        string = "container-random-load"
+	BenchmarkTestSystem                 string = "test-system"
+	BenchmarkEngineRandomLoad           string = "engine-random-load"
+	BenchmarkWarmup                     string = "warmup"
 )

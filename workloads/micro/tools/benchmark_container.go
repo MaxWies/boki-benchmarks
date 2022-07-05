@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"log"
 	"path"
-	"time"
 )
 
 func mergeSync(mergeFunction string, functionName string) {
@@ -61,9 +60,6 @@ func mergeSync(mergeFunction string, functionName string) {
 		ConcurrentWorkers:    FLAGS_concurrency_worker,
 		ConcurrentOperations: FLAGS_concurrency_operation,
 		EngineNodes:          FLAGS_engine_nodes,
-		StorageNodes:         FLAGS_storage_nodes,
-		SequencerNodes:       FLAGS_sequencer_nodes,
-		IndexNodes:           FLAGS_index_nodes,
 		UseTags:              FLAGS_use_tags,
 	}
 
@@ -92,27 +88,5 @@ func containerLoop(functionName string, requestInputBuilder func() utils.JSONVal
 
 func mergeContainerResults(functionName string) {
 	mergeFunction := fmt.Sprintf("%s%s", FLAGS_fn_merge_prefix, constants.FunctionMergeResults)
-	mergeSync(mergeFunction, functionName)
-}
-
-func logbookVirtualizationBenchmark(functionName string, requestInputBuilder func() utils.JSONValue) {
-	log.Printf("[INFO] Run logbook virtualization benchmark using function %s. Logbooks: %d. Duration: %d", functionName, FLAGS_logbooks, FLAGS_duration)
-	client := client.NewSimpleClient(FLAGS_faas_gateway, &client.CallAsync{})
-	c := 1
-	for c <= FLAGS_logbooks {
-		functionName := fmt.Sprintf("%s%s%d", FLAGS_fn_prefix, functionName, c)
-		client.SendRequest(functionName, requestInputBuilder())
-		c++
-	}
-	success := 0
-	for _, r := range client.HttpResults {
-		if r.Success {
-			success++
-		}
-	}
-	log.Printf("[INFO] %d successful results from %d total results.", success, len(client.HttpResults))
-	time.Sleep(time.Duration(FLAGS_duration*2) * time.Second)
-
-	mergeFunction := fmt.Sprintf("%s%s%d", FLAGS_fn_merge_prefix, constants.FunctionMergeResults, c)
 	mergeSync(mergeFunction, functionName)
 }

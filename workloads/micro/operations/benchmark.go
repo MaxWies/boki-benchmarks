@@ -43,9 +43,6 @@ type Description struct {
 	Benchmark            string `json:"benchmark"`
 	SnapshotInterval     int    `json:"snapshot_interval"`
 	EngineNodes          int    `json:"engine_nodes"`
-	StorageNodes         int    `json:"storage_nodes"`
-	SequencerNodes       int    `json:"sequencer_nodes"`
-	IndexNodes           int    `json:"index_nodes"`
 	ConcurrentClients    int    `json:"concurrency_client"`
 	ConcurrentEngines    int    `json:"concurrency_engines"`
 	ConcurrentWorkers    int    `json:"concurrency_workers"`
