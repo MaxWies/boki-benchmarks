@@ -132,6 +132,8 @@ def generate_swarm_config(base_dir, slog, controller_spec, exp_spec):
             config["services"]["slog-hybrid-engine"] = { "placement_label": "hybrid_engine_node", "replicas": controller_spec['slog_hybrid_engine_replicas'] }
     else:
         raise Exception("Unknown shared log")
+    if 'dynamodb_replicas' in controller_spec.keys():
+        config["services"]["dynamodb"] = { "placement_label": "dynamodb_node", "replicas": controller_spec['dynamodb_replicas'] }
     generate_swarm_config_engines(config, slog, controller_spec)
     generate_swarm_config_functions(base_dir, config, slog, controller_spec, exp_spec)
     config = json.dumps(config, indent=2)
