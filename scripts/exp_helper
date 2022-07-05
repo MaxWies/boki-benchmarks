@@ -36,8 +36,13 @@ def setup_hostname_for_machines(machine_configs):
     for name, machine_config in machine_configs.items():
         if machine_config['role'] != 'dirigent':
             run_remote_command(machine_config['ip'], ['sudo', 'hostnamectl', 'set-hostname', name])
-            #TODO: hot fix
-            run_remote_command(machine_config['ip'], ['sudo', '/home/mrc/setup/hostname-fix.sh'])
+            run_remote_command(machine_config['ip'], 
+                [
+                    'HOSTNAME=$(hostname);'
+                    'HOSTS_LINE=\"127.0.0.1\t$HOSTNAME\";'
+                    'if [ -n \"$(grep $HOSTNAME /etc/hosts)\" ]; then echo \"$HOSTNAME already exists\"; else sudo -- sh -c -e \"echo $HOSTS_LINE >> /etc/hosts\"; fi'
+                ]
+            )
 
 def is_mounted(ip, directory):
     try:
