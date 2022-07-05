@@ -50,6 +50,7 @@ done
 
 if [[ $SLOG == boki-remote ]]; then
     ALL_INDEX_ENGINE_HOSTS=`$HELPER_SCRIPT get-machine-with-label --base-dir=$BASE_DIR --machine-label=index_engine_node`
+    echo "[]" > $BASE_DIR/nightcore_config_empty.json
     for HOST in $ALL_INDEX_ENGINE_HOSTS; do
         scp -q $BASE_DIR/nightcore_config_empty.json $HOST:/tmp/nightcore_config_empty.json
         scp -q $BASE_DIR/run_launcher $HOST:/tmp/run_launcher
