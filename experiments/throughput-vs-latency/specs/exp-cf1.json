@@ -1,7 +1,7 @@
 {
     "functions": {
         "RandomAppendAndReadLoopAsync" : {
-            "concurrency": 2
+            "concurrency": 1
         },
         "TestSystem" : {
             "concurrency": 1

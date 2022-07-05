@@ -30,10 +30,11 @@ services:
       - --io_uring_entries=2048
       - --io_uring_fd_slots=4096
       - --enable_shared_log
+      # - --slog_engine_enable_cache
       - --slog_engine_cache_cap_mb=1024
       - --slog_engine_propagate_auxdata
       - --engine_node_type=engine
-      - --v=1
+      # - --v=1
     depends_on:
       - zookeeper-setup
     volumes:
@@ -60,11 +61,11 @@ services:
       - --io_uring_entries=2048
       - --io_uring_fd_slots=4096
       - --enable_shared_log
-      - --slog_engine_enable_cache
+      # - --slog_engine_enable_cache
       - --slog_engine_cache_cap_mb=1024
       - --slog_engine_propagate_auxdata
       - --engine_node_type=index_engine
-      - --v=1
+      # - --v=1
     depends_on:
       - zookeeper-setup
     volumes:

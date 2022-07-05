@@ -13,7 +13,6 @@ import math
 import pandas as pd
 import csv
 
-
 def count_csv_entries(csv_files):
     return pd.concat([pd.read_csv(file) for file in csv_files]).shape[0]
 
@@ -56,7 +55,7 @@ def add_throughput_latency_row(directory, slog, throughput, throughput_append, t
 
 def generate_throughput_vs_latency_plot__boki_vs_indilog__append(csv_file, result_file):
     df = pd.read_csv(csv_file)
-    df_boki = df.loc[df['slog'] == 'boki']
+    df_boki = df.loc[df['slog'] == 'boki-local']
     df_indilog = df.loc[df['slog'] == 'indilog']
 
     fig = plt.figure()
@@ -70,10 +69,10 @@ def generate_throughput_vs_latency_plot__boki_vs_indilog__append(csv_file, resul
     plt.xlim(left=0)
     plt.ylim(bottom=0)
 
-    plt.xlabel('Throughput (kOp/s)')
-    plt.ylabel('Latency (\u03BCs)')
+    plt.xlabel('Throughput (kOp/s)', fontsize=14)
+    plt.ylabel('Latency (\u03BCs)', fontsize=14)
 
-    plt.savefig(result_file)
+    plt.savefig(result_file, bbox_inches='tight')
     plt.close
 
 def generate_throughput_vs_latency_plot__indilog_vs_indilog_min_seqnum_completion__append(csv_file, result_file):
@@ -100,7 +99,7 @@ def generate_throughput_vs_latency_plot__indilog_vs_indilog_min_seqnum_completio
 
 def generate_throughput_vs_latency_plot__boki_vs_indilog__read(csv_file, result_file):
     df = pd.read_csv(csv_file)
-    df_boki = df.loc[df['slog'] == 'boki']
+    df_boki = df.loc[df['slog'] == 'boki-local']
     df_indilog = df.loc[df['slog'] == 'indilog']
 
     fig = plt.figure()
@@ -114,10 +113,10 @@ def generate_throughput_vs_latency_plot__boki_vs_indilog__read(csv_file, result_
     plt.xlim(left=0)
     plt.ylim(bottom=0)
 
-    plt.xlabel('Throughput (kOp/s)')
-    plt.ylabel('Latency (\u03BCs)')
+    plt.xlabel('Throughput (kOp/s)', fontsize=14)
+    plt.ylabel('Latency (\u03BCs)', fontsize=14)
 
-    plt.savefig(result_file)
+    plt.savefig(result_file, bbox_inches='tight')
     plt.close
 
 def generate_throughput_vs_latency_plot__indilog_vs_indilog_min_seqnum_completion__read(csv_file, result_file):
@@ -152,16 +151,16 @@ def generate_throughput_vs_latency_plot__boki_remote_vs_indilog_remote__read(csv
 
     df_boki.plot.line(x='throughput', y='latency_read_50', label='Boki-Remote Read 0.5', color='royalblue', style='o--', ax=ax)
     df_boki.plot.line(x='throughput', y='latency_read_99', label='Boki-Remote Read 0.99', color='royalblue', style='o-', ax=ax)
-    df_indilog.plot.line(x='throughput', y='latency_read_50', label='Indilog-Remote (Range) Read 0.5', color='lightgreen', style='o--', ax=ax)
-    df_indilog.plot.line(x='throughput', y='latency_read_99', label='Indilog-Remote (Range) Read 0.99', color='darkgreen', style='o-', ax=ax)
+    df_indilog.plot.line(x='throughput', y='latency_read_50', label='Indilog-Remote (Type 3) Read 0.5', color='lightgreen', style='o--', ax=ax)
+    df_indilog.plot.line(x='throughput', y='latency_read_99', label='Indilog-Remote (Type 3) Read 0.99', color='darkgreen', style='o-', ax=ax)
 
     plt.xlim(left=0)
     plt.ylim(bottom=0)
 
-    plt.xlabel('Throughput (kOp/s)')
-    plt.ylabel('Latency (\u03BCs)')
+    plt.xlabel('Throughput (kOp/s)', fontsize=14)
+    plt.ylabel('Latency (\u03BCs)', fontsize=14)
 
-    plt.savefig(result_file)
+    plt.savefig(result_file, bbox_inches='tight')
     plt.close
 
 if __name__ == '__main__':
@@ -186,15 +185,15 @@ if __name__ == '__main__':
             concatenate_csv_files(args.directory, args.filter, args.result_file)
         elif args.cmd == 'add-row':
             add_throughput_latency_row(args.directory, args.slog, args.throughput, args.throughput_append, args.throughput_read, args.result_file)
-        elif args.cmd == 'generate-plot-boki-vs-indilog-append':
-            generate_throughput_vs_latency_plot__boki_vs_indilog__append(args.file, args.result_file)
         elif args.cmd == 'generate-plot-indilog-vs-indilog-min-seqnum-completion-append':
             generate_throughput_vs_latency_plot__indilog_vs_indilog_min_seqnum_completion__append(args.file, args.result_file)
-        elif args.cmd == 'generate-plot-boki-vs-indilog-read':
-            generate_throughput_vs_latency_plot__boki_vs_indilog__read(args.file, args.result_file)
         elif args.cmd == 'generate-plot-indilog-vs-indilog-min-seqnum-completion-read':
             generate_throughput_vs_latency_plot__indilog_vs_indilog_min_seqnum_completion__read(args.file, args.result_file)
-        elif args.cmd == 'generate-plot-boki-remote-vs-indilog-remote-remote':
+        elif args.cmd == 'generate-plot-boki-vs-indilog-append':
+            generate_throughput_vs_latency_plot__boki_vs_indilog__append(args.file, args.result_file)
+        elif args.cmd == 'generate-plot-boki-vs-indilog-read':
+            generate_throughput_vs_latency_plot__boki_vs_indilog__read(args.file, args.result_file)
+        elif args.cmd == 'generate-plot-boki-remote-vs-indilog-remote-read':
             generate_throughput_vs_latency_plot__boki_remote_vs_indilog_remote__read(args.file, args.result_file)
         else:
             raise Exception('Unknown command: ' + args.cmd)
