@@ -15,8 +15,5 @@
             "zookeeper-setup"
         ]
     },
-    "exp_variables": {
-        "SLOG_SETTING": "eng4-st4-seq3"
-    },
     "dynamodb_replicas": 1
 }

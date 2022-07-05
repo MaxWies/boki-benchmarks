@@ -15,8 +15,5 @@
         "depends_on": [
             "zookeeper-setup"
         ]
-    },
-    "exp_variables": {
-        "SLOG_SETTING": "eng1-eh1-s21-seq3"
     }
 }
