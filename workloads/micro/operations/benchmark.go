@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"log"
 	"path"
+	"sync"
 
 	"github.com/google/uuid"
 )
@@ -63,6 +64,7 @@ type Benchmark struct {
 }
 
 type OperationBenchmark struct {
+	lock           *sync.Mutex
 	Calls          uint             `json:"calls"`
 	Success        uint             `json:"calls_success"`
 	AverageLatency float64          `json:"latency_average"`
@@ -74,6 +76,8 @@ type OperationBenchmark struct {
 }
 
 func (this *OperationBenchmark) AddSuccess(item *OperationCallItem) {
+	defer this.lock.Unlock()
+	this.lock.Lock()
 	this.Calls++
 	this.Success++
 	s := float64(this.Success)
@@ -87,11 +91,14 @@ func (this *OperationBenchmark) AddSuccess(item *OperationCallItem) {
 }
 
 func (this *OperationBenchmark) AddFailure() {
+	defer this.lock.Unlock()
+	this.lock.Lock()
 	this.Calls++
 }
 
 func CreateInitialOperationResult(Description string, latencyBucketLower int64, latencyBucketUpper int64, latencyBucketGranularity int64, latencyHeadSize int, latencyTailSize int) *OperationBenchmark {
 	return &OperationBenchmark{
+		lock:          &sync.Mutex{},
 		Calls:         0,
 		Success:       0,
 		Description:   Description,
@@ -108,7 +115,9 @@ func CreateInitialOperationResult(Description string, latencyBucketLower int64, 
 }
 
 func CreateEmptyOperationResult() *OperationBenchmark {
-	return &OperationBenchmark{}
+	return &OperationBenchmark{
+		lock: &sync.Mutex{},
+	}
 }
 
 func (this *OperationBenchmark) Merge(object interface{}) {
