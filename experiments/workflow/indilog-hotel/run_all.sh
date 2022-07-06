@@ -5,7 +5,6 @@ MACHINE_SPEC_DIR=$ROOT_DIR/machine-spec
 CONTROLLER_SPEC_DIR=$ROOT_DIR/controller-spec
 
 HELPER_SCRIPT=$ROOT_DIR/scripts/exp_helper
-BENCHMARK_SCRIPT=$BASE_DIR/summarize_benchmarks
 BENCHMARK_HELPER_SCRIPT=$ROOT_DIR/scripts/benchmark_helper
 
 RESULT_DIR=$BASE_DIR/results

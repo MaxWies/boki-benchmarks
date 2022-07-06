@@ -13,7 +13,6 @@ EXP_DIR=$3
 QPS=50
 
 HELPER_SCRIPT=$ROOT_DIR/scripts/exp_helper
-BENCHMARK_SCRIPT=$BASE_DIR/summarize_benchmarks
 BENCHMARK_HELPER_SCRIPT=$ROOT_DIR/scripts/benchmark_helper
 WRK_DIR=/usr/local/bin
 
