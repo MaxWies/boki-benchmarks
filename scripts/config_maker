@@ -68,7 +68,7 @@ def generate_swarm_config_functions(base_dir, config, slog, controller_spec, exp
             replicas = controller_spec['slog_service_replicas']
         for key, _ in exp_spec['functions'].items():
             config["services"][function_definitions['functions'][key]['service_name']] = {
-                    "placement_label": "engine_node",
+                    "placement_label": "function_node",
                     "replicas": replicas
             }
     elif slog.lower().startswith('boki'):
@@ -77,7 +77,7 @@ def generate_swarm_config_functions(base_dir, config, slog, controller_spec, exp
             replicas += controller_spec['slog_hybrid_engine_replicas']
         for key, _ in exp_spec['functions'].items():
                 config["services"][function_definitions['functions'][key]['service_name']] = {
-                        "placement_label": "engine_node",
+                        "placement_label": "function_node",
                         "replicas": replicas
                 }
 

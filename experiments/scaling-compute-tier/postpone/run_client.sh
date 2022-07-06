@@ -31,7 +31,7 @@ MANAGER_IP=`$HELPER_SCRIPT get-docker-manager-ip --base-dir=$BASE_DIR`
 CLIENT_HOST=`$HELPER_SCRIPT get-client-host --base-dir=$BASE_DIR`
 ENTRY_HOST=`$HELPER_SCRIPT get-service-host --base-dir=$BASE_DIR --service=slog-gateway`
 
-ALL_ENGINE_HOSTS=`$HELPER_SCRIPT get-machine-with-label --base-dir=$BASE_DIR --machine-label=engine_node`
+ALL_ENGINE_HOSTS=`$HELPER_SCRIPT get-machine-with-labels --base-dir=$BASE_DIR --machine-labels=engine_node,hybrid_engine_node`
 ENGINE_NODES=$(wc -w <<< $ALL_ENGINE_HOSTS)
 
 ssh -q $MANAGER_HOST -- cat /proc/cmdline >>$EXP_DIR/kernel_cmdline
@@ -197,7 +197,7 @@ elif [[ $SLOG == 'indilog-postpone-caching' || $SLOG == 'indilog-postpone-regist
         ENGINE_TYPE=indilog
         CUT_BEFORE_SCALE_TS=1
         # get engine type: old node has always node id 1 -> for other nodes num_files command will be 0
-        num_files=$(ssh -q $HOST -- find /mnt/inmem/slog/stats/*-1-* -type f | wc -l)
+        num_files=$(ssh -q $HOST -- find /mnt/inmem/slog/stats/*-1-* -type f 2>/dev/null | wc -l)
         echo $num_files
         if [[ $num_files -eq 0 && $new_node -eq 0 ]]; then
             # get new node

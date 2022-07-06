@@ -30,7 +30,7 @@ MANAGER_IP=`$HELPER_SCRIPT get-docker-manager-ip --base-dir=$BASE_DIR`
 CLIENT_HOST=`$HELPER_SCRIPT get-client-host --base-dir=$BASE_DIR`
 ENTRY_HOST=`$HELPER_SCRIPT get-service-host --base-dir=$BASE_DIR --service=slog-gateway`
 
-ALL_ENGINE_HOSTS=`$HELPER_SCRIPT get-machine-with-label --base-dir=$BASE_DIR --machine-label=engine_node`
+ALL_ENGINE_HOSTS=`$HELPER_SCRIPT get-machine-with-labels --base-dir=$BASE_DIR --machine-labels=engine_node,hybrid_engine_node`
 ENGINE_NODES=$(wc -w <<< $ALL_ENGINE_HOSTS)
 
 EXP_ENGINE_HOST=`$HELPER_SCRIPT get-single-machine-with-label --base-dir=$BASE_DIR --machine-label=engine_node`

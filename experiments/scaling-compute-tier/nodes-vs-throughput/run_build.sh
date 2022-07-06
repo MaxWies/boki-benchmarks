@@ -38,7 +38,7 @@ for host in $ALL_HOSTS; do
     scp -q $BASE_DIR/nightcore_config.json $host:/tmp/nightcore_config.json
 done
 
-ALL_ENGINE_HOSTS=`$HELPER_SCRIPT get-machine-with-label --base-dir=$BASE_DIR --machine-label=engine_node`
+ALL_ENGINE_HOSTS=`$HELPER_SCRIPT get-machine-with-labels --base-dir=$BASE_DIR --machine-labels=engine_node,hybrid_engine_node`
 for HOST in $ALL_ENGINE_HOSTS; do
     scp -q $BASE_DIR/run_launcher $HOST:/tmp/run_launcher
     ssh -q $HOST -- sudo rm -rf /mnt/inmem/

@@ -347,10 +347,6 @@ def collect_container_logs_main(base_dir, log_path):
             with open(os.path.join(log_path, '%s.stderr' % container_name), 'w') as fout:
                 fout.write(log_stderr)
 
-def reboot_machines(base_dir):
-    for machine_info in load_machines_file(base_dir)['machines'].values():
-        run_remote_command_without_check(machine_info['ip'], ['sudo', 'reboot'])
-
 def remove_docker_stack(base_dir):
     run_remote_command(get_manager_ip(base_dir), ['docker', 'stack', 'rm', 'boki-experiment'])
 
@@ -360,8 +356,17 @@ def prune_docker(base_dir):
 
 def restart_docker(base_dir):
     for machine_info in load_machines_file(base_dir)['machines'].values():
+        run_remote_command(machine_info['ip'], ['sudo', 'systemctl', 'restart', 'docker'])
+
+def stop_docker(base_dir):
+    for machine_info in load_machines_file(base_dir)['machines'].values():
         run_remote_command(machine_info['ip'], ['sudo', 'systemctl', 'stop', 'docker'])
-        run_remote_command(machine_info['ip'], ['sudo', 'systemctl', 'start', 'docker'])
+
+def reboot_machines(base_dir):
+    remove_docker_stack(base_dir)
+    stop_docker(base_dir)
+    for machine_info in load_machines_file(base_dir)['machines'].values():
+        run_remote_command_without_check(machine_info['ip'], ['sudo', 'reboot'])
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -427,6 +432,8 @@ if __name__ == '__main__':
             prune_docker(args.base_dir)
         elif args.cmd == 'restart-docker':
             restart_docker(args.base_dir)
+        elif args.cmd == 'stop-docker':
+            stop_docker(args.base_dir)
         else:
             raise Exception('Unknown command: ' + args.cmd)
     except Exception as e:
