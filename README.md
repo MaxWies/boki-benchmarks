@@ -23,7 +23,7 @@ Our VMs use Ubuntu 20.04 with kernel version 5.10.0. You must use a kernel versi
 
 ### Experiment VMs ###
 
-Our VMs that are used as nodes in Indilog and Boki, respectively must have installed Docker and use the following packages: g++ make cmake pkg-config autoconf automake libtool curl unzip ca-certificates gnupg lsb-release iperf3 netperf iftop
+Our VMs that are used as nodes in Indilog and Boki, respectively have installed Docker and use the following packages: g++ make cmake pkg-config autoconf automake libtool curl unzip ca-certificates gnupg lsb-release iperf3 netperf iftop
 
 Note that some of the packages are used for benchmarking the system.
 
@@ -33,9 +33,9 @@ For the experiment `workflow` you need to install [wrk2](https://github.com/gilt
 
 ### Manager VM ###
 
-A single 'Manager' VM is responsible for conducting experiments and combining the results. It uses the following packages: python3 python3-pip docker-compose default-jre
+A single Manager VM is responsible for conducting experiments and combining the results. It uses the following packages: python3 python3-pip docker-compose default-jre
 
-Python in the 'Manager' VM needs the following packages: numpy matplotlib pandas
+Python in the Manager VM needs the following packages: numpy matplotlib pandas
 
 ### Environment setup ###
 
@@ -66,7 +66,7 @@ When an experiment starts `scripts/config_maker` generates in `run_build.sh` the
 
 There are four different layers on which we can collect statistics: client, gateway, function containers, log engines.
 
-On which layer we collect statistics is based on the experiment. For most of the experiments we collect statistics on the log engine level.
+On which layer we collect statistics depends on the experiment. For most of the experiments we collect statistics on the log engine level.
 
 #### Client #### 
 The client measures latencies and throughput.
@@ -78,7 +78,7 @@ The gateway timestamps the start of a request and saves the duration when it rec
 Function workers of containers collect metrics, e.g. successful calls, latencies etc. After the benchmark the metrics are merged across function workers and then merged across containers to get the final statistics.
 
 #### Log Engine Level ####
-Log engines collect statistics in csv format, e.g. latencies, append and read calls etc. After the benchmark the Manager VM gets the statistic files, combines them and finally visualize them. Note that log engines produce a lot of statistics data. The Manager VM must have enough disk space to store the data. 
+Log engines collect statistics in csv format, e.g. latencies, append and read calls etc. After the benchmark the Manager VM gets the statistic files, combines them and finally visualize them. Note that log engines produce a lot of statistics data. The Manager VM must have enough disk space (multiple GB) to store the data. 
 
 Log engines run a thread that continously writes data to files. A zookeeper command is send by the Manager VM to activate the thread on all log engines: `create /faas/stat/start $ENGINE_STAT_THREAD_INTERVAL`. The implementation for statistic collection in log engines uses pre-compile statements. If you extend IndiLog Or Boki and would like to use statistic collection compile the source code with the arguments in `config.mk`  
 
