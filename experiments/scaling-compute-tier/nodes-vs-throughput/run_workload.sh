@@ -53,9 +53,6 @@ RESULT_DIR=$BASE_DIR/results/$WORKLOAD-$APPEND_TIMES-$READ_TIMES
 rm -rf $RESULT_DIR
 mkdir -p $RESULT_DIR
 
-$HELPER_SCRIPT prune-docker --base-dir=$MACHINE_SPEC_DIR
-
-
 $HELPER_SCRIPT reboot-machines --base-dir=$MACHINE_SPEC_DIR
 sleep 90
 
