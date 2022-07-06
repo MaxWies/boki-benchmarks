@@ -18,9 +18,10 @@ def random_string(length):
     letters = string.ascii_lowercase
     return ''.join(random.choice(letters) for _ in range(length))
 
-def run_remote_command(ssh_ip, cmd):
+def run_remote_command(ssh_ip, cmd, print_to_err = True):
     # print to stderr because stdout is used by variables
-    print(cmd, file=sys.stderr)
+    if print_to_err:
+        print(cmd, file=sys.stderr)
     ret = sp.run(['ssh', '-q', ssh_ip + '-' + USER_NAME, '--'] + cmd,
                  stdout=sp.PIPE, stderr=sp.PIPE, encoding='utf8')
     if ret.returncode != 0:
@@ -40,8 +41,9 @@ def setup_hostname_for_machines(machine_configs):
                 [
                     'HOSTNAME=$(hostname);'
                     'HOSTS_LINE=\"127.0.0.1\t$HOSTNAME\";'
-                    'if [ -n \"$(grep $HOSTNAME /etc/hosts)\" ]; then echo \"$HOSTNAME already exists\"; else sudo -- sh -c -e \"echo $HOSTS_LINE >> /etc/hosts\"; fi'
-                ]
+                    'if [ -n \"$(grep $HOSTNAME /etc/hosts)\" ]; then echo \"hostname already exists\"; else sudo -- sh -c -e \"echo $HOSTS_LINE >> /etc/hosts\"; fi'
+                ],
+                False
             )
 
 def is_mounted(ip, directory):
@@ -356,6 +358,11 @@ def prune_docker(base_dir):
     for machine_info in load_machines_file(base_dir)['machines'].values():
         run_remote_command(machine_info['ip'], ['sudo', 'docker system prune --all -f'])
 
+def restart_docker(base_dir):
+    for machine_info in load_machines_file(base_dir)['machines'].values():
+        run_remote_command(machine_info['ip'], ['sudo', 'systemctl', 'stop', 'docker'])
+        run_remote_command(machine_info['ip'], ['sudo', 'systemctl', 'start', 'docker'])
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('cmd', type=str)
@@ -418,6 +425,8 @@ if __name__ == '__main__':
             remove_docker_stack(args.base_dir)
         elif args.cmd == 'prune-docker':
             prune_docker(args.base_dir)
+        elif args.cmd == 'restart-docker':
+            restart_docker(args.base_dir)
         else:
             raise Exception('Unknown command: ' + args.cmd)
     except Exception as e:
