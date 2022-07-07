@@ -107,54 +107,13 @@ def generate_plot(directory, throughput_csv_file, result_file):
     ax.set_yticks(y_ticks)
 
     ax.grid(which='both')
-
-    # Shrink current axis by 10%
-    #ax.set_position([box.x0, box.y0, box.width * 0.9, box.height])
-
-    #bbox_to_anchor=(1.1, 0.2)
     ax.legend(loc='lower right', bbox_to_anchor=(1.15, 0), framealpha=1, prop={'size': 12})
 
     plt.xlabel('Latency (\u03BCs)', fontsize=14)
     plt.ylabel('Cumulated Latency', fontsize=14)
 
-    # plt.title('Latency impact of point queries and range queries')
-
     plt.savefig(result_file, bbox_inches='tight')
     plt.close
-        
-
-# def generate_plot(csv_file, result_file):
-#     df = pd.read_csv(csv_file)
-
-#     df_point_hit = df.loc[df['point_hit']]
-#     df_point_miss = df.loc[df['point_hit'] != True]
-
-#     fig = plt.figure()
-#     ax = plt.subplot(111)
-
-#     df_point_hit.plot.line(x='throughput', y='latency_read_50', label='0.5', color='orange', style='o', ax=ax)
-#     #df_point_hit.plot.line(x='throughput', y='latency_read_75', label='0.75 (Point hit)', color='olive', style='o-', ax=ax)
-#     df_point_hit.plot.line(x='throughput', y='latency_read_90', label='0.90', color='blue', style='o-', ax=ax)
-#     df_point_hit.plot.line(x='throughput', y='latency_read_99', label='0.99', color='red', style='o-', ax=ax)
-#     df_point_hit.plot.line(x='throughput', y='latency_read_999', label='0.999', color='black', style='o-', ax=ax)
-#     df_point_miss.plot.line(x='throughput', y='latency_read_50', label='0.5', color='orange', style='x--', ax=ax)
-#     #df_point_miss.plot.line(x='throughput', y='latency_read_75', label='0.75 (Point miss)', color='olive', style='o--', ax=ax)
-#     df_point_miss.plot.line(x='throughput', y='latency_read_90', label='0.90', color='blue', style='x--', ax=ax)
-#     df_point_miss.plot.line(x='throughput', y='latency_read_99', label='0.99', color='red', style='x--', ax=ax)
-#     df_point_miss.plot.line(x='throughput', y='latency_read_999', label='0.999', color='black', style='x--', ax=ax)
-
-#     for i, row in df_point_hit.iterrows():
-#         ax.annotate(row['index_config'], (row['throughput'], row['latency_read_50']))
-
-#     ax.set_xlim(0, 50)
-
-#     plt.xlabel('Throughput (kOp/s)')
-#     plt.ylabel('Latency (\u03BCs)')
-#     box = ax.get_position()
-#     ax.set_position([box.x0, box.y0, box.width * 0.85, box.height])
-#     ax.legend(loc='center left', bbox_to_anchor=(1, 0.23))
-#     plt.savefig(result_file)
-#     plt.close
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()

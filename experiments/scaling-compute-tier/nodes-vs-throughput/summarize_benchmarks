@@ -112,12 +112,6 @@ def generate_plot(csv_file, workload, result_file):
     ax.set_xticks(x_major_ticks)
     ax.set_xticks(x_minor_ticks, minor=True)
 
-    # info_text = 'Scaling from one engine'
-    # ax.text(
-    #     0.17, 0.7, info_text, transform=ax.transAxes, verticalalignment='top', size=10,
-    #     bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.5)
-    # )
-
     ax.legend(loc='upper left', prop={'size': 12})
 
     plt.savefig(result_file, bbox_inches='tight')

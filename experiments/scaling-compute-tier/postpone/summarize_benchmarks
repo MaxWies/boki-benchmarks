@@ -245,12 +245,6 @@ def generate_plot_boki_vs_indilog_append_latency(csv_file, relative_scale_ts, en
     ax.set_xlabel('Time (s)', fontsize=14)
     ax.set_ylabel('Latency (\u03BCs)', fontsize=14)
 
-    # info_text = 'Scaling from {} to {} engines'.format(engines_before, engines_after)
-    # ax.text(
-    #     0.17, 0.7, info_text, transform=ax.transAxes, verticalalignment='top', size=10,
-    #     bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.5)
-    # )
-
     plt.subplots_adjust(top=0.8)
 
     handles, labels = ax.get_legend_handles_labels()
@@ -283,12 +277,6 @@ def generate_plot_boki_vs_indilog_read_latency(csv_file, relative_scale_ts, engi
 
     ax.set_xlabel('Time (s)', fontsize=14)
     ax.set_ylabel('Latency (\u03BCs)', fontsize=14)
-
-    # info_text = 'Scaling from {} to {} engines'.format(engines_before, engines_after)
-    # ax.text(
-    #     0.17, 0.7, info_text, transform=ax.transAxes, verticalalignment='top', size=10,
-    #     bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.5)
-    # )
 
     plt.subplots_adjust(top=0.8)
 
