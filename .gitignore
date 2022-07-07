@@ -8,6 +8,7 @@
 /experiments/**/docker-compose.yml
 /experiments/**/config.json
 /experiments/**/nightcore_config.json
+/experiments/**/nightcore_config_empty.json
 /experiments/**/results
 /experiments/**/machines.json
 /experiments/**/machines*.json
