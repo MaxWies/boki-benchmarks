@@ -1,6 +1,6 @@
 #!/bin/bash
 BASE_DIR=`realpath $(dirname $0)`
-ROOT_DIR=`realpath $BASE_DIR/../..`
+ROOT_DIR=`realpath $BASE_DIR/../../..`
 MACHINE_SPEC_DIR=$ROOT_DIR/machine-spec
 CONTROLLER_SPEC_DIR=$ROOT_DIR/controller-spec
 
