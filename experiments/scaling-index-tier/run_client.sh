@@ -88,9 +88,9 @@ THROUGHPUT=`$BENCHMARK_ROOT_SCRIPT compute-throughput --exp-duration=$DURATION -
 $BENCHMARK_ROOT_SCRIPT concatenate-csv \
     --directory=$EXP_DIR/stats/latencies \
     --filter=read \
-    --result-file=$BASE_DIR/results/latencies-read_$INDEX_TIER_CONFIG.csv
+    --result-file=$BASE_DIR/results/$WORKLOAD/latencies-read_$INDEX_TIER_CONFIG.csv
 
-LATENCY_AVG=`$BENCHMARK_ROOT_SCRIPT large-file-compute-column-average --file=$BASE_DIR/results/latencies-read_$INDEX_TIER_CONFIG.csv --index=0`
+LATENCY_AVG=`$BENCHMARK_ROOT_SCRIPT large-file-compute-column-average --file=$BASE_DIR/results/$WORKLOAD/latencies-read_$INDEX_TIER_CONFIG.csv --index=0`
 
 echo $LATENCY_AVG
 
@@ -101,5 +101,5 @@ $BENCHMARK_SCRIPT add-row \
     --throughput=$THROUGHPUT \
     --latency-avg=$LATENCY_AVG \
     --is-point-hit=$IS_POINT_HIT \
-    --read-latency-file=$BASE_DIR/results/latencies-read_$INDEX_TIER_CONFIG.csv \
-    --result-file=$BASE_DIR/results/throughput-vs-latency.csv
+    --read-latency-file=$BASE_DIR/results/$WORKLOAD/latencies-read_$INDEX_TIER_CONFIG.csv \
+    --result-file=$BASE_DIR/results/$WORKLOAD/throughput-vs-latency.csv
