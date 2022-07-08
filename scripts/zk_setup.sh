@@ -15,7 +15,6 @@ create /faas/scale
 create /faas/storage_shard_req
 create /faas/storage_shard_resp
 create /faas/stat
-create /faas/ignore
 create /faas/activate
 quit
 EOF

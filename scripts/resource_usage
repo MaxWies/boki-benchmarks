@@ -89,17 +89,6 @@ def sample_resource_usage(script, pid, sample_rate, samples, log_path, log_file_
         mem_total
     ]
 
-def measure_network_bandwidth(script, interface, output_file, duration, nethogs_parser, result_file_csv):
-    if os.path.isfile(output_file):
-        os.remove(output_file)
-    run_command_no_check([script, interface, str(duration), output_file])
-    if os.path.isfile(result_file_csv):
-        os.remove(result_file_csv)
-    output, _ = run_command([nethogs_parser, '-type=csv', output_file])
-    file = open(result_file_csv, 'w')
-    file.write(output)
-    file.close()
-
 def run_iftop(interface, number_of_connections, duration, output_file):
     if os.path.isfile(output_file):
             os.remove(output_file)
@@ -118,12 +107,6 @@ if __name__ == '__main__':
     parser.add_argument('--sample-rate', type=int, default=2)
     parser.add_argument('--samples', type=int, default=100)
     parser.add_argument('--log-path', type=str, default='/tmp')
-    parser.add_argument('--nethogs-script', type=str, default='/tmp/bandwidth.sh')
-    parser.add_argument('--network-interface', type=str, default='eth0')
-    parser.add_argument('--nethogs-output-file', type=str, default='/tmp/bandwidth')
-    parser.add_argument('--nethogs-trace-duration', type=int)
-    parser.add_argument('--nethogs-parser', type=str, default='/usr/local/bin/hogs')
-    parser.add_argument('--nethogs-csv-file', type=str, default='/tmp/bandwidth.csv')
     parser.add_argument('--iftop-network-interface', type=str, default='eth0')
     parser.add_argument('--iftop-connections', type=int, default=20)
     parser.add_argument('--iftop-duration', type=int)
@@ -152,15 +135,6 @@ if __name__ == '__main__':
             measure_resource_usage(
                 batch_csv_file, args.batches, args.resource_usage_script, process_id, 
                 args.sample_rate, args.samples, args.log_path, log_file_name
-            )
-        elif args.cmd == 'monitor-network-bandwidth':
-            measure_network_bandwidth(
-                args.nethogs_script,
-                args.network_interface,
-                args.nethogs_output_file,
-                args.nethogs_trace_duration,
-                args.nethogs_parser,
-                args.nethogs_csv_file
             )
         elif args.cmd == 'run-iftop':
             run_iftop(
