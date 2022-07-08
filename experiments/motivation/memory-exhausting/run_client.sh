@@ -56,8 +56,8 @@ EXP_ENGINE_START_TS=$(ssh -q $EXP_HOST -- date +%s)
 EXP_ENGINE_END_TS=$((EXP_ENGINE_START_TS+DURATION-ENGINE_STAT_THREAD_INTERVAL))
 
 # activiate resource usage script on engine running in background
-ssh -q $EXP_HOST -- sudo rm /tmp/resource_usage.sh /tmp/resource_usage /tmp/bandwidth.sh
-scp -q $ROOT_DIR/scripts/resource_usage $ROOT_DIR/scripts/resource_usage.sh $ROOT_DIR/scripts/bandwidth.sh $EXP_HOST:/tmp
+ssh -q $EXP_HOST -- sudo rm /tmp/resource_usage.sh /tmp/resource_usage
+scp -q $ROOT_DIR/scripts/resource_usage $ROOT_DIR/scripts/resource_usage.sh $EXP_HOST:/tmp
 ssh -q -f $EXP_HOST -- "nohup /tmp/resource_usage monitor-resource-usage-by-name \
     --batches=$((DURATION / ENGINE_STAT_THREAD_INTERVAL)) \
     --sample-rate=1 \
