@@ -10,7 +10,7 @@ SLOG=$1
 EXP_SPEC_FILE=$2
 EXP_DIR=$3
 
-QPS=50
+QPS=200
 
 HELPER_SCRIPT=$ROOT_DIR/scripts/exp_helper
 BENCHMARK_HELPER_SCRIPT=$ROOT_DIR/scripts/benchmark_helper
