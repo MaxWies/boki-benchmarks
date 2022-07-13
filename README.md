@@ -9,7 +9,7 @@ and scripts for running experiments.
 * `controller-spec`: specifications for the controller in IndiLog and Boki which can be reused for different experiments.
 * `dockerfiles`: dockerfiles for building relevant Docker containers.
 * `experiments`: setup scripts for running experiments of individual workloads and visualization scripts for the results.
-* `machine-spec`: specifications for the machines in IndiLog and Boki. This folder contains only templates for real machine configuration files.
+* `machine-spec`: specifications for the machines in IndiLog and Boki. In this folder we provide only templates for real machine configuration files.
 * `scripts`: helper scripts to build Docker containers, generate experiment configurations and support the experiment flow.
 * `workloads`: contains libraries and their workloads
 
@@ -36,6 +36,8 @@ For the experiment `workflow` you need to install [wrk2](https://github.com/gilt
 A single Manager VM is responsible for conducting experiments and combining the results. It uses the following packages: python3 python3-pip docker-compose default-jre
 
 Python in the Manager VM needs the following packages: numpy matplotlib pandas
+
+Some of the experiments use ZooKeeper to send commands to the system. Please install ZooKeeper such that the ZooKeeper client can be found under the following path: `PROJECT_ROOT_DIR/../zookeeper/bin/zkCli.sh`. For our experiments we use version 3.7.0. 
 
 ### Environment setup ###
 
