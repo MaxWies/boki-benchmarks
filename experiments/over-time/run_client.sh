@@ -151,9 +151,6 @@ $BENCHMARK_SCRIPT make-time-relative \
     --reference-ts=$EXP_ENGINE_START_TS \
     --result-file=$BASE_DIR/results/$WORKLOAD/single-time-vs-cpu-memory.csv
 
-# free some storage
-rm -rf $EXP_DIR_SINGLE
-
 # get latencies from ALL engines
 EXP_DIR_ALL=$EXP_DIR/stats/all
 mkdir -p $EXP_DIR_ALL
