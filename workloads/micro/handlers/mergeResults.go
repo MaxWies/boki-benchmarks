@@ -26,28 +26,12 @@ func NewMergeHandler() types.FuncHandler {
 }
 
 func (h *MergeHandler) CreateMergable(mergerType string) (merge.Mergable, error) {
-	// switch mergerType {
-	// case MergeType_AppendLoopResponse:
-	// 	return &response.Benchmark{
-	// 		Message: "No Results",
-	// 	}, nil
-	// default:
-	// 	return nil, fmt.Errorf("Unknown merger type %s", mergerType)
-	// }
 	return &operations.Benchmark{
 		Message: "No Results",
 	}, nil
 }
 
 func (h *MergeHandler) CreateMergableFromJson(mergerType string, marshalled []byte) (merge.Mergable, error) {
-	// switch mergerType {
-	// case MergeType_AppendLoopResponse:
-	// 	var appendLoopResponse response.Benchmark
-	// 	err := json.Unmarshal(marshalled, &appendLoopResponse)
-	// 	return &appendLoopResponse, err
-	// default:
-	// 	return nil, fmt.Errorf("Unknown merger type %s", mergerType)
-	// }
 	var benchmarkResponse operations.Benchmark
 	err := json.Unmarshal(marshalled, &benchmarkResponse)
 	return &benchmarkResponse, err

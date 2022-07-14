@@ -20,14 +20,10 @@ func (pq PriorityQueueMax) Less(i, j int) bool {
 
 func (pq PriorityQueueMax) Swap(i, j int) {
 	pq.Items[i], pq.Items[j] = pq.Items[j], pq.Items[i]
-	//pq.Items[i].Index = i
-	//pq.Items[j].Index = j
 }
 
 func (pq *PriorityQueueMax) Push(x interface{}) {
-	//n := len(pq.Items)
 	item := x.(*OperationCallItem)
-	//item.Index = n
 	pq.Items = append(pq.Items, item)
 }
 
@@ -36,7 +32,6 @@ func (pq *PriorityQueueMax) Pop() interface{} {
 	n := len(old)
 	item := old[n-1]
 	old[n-1] = &OperationCallItem{} // avoid memory leak
-	//item.Index = -1 // for safety
 	pq.Items = old[0 : n-1]
 	return item
 }

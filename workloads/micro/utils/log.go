@@ -156,23 +156,6 @@ func (p *TagPool) Update(tag uint64, seqNum uint64) (uint64, uint64) {
 	return seqnum_min, seqnum_max
 }
 
-// func (p *TagPool) Append(tag uint64, seqNum uint64) {
-// 	defer p.lock.Unlock()
-// 	p.lock.Lock()
-// 	_, contains := p.maxSeqnumByTag[tag]
-// 	if contains {
-// 		log.Printf("[WARNING] Tag %d already exists", tag)
-// 		return
-// 	}
-// 	p.tags = append(p.tags, tag)
-// 	p.maxSeqnumByTag[tag] = seqNum
-// 	if p.limit < len(p.tags) {
-// 		first_tag := p.tags[0]
-// 		delete(p.maxSeqnumByTag, first_tag)
-// 		p.tags = p.tags[1:]
-// 	}
-// }
-
 func (p *TagPool) PickRandomTag() uint64 {
 	defer p.lock.Unlock()
 	p.lock.Lock()
