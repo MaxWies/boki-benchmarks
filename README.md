@@ -1,15 +1,15 @@
-Benchmark workloads of [Indilog](https://github.com/MaxWies/IndiLog) and [Boki](https://github.com/ut-osa/boki)
+Benchmark workloads of [Ixe](https://github.com/MaxWies/Ixe) and [Boki](https://github.com/ut-osa/boki)
 ==================================
 
-This repository includes evaluation workloads of Indilog and Boki,
+This repository includes evaluation workloads of Ixe and Boki,
 and scripts for running experiments.
 
 ### Structure of this repository ###
 
-* `controller-spec`: specifications for the controller in IndiLog and Boki which can be reused for different experiments.
+* `controller-spec`: specifications for the controller in Ixe and Boki which can be reused for different experiments.
 * `dockerfiles`: dockerfiles for building relevant Docker containers.
 * `experiments`: setup scripts for running experiments of individual workloads and visualization scripts for the results.
-* `machine-spec`: specifications for the machines in IndiLog and Boki. In this folder we provide only templates for real machine configuration files.
+* `machine-spec`: specifications for the machines in Ixe and Boki. In this folder we provide only templates for real machine configuration files.
 * `scripts`: helper scripts to build Docker containers, generate experiment configurations and support the experiment flow.
 * `workloads`: contains libraries and their workloads
 
@@ -19,11 +19,11 @@ and scripts for running experiments.
 
 For our experiments we use internally hosted VMs.
 
-Our VMs use Ubuntu 20.04 with kernel version 5.10.0. You must use a kernel version >= 5.10.0 because IndiLog and Boki use `io_uring`.
+Our VMs use Ubuntu 20.04 with kernel version 5.10.0. You must use a kernel version >= 5.10.0 because Ixe and Boki use `io_uring`.
 
 ### Experiment VMs ###
 
-Our VMs that are used as nodes in Indilog and Boki, respectively have installed Docker and use the following packages: g++ make cmake pkg-config autoconf automake libtool curl unzip ca-certificates gnupg lsb-release iperf3 netperf iftop
+Our VMs that are used as nodes in Ixe and Boki, respectively have installed Docker and use the following packages: g++ make cmake pkg-config autoconf automake libtool curl unzip ca-certificates gnupg lsb-release iperf3 netperf iftop
 
 Note that some of the packages are used for benchmarking the system.
 
@@ -82,13 +82,13 @@ Function workers of containers collect metrics, e.g. successful calls, latencies
 #### Log Engine Level ####
 Log engines collect statistics in csv format, e.g. latencies, append and read calls etc. After the benchmark the Manager VM gets the statistic files, combines them and finally visualize them. Note that log engines produce a lot of statistics data. The Manager VM must have enough disk space (multiple GB) to store the data. 
 
-Log engines run a thread that continously writes data to files. A zookeeper command is send by the Manager VM to activate the thread on all log engines: `create /faas/stat/start $ENGINE_STAT_THREAD_INTERVAL`. The implementation for statistic collection in log engines uses pre-compile statements. If you extend IndiLog Or Boki and would like to use statistic collection compile the source code with the arguments in `config.mk`  
+Log engines run a thread that continously writes data to files. A zookeeper command is send by the Manager VM to activate the thread on all log engines: `create /faas/stat/start $ENGINE_STAT_THREAD_INTERVAL`. The implementation for statistic collection in log engines uses pre-compile statements. If you extend Ixe Or Boki and would like to use statistic collection compile the source code with the arguments in `config.mk`  
 
 ## Common Issues ##
 
 ### Docker Swarm ###
 
-We encountered issues with docker swarm for IndiLog and Boki, respectively that lead to an invalid setup of the system. Moreover, we observed sometimes that processes that use io_uring are not cleaned up properly after termination. To minimize the likelihood of issues we reboot all VMs (`scripts/exp_helper reboot-machines --base-dir=$MACHINE_SPEC_DIR`) before starting an experiment. `$MACHINE_SPEC_DIR` specifies the directory location of the machine-spec file `machines.json`
+We encountered issues with docker swarm for Ixe and Boki, respectively that lead to an invalid setup of the system. Moreover, we observed sometimes that processes that use io_uring are not cleaned up properly after termination. To minimize the likelihood of issues we reboot all VMs (`scripts/exp_helper reboot-machines --base-dir=$MACHINE_SPEC_DIR`) before starting an experiment. `$MACHINE_SPEC_DIR` specifies the directory location of the machine-spec file `machines.json`
 
 If you run many experiments over several weeks on the same VMs consider to prune docker on all experiment VMs (`scripts/exp_helper prune-docker --base-dir=$MACHINE_SPEC_DIR`). This frees a lot of disk space.
 
